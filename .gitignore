@@ -11,6 +11,8 @@ public/sample_datasets/
 
 # Environment & Cache
 .env
+.env*
+*.env
 .env.local
 .env.standalone
 __pycache__/
