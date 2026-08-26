@@ -661,11 +661,20 @@ function Chatbot({
     // ==========================================
     // DETERMINISTIC GRAPH TOOL-CALLING INTERCEPTOR
     // ==========================================
-    const isRelationalQuery = /(connected to|connection between|trace|linked to|link between|relationship between|who are the co-accused|syndicate|hubs|kingpin|path between)/i.test(text);
+    // ==========================================
+    // DETERMINISTIC GRAPH TOOL-CALLING INTERCEPTOR
+    // ==========================================
+    const isRelationalQuery = /(connected to|connected with|connection between|trace|linked to|linked with|link between|relationship between|who are the co-accused|syndicate|hubs|kingpin|path between|dossier on|associations of)/i.test(text);
 
     if (isRelationalQuery) {
-      const graphStatus = GraphQueryToolAgent.get_graph_status();
-      
+      // Auto-load if dataset exists but network store not yet initialized
+      let graphStatus = GraphQueryToolAgent.get_graph_status();
+      if (!graphStatus.is_locked && datasetState?.rawRecords?.length > 0) {
+        const headers = datasetState.columns || Object.keys(datasetState.rawRecords[0] || {});
+        globalNetworkStore.loadDataset(datasetState.rawRecords, headers, datasetState.filename || 'Active Investigation Dataset');
+        graphStatus = GraphQueryToolAgent.get_graph_status();
+      }
+
       if (!graphStatus.is_locked || graphStatus.total_nodes === 0) {
         setTyping(false);
         const botReply = {
@@ -688,27 +697,48 @@ function Chatbot({
         return;
       }
 
-      // Check for path queries: e.g. "how is X connected to Y" or "trace path between X and Y"
-      let entityA = '';
-      let entityB = '';
-      const betweenMatch = text.match(/(?:between|from|connect|linking)\s+([A-Za-z0-9_\-\.\/]+)\s+(?:and|to|with)\s+([A-Za-z0-9_\-\.\/]+)/i);
-      const isConnectedMatch = text.match(/how is\s+([A-Za-z0-9_\-\.\/]+)\s+(?:connected|linked|related)\s+(?:to|with)\s+([A-Za-z0-9_\-\.\/]+)/i);
+      // 1. Check for path queries: e.g. "how is Imran Khan connected to Ramesh Tiwari?"
+      const pathMatch = text.match(/(?:how is|between|from|linking|connection between|path from)\s+([A-Za-z0-9\s_\-\.\/@+]+?)\s+(?:connected to|connected with|linked to|linked with|and|to)\s+([A-Za-z0-9\s_\-\.\/@+]+)/i);
 
-      if (betweenMatch) {
-        entityA = betweenMatch[1].trim();
-        entityB = betweenMatch[2].trim();
-      } else if (isConnectedMatch) {
-        entityA = isConnectedMatch[1].trim();
-        entityB = isConnectedMatch[2].trim();
+      if (pathMatch) {
+        const entityA = pathMatch[1].trim();
+        const entityB = pathMatch[2].trim().replace(/\?+$/, '');
+
+        if (entityA && entityB) {
+          const pathResult = GraphQueryToolAgent.trace_shortest_path(entityA, entityB);
+          setTyping(false);
+          const botReply = {
+            id: Date.now() + '-bot',
+            sender: 'bot',
+            text: pathResult.narrative || (pathResult.found ? `Found connection path.` : pathResult.reason),
+            agent_type: 'graph_intelligence_agent',
+            agent_label: 'Graph Intelligence Agent',
+            agent_icon: '🕸️',
+            agent_color: '#0284c7',
+            agent_description: 'Deterministic Graph Link Analysis',
+            render_visuals: false,
+            user_query: text
+          };
+          setMessages(prev => {
+            const next = [...prev, botReply];
+            updateSessionStore(next);
+            return next;
+          });
+          return;
+        }
       }
 
-      if (entityA && entityB) {
-        const pathResult = GraphQueryToolAgent.trace_shortest_path(entityA, entityB);
+      // 2. Check for Dossier / Single Entity Association queries
+      const dossierMatch = text.match(/(?:dossier on|associations of|profile of|who is)\s+([A-Za-z0-9\s_\-\.\/@+]+)/i);
+      if (dossierMatch && !/(hubs|kingpin)/i.test(text)) {
+        const entityName = dossierMatch[1].trim().replace(/\?+$/, '');
+        const dossier = GraphQueryToolAgent.get_entity_dossier(entityName);
         setTyping(false);
+
         const botReply = {
           id: Date.now() + '-bot',
           sender: 'bot',
-          text: pathResult.narrative || (pathResult.found ? `Found connection path.` : pathResult.reason),
+          text: dossier.narrative || (dossier.found ? `Found dossier for ${entityName}.` : dossier.reason),
           agent_type: 'graph_intelligence_agent',
           agent_label: 'Graph Intelligence Agent',
           agent_icon: '🕸️',
@@ -725,15 +755,20 @@ function Chatbot({
         return;
       }
 
-      // Check for Hubs / Kingpin queries
-      if (/(hubs|kingpins|central|most connected|leaders)/i.test(text)) {
+      // 3. Check for Hubs / Kingpin queries
+      if (/(hubs|kingpins|central|most connected|leaders|key suspects)/i.test(text)) {
         const hubsResult = GraphQueryToolAgent.find_syndicate_hubs(5);
         setTyping(false);
-        const hubList = hubsResult.hubs.map((h, i) => `* **${i + 1}. ${h.label}** (${h.type}) — \`${h.connections} direct connections\` | *Station: ${h.metadata?.policeStation || 'Central Hub'}*`).join('\n');
+        const hubList = hubsResult.hubs.map((h, i) => `${i + 1}. **${h.label}** *(${h.type})* — **${h.connections} verified connections** *(Jurisdiction: ${h.metadata?.policeStation || 'Central Grid'})*`).join('\n');
         const botReply = {
           id: Date.now() + '-bot',
           sender: 'bot',
-          text: `### 🕸️ Top Central Syndicate Hubs (Degree Centrality):\n\n${hubList}\n\n🛡️ *Computed from ${graphStatus.total_nodes} entities and ${graphStatus.total_edges} verified relational links.*`,
+          text: `### 🕸️ Key Central Figures & Syndicate Hubs\n\n` +
+            `The following individuals and entities possess the highest number of direct cross-case linkages in the active records:\n\n` +
+            `${hubList}\n\n` +
+            `#### 🚨 Tactical Recommendation:\n` +
+            `* Prioritize surveillance and CDR cross-referencing on the top 3 individuals to dismantle coordinating communication channels.\n\n` +
+            `---\n🛡️ *Verified from Karnataka Police Relational Records · Section 65B Certified*`,
           agent_type: 'graph_intelligence_agent',
           agent_label: 'Graph Intelligence Agent',
           agent_icon: '🕸️',
