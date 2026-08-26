@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, CheckCheck, Send, Upload, Bolt, Disc, CheckCircle, FileText, Cpu, Database, ChevronDown, ChevronUp, Paperclip, Download, History, Trash2, Sparkles, Mic, MicOff, Volume2, VolumeX, Languages, Radio, Compass, Lightbulb, Scale, AlertTriangle, Shield, PlusCircle, BarChart2, PieChart, TrendingUp, Plus, ChevronRight, Plug, Layers, FolderPlus, MessageSquare, FolderKanban, ShieldAlert, HardDrive } from 'lucide-react';
+import { ShieldCheck, CheckCheck, Send, Upload, Bolt, Disc, CheckCircle, FileText, Cpu, Database, ChevronDown, ChevronUp, Paperclip, Download, History, Trash2, Sparkles, Mic, MicOff, Volume2, VolumeX, Languages, Radio, Compass, Lightbulb, Scale, AlertTriangle, Shield, PlusCircle, BarChart2, PieChart, TrendingUp, Plus, ChevronRight, Plug, Layers, FolderPlus, MessageSquare, FolderKanban, ShieldAlert, HardDrive, Network } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { jsPDF } from 'jspdf';
@@ -23,6 +23,7 @@ import DatabaseConnectorModal from './DatabaseConnectorModal';
 import VisualIntelligenceStudio from './VisualIntelligenceStudio';
 import UploadDatasetModal from './UploadDatasetModal';
 import { parseCSV } from '../analytics/services/datasetStore';
+import { GraphQueryToolAgent, globalNetworkStore } from '../analytics/services/networkAnalyticsService';
 
 ChartJS.register(
   CategoryScale,
@@ -342,7 +343,17 @@ function generateFallbackChartData(message) {
   };
 }
 
-function Chatbot({ onAddDocument, divisionName = "Bengaluru Division", onNavigateToAnalytics, onDatasetIngested, isDatasetLoaded, datasetState = null }) {
+function Chatbot({
+  onAddDocument,
+  divisionName = "Bengaluru Division",
+  onNavigateToAnalytics,
+  onNavigateToNetwork,
+  onNavigateToMaps,
+  onNavigateToVault,
+  onDatasetIngested,
+  isDatasetLoaded,
+  datasetState = null
+}) {
   const [messages, setMessages] = useState(() => {
     try {
       const saved = localStorage.getItem(`ksp_sentinel_chat_history_${divisionName}`);
@@ -646,6 +657,99 @@ function Chatbot({ onAddDocument, divisionName = "Bengaluru Division", onNavigat
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setTyping(true);
+
+    // ==========================================
+    // DETERMINISTIC GRAPH TOOL-CALLING INTERCEPTOR
+    // ==========================================
+    const isRelationalQuery = /(connected to|connection between|trace|linked to|link between|relationship between|who are the co-accused|syndicate|hubs|kingpin|path between)/i.test(text);
+
+    if (isRelationalQuery) {
+      const graphStatus = GraphQueryToolAgent.get_graph_status();
+      
+      if (!graphStatus.is_locked || graphStatus.total_nodes === 0) {
+        setTyping(false);
+        const botReply = {
+          id: Date.now() + '-bot',
+          sender: 'bot',
+          text: `### 🛡️ Sentinel Graph Intelligence Notice\n\n**No active relational dataset is currently locked in Crime Analytics.**\n\nTo trace multi-hop entity connections, vehicle-suspect links, or syndicate topologies:\n1. Open the **Crime Analytics Portal** from the header or sidebar.\n2. In the **Network & Link Intelligence** workspace, load an active dataset or attach a dedicated CDR/Transaction file.\n\n*Once locked, I will deterministically compute and verify exact multi-hop paths without hallucination.*`,
+          agent_type: 'graph_intelligence_agent',
+          agent_label: 'Graph Intelligence Agent',
+          agent_icon: '🕸️',
+          agent_color: '#0284c7',
+          agent_description: 'Deterministic Graph Link Analysis',
+          render_visuals: false,
+          user_query: text
+        };
+        setMessages(prev => {
+          const next = [...prev, botReply];
+          updateSessionStore(next);
+          return next;
+        });
+        return;
+      }
+
+      // Check for path queries: e.g. "how is X connected to Y" or "trace path between X and Y"
+      let entityA = '';
+      let entityB = '';
+      const betweenMatch = text.match(/(?:between|from|connect|linking)\s+([A-Za-z0-9_\-\.\/]+)\s+(?:and|to|with)\s+([A-Za-z0-9_\-\.\/]+)/i);
+      const isConnectedMatch = text.match(/how is\s+([A-Za-z0-9_\-\.\/]+)\s+(?:connected|linked|related)\s+(?:to|with)\s+([A-Za-z0-9_\-\.\/]+)/i);
+
+      if (betweenMatch) {
+        entityA = betweenMatch[1].trim();
+        entityB = betweenMatch[2].trim();
+      } else if (isConnectedMatch) {
+        entityA = isConnectedMatch[1].trim();
+        entityB = isConnectedMatch[2].trim();
+      }
+
+      if (entityA && entityB) {
+        const pathResult = GraphQueryToolAgent.trace_shortest_path(entityA, entityB);
+        setTyping(false);
+        const botReply = {
+          id: Date.now() + '-bot',
+          sender: 'bot',
+          text: pathResult.narrative || (pathResult.found ? `Found connection path.` : pathResult.reason),
+          agent_type: 'graph_intelligence_agent',
+          agent_label: 'Graph Intelligence Agent',
+          agent_icon: '🕸️',
+          agent_color: '#0284c7',
+          agent_description: 'Deterministic Graph Link Analysis',
+          render_visuals: false,
+          user_query: text
+        };
+        setMessages(prev => {
+          const next = [...prev, botReply];
+          updateSessionStore(next);
+          return next;
+        });
+        return;
+      }
+
+      // Check for Hubs / Kingpin queries
+      if (/(hubs|kingpins|central|most connected|leaders)/i.test(text)) {
+        const hubsResult = GraphQueryToolAgent.find_syndicate_hubs(5);
+        setTyping(false);
+        const hubList = hubsResult.hubs.map((h, i) => `* **${i + 1}. ${h.label}** (${h.type}) — \`${h.connections} direct connections\` | *Station: ${h.metadata?.policeStation || 'Central Hub'}*`).join('\n');
+        const botReply = {
+          id: Date.now() + '-bot',
+          sender: 'bot',
+          text: `### 🕸️ Top Central Syndicate Hubs (Degree Centrality):\n\n${hubList}\n\n🛡️ *Computed from ${graphStatus.total_nodes} entities and ${graphStatus.total_edges} verified relational links.*`,
+          agent_type: 'graph_intelligence_agent',
+          agent_label: 'Graph Intelligence Agent',
+          agent_icon: '🕸️',
+          agent_color: '#0284c7',
+          agent_description: 'Deterministic Graph Link Analysis',
+          render_visuals: false,
+          user_query: text
+        };
+        setMessages(prev => {
+          const next = [...prev, botReply];
+          updateSessionStore(next);
+          return next;
+        });
+        return;
+      }
+    }
 
     const historyPayload = messages
       .filter(m => m.id !== 'welcome')
@@ -1322,43 +1426,81 @@ function Chatbot({ onAddDocument, divisionName = "Bengaluru Division", onNavigat
           <Plus size={16} /> New Conversation
         </button>
 
-        {/* PROMINENT DEDICATED ANALYTICS HUB NAVIGATION BUTTON */}
-        <button
-          onClick={handleTouchCrimeAnalyticsHub}
-          style={{
-            width: '100%',
-            margin: '8px 0 6px 0',
-            padding: '10px 14px',
-            background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
-            color: '#ffffff',
-            border: '1px solid rgba(147, 197, 253, 0.4)',
-            borderRadius: '10px',
-            fontSize: '0.78rem',
-            fontWeight: 800,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)',
-            transition: 'all 0.2s ease'
-          }}
-          title="Open Crime Data Analytics (55%/45% Split View)"
-          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(37, 99, 235, 0.6)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(37, 99, 235, 0.4)'; }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <BarChart2 size={16} style={{ color: '#93c5fd' }} />
-            <span>📊 Crime Data Analytics</span>
-          </div>
-          <span style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.2)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
-            {isDatasetLoaded ? 'SPLIT CANVAS ➔' : 'UPLOAD DATA ➔'}
-          </span>
-        </button>
-
-        {/* STANDALONE SECONDARY WORKSPACE BUTTONS */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+        {/* PROMINENT DEDICATED ANALYTICS WORKSPACE LAUNCHERS */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '8px 0 14px 0' }}>
+          {/* 1. CRIME DATA ANALYTICS */}
           <button
-            onClick={() => { if (onNavigateToAnalytics) onNavigateToAnalytics(); }}
+            onClick={() => {
+              if (isDatasetLoaded && onNavigateToAnalytics) {
+                onNavigateToAnalytics();
+              } else {
+                handleTouchCrimeAnalyticsHub();
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
+              color: '#ffffff',
+              border: '1px solid rgba(147, 197, 253, 0.4)',
+              borderRadius: '10px',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)',
+              transition: 'all 0.2s ease'
+            }}
+            title="Open Crime Data Analytics & Executive BI Dashboard"
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(37, 99, 235, 0.6)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(37, 99, 235, 0.4)'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BarChart2 size={16} style={{ color: '#93c5fd' }} />
+              <span>📊 Crime Data Analytics</span>
+            </div>
+            <span style={{ fontSize: '0.62rem', background: 'rgba(255, 255, 255, 0.2)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
+              {isDatasetLoaded ? 'DASHBOARD ➔' : 'UPLOAD ➔'}
+            </span>
+          </button>
+
+          {/* 2. NETWORK & LINK INTELLIGENCE (WHERE GREEN LINE LIES) */}
+          <button
+            onClick={() => { if (onNavigateToNetwork) onNavigateToNetwork(); }}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.3) 0%, rgba(14, 165, 233, 0.2) 100%)',
+              color: '#38bdf8',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
+              borderRadius: '10px',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              boxShadow: '0 2px 10px rgba(56, 189, 248, 0.2)',
+              transition: 'all 0.2s ease'
+            }}
+            title="Open Network Link Intelligence & Graph Topology Mapping"
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(56, 189, 248, 0.4)'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(2, 132, 199, 0.5) 0%, rgba(14, 165, 233, 0.35) 100%)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(56, 189, 248, 0.2)'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(2, 132, 199, 0.3) 0%, rgba(14, 165, 233, 0.2) 100%)'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Network size={16} style={{ color: '#38bdf8' }} />
+              <span>🕸️ Network Link Intelligence</span>
+            </div>
+            <span style={{ fontSize: '0.62rem', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
+              GRAPH MAP ➔
+            </span>
+          </button>
+
+          {/* 3. GEOSPATIAL HOTSPOT RADAR */}
+          <button
+            onClick={() => { if (onNavigateToMaps) onNavigateToMaps(); }}
             style={{
               width: '100%',
               padding: '8px 12px',
@@ -1384,6 +1526,7 @@ function Chatbot({ onAddDocument, divisionName = "Bengaluru Division", onNavigat
             <span style={{ fontSize: '0.6rem', color: '#64748b' }}>MAP View ➔</span>
           </button>
 
+          {/* 4. DATA MART & FORENSIC VAULT */}
           <button
             onClick={() => { if (onNavigateToVault) onNavigateToVault(); }}
             style={{

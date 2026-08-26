@@ -5,17 +5,19 @@ import DatasetUploadGuard from './components/DatasetUploadGuard';
 import OverviewDashboard from './modules/OverviewDashboard';
 import HotmapView from './modules/HotmapView';
 import ForensicVaultView from './modules/ForensicVaultView';
+import NetworkGraphView from './modules/NetworkGraphView';
 import { initialDatasetState, parseCSV } from './services/datasetStore';
 
 export default function AnalyticsDashboard({
   divisionName = "Bengaluru Division",
   onBackToChat,
   datasetState = initialDatasetState,
+  initialTab = 'dashboard',
   onDatasetLoaded,
   onUpdateFilters,
   onResetFilters
 }) {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const handleUploadReplacement = (file) => {
     const reader = new FileReader();
@@ -45,7 +47,7 @@ export default function AnalyticsDashboard({
       fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
       color: '#0f172a'
     }}>
-      {/* LEFT NAVIGATION RAIL (3 STREAMLINED WORKSPACES) */}
+      {/* LEFT NAVIGATION RAIL (4 STREAMLINED WORKSPACES) */}
       <PortalSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -64,10 +66,16 @@ export default function AnalyticsDashboard({
         />
 
         {/* SCROLLABLE MODULE BODY */}
-        <main style={{ flex: 1, overflowY: 'auto', backgroundColor: '#f8fafc' }}>
+        <main style={{ flex: 1, overflowY: 'auto', backgroundColor: '#0a0f1d' }}>
           
-          {/* EMPTY-STATE GUARD (IF NO DATASET LOADED YET) */}
-          {!datasetState.isLoaded ? (
+          {/* WORKSPACE: NETWORK & LINK INTELLIGENCE (ALWAYS ACCESSIBLE WITH DEDICATED INGESTION) */}
+          {activeTab === 'network_graph' ? (
+            <NetworkGraphView
+              datasetState={datasetState}
+              onBackToChat={onBackToChat}
+            />
+          ) : !datasetState.isLoaded ? (
+            /* EMPTY-STATE GUARD (IF NO DATASET LOADED YET FOR TABULAR/SPATIAL VIEWS) */
             <DatasetUploadGuard onDatasetLoaded={onDatasetLoaded} />
           ) : (
             <>

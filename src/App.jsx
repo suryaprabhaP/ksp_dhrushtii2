@@ -3,6 +3,7 @@ import Chatbot from './components/Chatbot';
 import AnalyticsDashboard from './analytics/AnalyticsDashboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import { initialDatasetState } from './analytics/services/datasetStore';
+import { globalNetworkStore } from './analytics/services/networkAnalyticsService';
 import { Shield, MapPin, Radio, BarChart2 } from 'lucide-react';
 
 /**
@@ -13,6 +14,7 @@ import { Shield, MapPin, Radio, BarChart2 } from 'lucide-react';
 function App() {
   const [selectedDivision, setSelectedDivision] = useState('Bengaluru Division');
   const [activeView, setActiveView] = useState('chat'); // 'chat' | 'analytics'
+  const [analyticsInitialTab, setAnalyticsInitialTab] = useState('dashboard');
   const [datasetState, setDatasetState] = useState(initialDatasetState);
   
   // MOCK LOGIN STATE
@@ -44,6 +46,9 @@ function App() {
 
   // Ingestion callback
   const handleDatasetLoaded = ({ filename, fileSizeBytes, sha256, headers, records }) => {
+    // Synchronize both Tabular Store and Network Topology Graph Store
+    globalNetworkStore.loadDataset(records, headers, filename);
+
     setDatasetState(prev => ({
       ...prev,
       isLoaded: true,
@@ -58,21 +63,49 @@ function App() {
 
   // Filter slicer callbacks
   const handleUpdateFilters = (key, value) => {
-    setDatasetState(prev => ({
-      ...prev,
-      filters: {
-        ...prev.filters,
-        [key]: value
+    setDatasetState(prev => {
+      const newFilters = { ...prev.filters, [key]: value };
+      let filtered = [...prev.rawRecords];
+
+      if (newFilters.division && newFilters.division !== 'All') {
+        filtered = filtered.filter(r => (r.Division || r.division) === newFilters.division);
       }
-    }));
+      if (newFilters.district && newFilters.district !== 'All') {
+        filtered = filtered.filter(r => (r.District || r.district) === newFilters.district);
+      }
+      if (newFilters.policeStation && newFilters.policeStation !== 'All') {
+        filtered = filtered.filter(r => (r.Police_Station || r.police_station || r.Station) === newFilters.policeStation);
+      }
+      if (newFilters.crimeCategory && newFilters.crimeCategory !== 'All') {
+        filtered = filtered.filter(r => (r.Crime_Category || r.crime_category || r.Category) === newFilters.crimeCategory);
+      }
+      if (newFilters.status && newFilters.status !== 'All') {
+        filtered = filtered.filter(r => (r.Status || r.status) === newFilters.status);
+      }
+      if (newFilters.year && newFilters.year !== 'All') {
+        filtered = filtered.filter(r => String(r.Year || r.year || (r.Date ? r.Date.split('-')[0] : '')) === String(newFilters.year));
+      }
+      if (newFilters.searchKeyword && newFilters.searchKeyword.trim()) {
+        const kw = newFilters.searchKeyword.toLowerCase();
+        filtered = filtered.filter(r => Object.values(r).some(val => String(val).toLowerCase().includes(kw)));
+      }
+
+      return {
+        ...prev,
+        filters: newFilters,
+        filteredRecords: filtered
+      };
+    });
   };
 
   const handleResetFilters = () => {
     setDatasetState(prev => ({
       ...prev,
+      filteredRecords: prev.rawRecords,
       filters: {
         division: 'All',
         district: 'All',
+        policeStation: 'All',
         crimeCategory: 'All',
         status: 'All',
         year: 'All',
@@ -179,7 +212,7 @@ function App() {
 
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
-                  Mock Security Passcode
+                  Command Passcode
                 </label>
                 <input
                   type="password"
@@ -202,25 +235,26 @@ function App() {
               <button
                 type="submit"
                 style={{
-                  marginTop: '8px',
-                  width: '100%',
+                  marginTop: '10px',
                   padding: '12px',
                   background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '10px',
-                  fontSize: '0.85rem',
+                  fontSize: '0.88rem',
                   fontWeight: 800,
                   cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)'
+                  boxShadow: '0 4px 15px rgba(37, 99, 235, 0.4)'
                 }}
               >
-                🛡️ Sign In to Command Console
+                Sign In to Sentinel Console
               </button>
             </form>
 
-            <div style={{ margin: '16px 0', borderTop: '1px solid #1e293b', position: 'relative' }}>
-              <span style={{ position: 'absolute', top: '-9px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#0f172a', padding: '0 8px', fontSize: '0.65rem', color: '#64748b', fontWeight: 800 }}>OR</span>
+            <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '10px' }}>
+              <div style={{ flex: 1, height: '1px', backgroundColor: '#334155' }} />
+              <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>OR</span>
+              <div style={{ flex: 1, height: '1px', backgroundColor: '#334155' }} />
             </div>
 
             <button
@@ -252,6 +286,7 @@ function App() {
           divisionName={selectedDivision}
           onBackToChat={() => setActiveView('chat')}
           datasetState={datasetState}
+          initialTab={analyticsInitialTab}
           onDatasetLoaded={handleDatasetLoaded}
           onUpdateFilters={handleUpdateFilters}
           onResetFilters={handleResetFilters}
@@ -272,7 +307,7 @@ function App() {
         fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
         color: '#f8fafc'
       }}>
-        {/* STANDALONE CHATBOT UI TOP BAR */}
+        {/* STANDALONE CHATBOT UI TOP BAR (CLEAN & MINIMAL - NO ANALYTICS HUB BUTTON) */}
         <header style={{
           height: '52px',
           background: 'linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
@@ -317,30 +352,6 @@ function App() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* VIEW SWITCHER IN TOP BAR */}
-            <button
-              onClick={() => setActiveView('analytics')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
-                color: '#ffffff',
-                border: '1px solid rgba(147, 197, 253, 0.4)',
-                borderRadius: '8px',
-                padding: '5px 12px',
-                fontSize: '0.74rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(37, 99, 235, 0.35)',
-                transition: 'all 0.15s ease'
-              }}
-              title="Navigate to Advanced Crime Analytics Hub"
-            >
-              <BarChart2 size={13} />
-              <span>📊 Analytics Hub {datasetState.isLoaded && `(${datasetState.rawRecords.length})`}</span>
-            </button>
-
             {/* DIVISION SELECTOR */}
             <div style={{
               display: 'flex',
@@ -398,9 +409,13 @@ function App() {
         <main style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
           <Chatbot
             divisionName={selectedDivision}
-            onNavigateToAnalytics={() => setActiveView('analytics')}
+            onNavigateToAnalytics={() => { setAnalyticsInitialTab('dashboard'); setActiveView('analytics'); }}
+            onNavigateToNetwork={() => { setAnalyticsInitialTab('network_graph'); setActiveView('analytics'); }}
+            onNavigateToMaps={() => { setAnalyticsInitialTab('hotspot_maps'); setActiveView('analytics'); }}
+            onNavigateToVault={() => { setAnalyticsInitialTab('vault'); setActiveView('analytics'); }}
             onDatasetIngested={handleDatasetLoaded}
             isDatasetLoaded={datasetState.isLoaded}
+            datasetState={datasetState}
           />
         </main>
       </div>

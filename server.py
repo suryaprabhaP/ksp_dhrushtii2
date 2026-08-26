@@ -335,6 +335,11 @@ class SessionDataStore:
             summary.append(f"Table '{tbl}' ({meta['filename']}): {meta['row_count']} rows. Columns: {', '.join(meta['columns'][:20])}")
         return "\n".join(summary)
 
+    def get_dataset_meta(self, session_id: str) -> dict:
+        if not self.has_dataset(session_id):
+            return {}
+        return self.sessions[session_id]["tables"].get("crime_dataset", {})
+
     def execute_sql(self, session_id: str, sql: str):
         if not self.has_dataset(session_id):
             raise ValueError("No authorized dataset attached to this investigation session.")
@@ -1633,6 +1638,34 @@ def upload_dataset():
 @app.route("/api/sarvam_tts", methods=["POST"])
 def sarvam_tts():
     return jsonify({"success": False, "reason": "Standalone mode: browser TTS active"}), 200
+
+
+@app.route("/api/network_graph", methods=["GET", "POST"])
+def network_graph_api():
+    try:
+        req_json = request.get_json(silent=True) or {}
+        session_id = request.args.get("session_id") or req_json.get("session_id", "default_session")
+        query_type = req_json.get("query_type", "status")
+        
+        # Check if session has DuckDB dataset
+        if session_store.has_dataset(session_id):
+            meta = session_store.get_dataset_meta(session_id)
+            return jsonify({
+                "success": True,
+                "is_locked": True,
+                "dataset_name": meta.get("filename", "Active Dataset"),
+                "total_records": meta.get("row_count", 0),
+                "columns": meta.get("columns", [])
+            }), 200
+        else:
+            return jsonify({
+                "success": True,
+                "is_locked": False,
+                "message": "No active dataset locked in server session."
+            }), 200
+    except Exception as e:
+        log.error(f"Network graph API error: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/api/health", methods=["GET"])

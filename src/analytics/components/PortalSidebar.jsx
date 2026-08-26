@@ -1,8 +1,6 @@
 import React from 'react';
 import {
-  LayoutDashboard,
-  MapPin,
-  Database,
+  Network,
   ArrowLeft,
   Settings,
   HardDrive,
@@ -11,9 +9,7 @@ import {
 } from 'lucide-react';
 
 export const FOCUSED_WORKSPACES = [
-  { id: 'dashboard', label: 'Dashboard & Visual Analytics', icon: LayoutDashboard, badge: 'Power BI' },
-  { id: 'hotspot_maps', label: 'Geospatial Hotspot Radar', icon: MapPin, badge: 'Radar' },
-  { id: 'vault', label: 'Data Mart & Forensic Vault', icon: Database, badge: 'Sec 65B' }
+  { id: 'network_graph', label: 'Network & Link Intelligence', icon: Network, badge: 'Graph Topology' }
 ];
 
 export default function PortalSidebar({ activeTab, setActiveTab, onBackToChat, isDatasetLoaded = false, recordCount = 0 }) {
