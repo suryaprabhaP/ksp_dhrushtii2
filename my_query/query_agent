@@ -1,0 +1,45 @@
+5. The most important component: Query Agent
+
+Officer:
+"Find all robbery cases involving a black SUV in Bengaluru during 2025."
+
+The agent shouldn't simply hallucinate SQL.
+
+Natural language
+      ↓
+Intent extraction
+      ↓
+Entity extraction
+      ↓
+Query plan
+      ↓
+Schema validation
+      ↓
+SQL generation
+      ↓
+SQL security validation
+      ↓
+Database
+      ↓
+Results
+
+Intent:
+    crime_search
+
+Crime:
+    robbery
+
+Vehicle:
+    SUV
+
+Color:
+    black
+
+Location:
+    Bengaluru
+
+Time:
+    2025-01-01 → 2025-12-31
+
+Then generate SQL/API.
+

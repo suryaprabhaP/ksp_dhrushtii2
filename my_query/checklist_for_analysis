@@ -1,0 +1,20 @@
+| Capability                         | What the analyst agent should do                                                                                                           |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Natural-language investigation** | Officer asks: “Show robberies near Mysuru involving the same vehicle in the last 6 months.”                                                |
+| **Database investigation**         | Convert the question into safe SQL/API queries and retrieve relevant records.                                                              |
+| **Cross-case correlation**         | Connect people, vehicles, phone numbers, locations, weapons, FIRs, cases, organizations, etc.                                              |
+| **Entity resolution**              | Detect that `Ravi Kumar`, `R. Kumar`, and another record may refer to the same person—but flag uncertainty rather than blindly merge them. |
+| **Timeline reconstruction**        | Build chronological events across multiple cases.                                                                                          |
+| **Crime pattern detection**        | Detect recurring locations, times, methods, victims, vehicles, etc.                                                                        |
+| **Hotspot analysis**               | Identify geographic concentrations of crime.                                                                                               |
+| **Trend analysis**                 | “Is chain-snatching increasing in this area?”                                                                                              |
+| **Network analysis**               | Generate relationship graphs between suspects, cases, vehicles, locations and other entities.                                              |
+| **Case similarity**                | Find previous cases that resemble the current investigation.                                                                               |
+| **Predictive analysis**            | Estimate risk/patterns where appropriate, with explicit uncertainty and human review.                                                      |
+| **Explainability**                 | Every important conclusion should answer: **Why did you say this? Which records support it?**                                              |
+| **Evidence tracing**               | Every generated claim should point back to source records.                                                                                 |
+| **Multilingual interaction**       | English + Kannada initially; potentially voice later.                                                                                      |
+| **Context memory**                 | Understand follow-ups: “What about the previous suspect?”                                                                                  |
+| **Report generation**              | Produce structured investigation summaries/PDFs from verified data.                                                                        |
+| **Role-based access**              | Different officers see different data/actions.                                                                                             |
+| **Audit trail**                    | Log who searched what, when, what data was accessed, and what the system generated.                                                        |

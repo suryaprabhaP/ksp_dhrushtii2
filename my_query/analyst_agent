@@ -1,0 +1,101 @@
+2. The agent should NOT be one giant agent
+
+[Certain] I would use a multi-component analytical architecture, but not an unnecessarily complicated swarm of autonomous agents.
+
+                    POLICE OFFICER
+                          │
+                          ▼
+                ┌───────────────────┐
+                │  Analyst Interface │
+                │ Text / Voice       │
+                └─────────┬─────────┘
+                          │
+                          ▼
+                ┌───────────────────┐
+                │ Investigation      │
+                │ Orchestrator       │
+                └─────────┬─────────┘
+                          │
+          ┌───────────────┼────────────────┐
+          ▼               ▼                ▼
+    Query Agent     Analytics Agent   Investigation Agent
+          │               │                │
+          ▼               ▼                ▼
+      SQL/API        ML/Statistics     Graph Engine
+          │               │                │
+          └───────────────┼────────────────┘
+                          ▼
+                 ┌──────────────────┐
+                 │ Evidence Layer   │
+                 │ + Provenance     │
+                 └────────┬─────────┘
+                          ▼
+                 ┌──────────────────┐
+                 │ Verified Answer  │
+                 └──────────────────┘
+
+Core system architecture I would choose
+Layer 1 — Officer Interface
+
+Web application initially.
+
+React / Next.js
+        │
+        ├── Chat
+        ├── Case dashboard
+        ├── Crime map
+        ├── Relationship graph
+        ├── Timeline
+        └── Reports
+later: 
+Voice
+ ↓
+Speech-to-Text
+ ↓
+Analyst Agent
+ ↓
+Text / Voice response
+
+Layer 2 — Agent Orchestrator
+
+This is the brain coordinating the system.
+
+I would use:
+
+Python + FastAPI + LangGraph
+
+Why LangGraph?
+
+Because investigation isn't simply:
+question → LLM → answer'
+
+its more like 
+
+Question
+   ↓
+Understand intent
+   ↓
+Identify entities
+   ↓
+Determine required datasets
+   ↓
+Generate query
+   ↓
+Validate query
+   ↓
+Execute
+   ↓
+Analyze
+   ↓
+Cross-check
+   ↓
+Collect evidence
+   ↓
+Generate explanation
+   ↓
+Return answer
+
+That is a stateful workflow, which is where graph-based agent orchestration becomes useful.
+
+
+

@@ -1,0 +1,79 @@
+Database architecture
+
+This is where I would not compromise.
+
+Use:
+
+PostgreSQL
+
+for structured police records.
+
+cases
+persons
+victims
+suspects
+officers
+vehicles
+locations
+fir
+evidence
+phone_records
+case_person_relationships
+case_vehicle_relationships
+
+But PostgreSQL alone isn't ideal for relationship investigation.
+
+So add:
+Neo4j
+
+for graph relationships.
+
+Example:
+Person
+   ↓
+owns
+   ↓
+Vehicle
+   ↓
+seen_at
+   ↓
+Crime Scene
+   ↓
+associated_with
+   ↓
+Case
+
+Then an officer can ask:
+
+"Show connections between these three suspects and previous robbery cases."
+
+Graph traversal becomes dramatically easier.
+
+7. Vector database
+
+I would add a vector store, but not use it as the primary crime database.
+
+Use it for unstructured information:
+
+FIR documents
+Investigation reports
+Statements
+Case notes
+PDFs
+Orders
+Evidence descriptions
+
+Possible choice:
+
+pgvector inside PostgreSQL
+
+rather than immediately introducing another database.
+
+That gives:
+PostgreSQL
+├── Structured records
+└── pgvector
+      └── semantic search
+
+This reduces infrastructure complexity.
+

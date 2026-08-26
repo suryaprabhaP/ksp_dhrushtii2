@@ -1,0 +1,36 @@
+Crime analytics engine
+
+Don't ask the LLM to perform statistical analysis.
+
+Use Python.
+Python
+Pandas
+NumPy
+SciPy
+Scikit-learn
+GeoPandas
+
+Potential analyses:
+
+TEMPORAL:
+crime frequency
+seasonality
+day-of-week patterns
+hourly patterns
+trend detection
+
+
+GEOGRAPHIC:
+hotspot detection
+spatial clustering
+distance analysis
+crime density
+
+STATISTICS:
+correlation
+clustering
+anomaly detection
+similarity
+time-series analysis
+
+The LLM interprets the output.

@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Datasets (Excluded as requested)
+public/sample_datasets/
+**/sample_datasets/**
+*.csv
+*.xlsx
+
+# Environment & Cache
+.env
+.env.local
+.env.standalone
+__pycache__/
+*.pyc
+*.pyo
+*.log
+.DS_Store
+Thumbs.db
