@@ -16,10 +16,12 @@ public/sample_datasets/
 __pycache__/
 *.pyc
 *.pyo
-# Graphify & Vault Artifacts
+*.log
+.DS_Store
+Thumbs.db
+
+# Graphify Knowledge Graph & Vault (Local Only)
 graphify-out/
 analysis_vault/
-obsidian_vault/
-.graphify*
-*.graphify*
-my_query/
+.graphify/
+.graphifyignore

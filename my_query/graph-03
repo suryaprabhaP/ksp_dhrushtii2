@@ -1,0 +1,156 @@
+# 🕸️ KSP Sentinel AI — Phase 2: Graphify-Referenced Network Intelligence & Agentic Tool Suite
+
+## 1. Architectural Vision & Paradigm Shift
+
+This architecture combines two specialized autonomous agents:
+1. **`NetworkIngestionAgent`**: Automatically evaluates any uploaded stream (CSV, Excel `.xlsx`, SQL, NoSQL), calculates the Graph Feasibility Score ($0-100\%$), extracts multi-relational primitives, and constructs the deterministic graph topology.
+2. **`GraphQueryToolAgent`**: A dedicated tool-calling specialist in the Chatbot that answers relational inquiries (*"How is Person A connected to Crime Person B?"*) using deterministic BFS/Dijkstra graph traversal without hallucinations.
+3. **Graphify-Inspired Interactive Portal Window**: A full-screen dark-theme Force-Directed Canvas modeled directly on **Graphify's HTML visualizer** (community clusters, God node prominence, 1-hop/2-hop neighborhood isolation, interactive path tracing, and forensic inspector drawer).
+
+---
+
+## 2. End-to-End System Architecture
+
+```
+  ┌─────────────────────────────────────────────────────────────────────────────────────────┐
+  │                            UNIVERSAL INGESTION DATA MART                                │
+  │   [CSV Files]        [Excel .xlsx Workbooks]      [SQL Relational DB]   [NoSQL JSON DB] │
+  └────────────────────────────────────────────┬────────────────────────────────────────────┘
+                                               │
+                                               ▼
+  ┌─────────────────────────────────────────────────────────────────────────────────────────┐
+  │                    AGENT 1: NetworkIngestionAgent (Auto-Suitability)                    │
+  │  - Semantic Entity Profiler (Suspects, Vehicles, Phones, Cases, Accounts, Locations)   │
+  │  - Co-occurrence & Linkage Ratio Analyzer                                               │
+  │  - Computes Graph Feasibility Score ($0-100\%$) & Locks Graph Topology                  │
+  └────────────────────────────────────────────┬────────────────────────────────────────────┘
+                                               │
+                                               ▼
+  ┌─────────────────────────────────────────────────────────────────────────────────────────┐
+  │                           LOCKED CRIME GRAPH TOPOLOGY STORE                             │
+  │   Adjacency Matrix • Degree/Betweenness Centrality • Louvain Communities • Sec 65B Hash │
+  └──────────────────────────┬───────────────────────────────────┬──────────────────────────┘
+                             │                                   │
+                             ▼                                   ▼
+┌───────────────────────────────────────────────┐   ┌───────────────────────────────────────────────┐
+│     FEATURE 1: CRIME ANALYTICS PORTAL         │   │         FEATURE 2: CHATBOT INTELLIGENCE       │
+│    (Graphify-Referenced Dedicated Window)     │   │         (Autonomous Tool-Calling Agent)       │
+│                                               │   │                                               │
+│ • Full-Screen Dark Force-Directed Canvas      │   │ • AGENT 2: GraphQueryToolAgent                │
+│ • Graphify-Style Community Cluster Coloring   │   │ • Tool Suite:                                 │
+│ • God Nodes Prominence (Centrality Sizing)    │   │   1. `get_graph_status()`                     │
+│ • Interactive Search & Autocomplete Fly-To    │   │   2. `trace_shortest_path(EntityA, EntityB)`   │
+│ • 1-Hop / 2-Hop Neighborhood Focus & Dimming  │   │   3. `get_entity_dossier(EntityID)`           │
+│ • Visual Shortest-Path Highlighting           │   │   4. `find_syndicate_hubs(TopK)`              │
+│ • Sec 65B Forensic Evidence Inspector Drawer  │   │ • Natural Language Causal Trail in Chat Feed  │
+│ • Controls: Physics, Zoom/Pan, Cluster Slicer │   │ • Zero Canvas Intrusion / Retains Clean UI    │
+└───────────────────────────────────────────────┘   └───────────────────────────────────────────────┘
+```
+
+---
+
+## 3. Agent 1: `NetworkIngestionAgent` (Dynamic Feasibility & Resolution)
+
+### ⚙️ Responsibilities:
+- **Heuristic Schema Inference**: Detects entity primitives across heterogeneous column schemas:
+  - Identity: `accused`, `suspect`, `victim`, `name`, `person_id`, `co_accused`
+  - Asset: `vehicle`, `reg_no`, `plate_no`, `imei`, `device_id`
+  - Telephony: `phone`, `mobile`, `caller`, `receiver`, `msisdn`
+  - Financial: `bank_account`, `upi_id`, `mule_account`, `transaction_id`
+  - Legal: `fir_number`, `case_id`, `crime_category`, `sub_motive`
+  - Spatial: `police_station`, `division`, `district`, `location`
+- **Feasibility Evaluation**:
+  $$\text{Feasibility Score} = \min\left(100, \; 30 \times N_{\text{relational\_cols}} + 40 \times \text{LinkageRatio}\right)$$
+  - $\ge 60\%$: Emits `GRAPH_FEASIBLE`, compiles node-link topology, enables Network workspace.
+  - $< 60\%$: Emits `FLAT_SUMMARY`, suggests standard statistical charts with guidance.
+
+---
+
+## 4. Feature 1: Graphify-Referenced Interactive Network Canvas
+
+**Target File**: `src/analytics/modules/NetworkGraphView.jsx` (Dedicated Crime Analytics Window)
+
+### 🎨 Graphify-Style Visualizer Design System:
+1. **Interactive Force Simulation**:
+   - D3 / 2D Canvas Euler physics with Coulomb repulsion, Hooke spring link tension, and center gravitation.
+   - Interactive node drag with velocity damping and pin-in-place toggle.
+2. **Community Clustering & God Nodes**:
+   - Nodes categorized into modular color palettes (`#38bdf8` Cyber, `#ef4444` Gangs, `#f59e0b` Narcotics, `#10b981` Financial).
+   - Node radius dynamically scaled by **Degree Centrality** (God nodes visually dominate as syndicate hubs).
+3. **Neighborhood Isolation & Dimming**:
+   - Clicking any node isolates its **1-hop and 2-hop connected graph**, smoothly dimming all unrelated background nodes to 15% opacity.
+4. **Node Inspector Drawer**:
+   - Sliding right drawer detailing the entity’s connected cases, vehicles, phone calls, betweenness score, and Sec 65B verification hash.
+5. **Interactive Path Highlighting**:
+   - Visual Path Tracer: Selecting two nodes highlights the exact multi-hop route in glowing neon cyan.
+6. **Command Toolbar**:
+   - Search & Fly-To autocomplete, Physics Pause/Play, Cluster Slicer, Zoom $\times 0.1 - \times 4$, Reset View, and SVG/PNG Export.
+
+---
+
+## 5. Agent 2: `GraphQueryToolAgent` in Chatbot (Scofield Tool Suite)
+
+**Target Files**: `src/components/Chatbot.jsx` & `src/analytics/services/networkAnalyticsService.js`
+
+### 🛠️ Deterministic Tool Suite:
+
+```javascript
+// 1. Check Graph Status
+get_graph_status() -> { is_locked: bool, dataset: string, nodes: number, edges: number, feasibility: number }
+
+// 2. Shortest Path Finder (BFS)
+trace_shortest_path(entity_a, entity_b) -> {
+  found: true,
+  hops: 3,
+  trail: [
+    { from: "Imran K", to: "KA-22-M-4412", relation: "OPERATED_VEHICLE" },
+    { from: "KA-22-M-4412", to: "Ramesh T", relation: "SHARED_WITH" },
+    { from: "Ramesh T", to: "FIR-724/2025", relation: "ACCUSED_IN" }
+  ],
+  sec65b_signature: "fbd6538801307814"
+}
+
+// 3. Entity Dossier
+get_entity_dossier(entity_id) -> { entity: string, type: string, associates: [], vehicles: [], firs: [] }
+
+// 4. Syndicate Hubs
+find_syndicate_hubs(top_k) -> { hubs: [{ name, type, degree_centrality, betweenness_centrality }] }
+```
+
+### 💬 Chatbot Conversational Protocol:
+- **Locked Dataset**: Chatbot invokes tools deterministically and explains the verified evidentiary trail in natural investigative Markdown with citation pills.
+- **Unlocked Dataset**: Refuses to hallucinate and guides the officer to upload/lock a dataset in Crime Analytics.
+- **Clean UI**: All tool executions happen in the background; the conversational feed remains uncluttered with zero canvas disruption.
+
+---
+
+## 6. Proposed Changes
+
+### Component 1: Graph Engine & Ingestion Agent
+#### [NEW] [networkAnalyticsService.js](file:///d:/new_datathon/chatbot-ui-standalone/src/analytics/services/networkAnalyticsService.js)
+- `NetworkIngestionAgent`: Autonomous graph suitability detection and multi-format schema extraction.
+- Deterministic graph data store, centrality metrics, BFS shortest path, and tool suite functions.
+
+### Component 2: Dedicated Graphify-Style Visualizer
+#### [NEW] [NetworkGraphView.jsx](file:///d:/new_datathon/chatbot-ui-standalone/src/analytics/modules/NetworkGraphView.jsx)
+- Full-screen force-directed visualizer with community colors, God nodes, 1-hop/2-hop neighborhood isolation, node inspector, and path tracer.
+#### [MODIFY] [PortalSidebar.jsx](file:///d:/new_datathon/chatbot-ui-standalone/src/analytics/components/PortalSidebar.jsx) & [AnalyticsDashboard.jsx](file:///d:/new_datathon/chatbot-ui-standalone/src/analytics/AnalyticsDashboard.jsx)
+- Register and mount the **"Network & Link Intelligence"** workspace tab.
+
+### Component 3: Chatbot Agent & Tool Execution
+#### [MODIFY] [Chatbot.jsx](file:///d:/new_datathon/chatbot-ui-standalone/src/components/Chatbot.jsx)
+- Wire `GraphQueryToolAgent` into the Chatbot message handler.
+- Format tool outputs into rich investigative Markdown with Sec 65B audit badges.
+
+---
+
+## 7. Verification Plan
+
+### Automated Verification
+1. Run `NetworkIngestionAgent` on `ksp_bengaluru_metro_special_ops_3500.csv` $\rightarrow$ Confirm feasibility score $\ge 90\%$, verify 200+ nodes and 300+ edges generated cleanly.
+2. Verify `trace_shortest_path` finds exact multi-hop paths between test entities in $< 5\text{ms}$.
+
+### Manual UI Verification
+1. Open **Crime Analytics Portal** $\rightarrow$ Navigate to **Network & Link Intelligence**.
+2. Test force physics, drag-pinning, God node prominence, neighborhood dimming, and search fly-to.
+3. Open **Chatbot** $\rightarrow$ Ask: *"How is Imran connected to Ramesh?"* $\rightarrow$ Confirm Chatbot uses `trace_shortest_path` tool and outputs the causal trail with zero canvas disruption.
