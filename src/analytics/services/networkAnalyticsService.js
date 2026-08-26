@@ -348,25 +348,44 @@ export class GraphTopologyBuilder {
       n.community = communityMap.get(groupKey);
     });
 
-    // Graphify Radial Concentric Orbit Layout (Wide Spacing centered at 0, 0)
-    const totalNodes = nodes.length || 1;
-    nodes.forEach((n, idx) => {
-      let baseRadius = 240;
-      if (n.type === 'SUSPECT') {
-        baseRadius = 180 + (idx % 6) * 35; // Core suspect inner orbit
-      } else if (n.type === 'OPERATION') {
-        baseRadius = 280 + (idx % 4) * 30; // Syndicate ring orbit
-      } else if (n.type === 'VEHICLE' || n.type === 'PHONE') {
-        baseRadius = 380 + (idx % 8) * 35; // Asset mid orbit
-      } else {
-        baseRadius = 490 + (idx % 10) * 40; // Stations & Mules outer orbit
-      }
+    // 4. Graphify 360° Balanced Radial Orbit Layout (Evenly distributed angular fan-out)
+    // Group nodes by type to give each entity type an exclusive 360° angular sector
+    const nodesByType = new Map();
+    nodes.forEach(n => {
+      if (!nodesByType.has(n.type)) nodesByType.set(n.type, []);
+      nodesByType.get(n.type).push(n);
+    });
 
-      const angle = (idx / totalNodes) * Math.PI * 2 + (n.community * 0.9);
-      n.x = baseRadius * Math.cos(angle);
-      n.y = baseRadius * Math.sin(angle);
-      n.vx = 0;
-      n.vy = 0;
+    const typeOrder = ['SUSPECT', 'OPERATION', 'POLICE_STATION', 'VEHICLE', 'PHONE', 'FINANCIAL'];
+    const totalTypes = typeOrder.filter(t => nodesByType.has(t)).length || 1;
+    let typeSectorIdx = 0;
+
+    typeOrder.forEach(typeKey => {
+      const typeNodes = nodesByType.get(typeKey);
+      if (!typeNodes || typeNodes.length === 0) return;
+
+      const sectorAngleStart = (typeSectorIdx / totalTypes) * Math.PI * 2;
+      const sectorSpan = (Math.PI * 2) / totalTypes;
+
+      let baseRadius = 260;
+      if (typeKey === 'SUSPECT') baseRadius = 180;
+      else if (typeKey === 'OPERATION') baseRadius = 280;
+      else if (typeKey === 'POLICE_STATION') baseRadius = 400;
+      else if (typeKey === 'VEHICLE') baseRadius = 380;
+      else if (typeKey === 'PHONE') baseRadius = 480;
+      else if (typeKey === 'FINANCIAL') baseRadius = 540;
+
+      typeNodes.forEach((n, idx) => {
+        // Distribute nodes evenly across the type's dedicated sector
+        const angle = sectorAngleStart + ((idx + 0.5) / typeNodes.length) * sectorSpan;
+        const radius = baseRadius + (idx % 3) * 35;
+        n.x = radius * Math.cos(angle);
+        n.y = radius * Math.sin(angle);
+        n.vx = 0;
+        n.vy = 0;
+      });
+
+      typeSectorIdx++;
     });
 
     // Dynamic Feature Types list

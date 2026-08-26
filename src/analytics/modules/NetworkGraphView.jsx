@@ -116,12 +116,12 @@ export default function NetworkGraphView({ datasetState, onBackToChat }) {
 
     const simulationStep = () => {
       if (isPhysicsRunning && nodes.length > 0) {
-        const k = 220; // Expanded Spring Rest Length
-        const maxRepulsiveDist = 550;
-        const damping = 0.82;
-        const centerGravity = 0.006;
+        const kBase = 240; // Base Spring Rest Length
+        const maxRepulsiveDist = 600;
+        const damping = 0.84;
+        const centerGravity = 0.005;
 
-        // 1. Repulsion & Collision Buffer between nodes
+        // 1. Repulsion & Dynamic Collision Relaxation between all node pairs
         for (let i = 0; i < nodes.length; i++) {
           const na = nodes[i];
           const ra = Math.max(10, Math.min(24, 9 + (na.degree || 1) * 1.5));
@@ -129,21 +129,23 @@ export default function NetworkGraphView({ datasetState, onBackToChat }) {
           for (let j = i + 1; j < nodes.length; j++) {
             const nb = nodes[j];
             const rb = Math.max(10, Math.min(24, 9 + (nb.degree || 1) * 1.5));
-            const minAllowedDist = ra + rb + 30; // Hard collision buffer
+            const minAllowedDist = ra + rb + 44; // Enhanced collision separation buffer
 
             const dx = nb.x - na.x;
             const dy = nb.y - na.y;
             const distSq = dx * dx + dy * dy || 1;
             const dist = Math.sqrt(distSq);
 
+            // Hard Non-Penetration Resolution (Instantly pushes overlapping circles & labels apart)
             if (dist < minAllowedDist) {
-              const overlap = (minAllowedDist - dist) * 0.5;
+              const overlap = (minAllowedDist - dist) * 0.6;
               const nx = (dx / dist) * overlap;
               const ny = (dy / dist) * overlap;
-              if (draggedNodeRef.current?.id !== na.id) { na.x -= nx; na.y -= ny; }
-              if (draggedNodeRef.current?.id !== nb.id) { nb.x += nx; nb.y += ny; }
+              if (draggedNodeRef.current?.id !== na.id) { na.x -= nx; na.y -= ny; na.vx -= nx * 0.4; na.vy -= ny * 0.4; }
+              if (draggedNodeRef.current?.id !== nb.id) { nb.x += nx; nb.y += ny; nb.vx += nx * 0.4; nb.vy += ny * 0.4; }
             } else if (dist < maxRepulsiveDist) {
-              const force = Math.min(22, 3600 / (distSq + 40));
+              // Smooth Coulomb Repulsion
+              const force = Math.min(26, 4600 / (distSq + 45));
               const fx = (dx / dist) * force;
               const fy = (dy / dist) * force;
 
@@ -159,17 +161,20 @@ export default function NetworkGraphView({ datasetState, onBackToChat }) {
           }
         }
 
-        // 2. Spring attraction along multi-hop edges
+        // 2. Adaptive Spring attraction along multi-hop edges
         edges.forEach(e => {
           const sourceNode = typeof e.source === 'object' ? e.source : nodes.find(n => n.id === e.source);
           const targetNode = typeof e.target === 'object' ? e.target : nodes.find(n => n.id === e.target);
           if (!sourceNode || !targetNode) return;
 
+          // Adaptive spring length based on node degrees
+          const k = kBase + Math.min(120, (sourceNode.degree + targetNode.degree) * 6);
+
           const dx = targetNode.x - sourceNode.x;
           const dy = targetNode.y - sourceNode.y;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
           const displacement = dist - k;
-          const force = Math.min(14, Math.max(-14, displacement * 0.028));
+          const force = Math.min(14, Math.max(-14, displacement * 0.024));
 
           const fx = (dx / dist) * force;
           const fy = (dy / dist) * force;
