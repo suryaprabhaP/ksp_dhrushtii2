@@ -73,6 +73,7 @@ export default function AnalyticsDashboard({
             <NetworkGraphView
               datasetState={datasetState}
               onBackToChat={onBackToChat}
+              onDatasetLoaded={onDatasetLoaded}
             />
           ) : !datasetState.isLoaded ? (
             /* EMPTY-STATE GUARD (IF NO DATASET LOADED YET FOR TABULAR/SPATIAL VIEWS) */

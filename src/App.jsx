@@ -307,7 +307,7 @@ function App() {
         fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
         color: '#f8fafc'
       }}>
-        {/* STANDALONE CHATBOT UI TOP BAR (CLEAN & MINIMAL - NO ANALYTICS HUB BUTTON) */}
+        {/* STANDALONE CHATBOT UI TOP BAR (WITH ANALYTICS HUB BUTTON) */}
         <header style={{
           height: '52px',
           background: 'linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
@@ -336,7 +336,7 @@ function App() {
             <div>
               <h1 style={{
                 margin: 0,
-                fontSize: '1.05rem',
+                fontSize: '1.02rem',
                 fontWeight: 800,
                 letterSpacing: '0.04em',
                 background: 'linear-gradient(90deg, #ffffff 0%, #93c5fd 100%)',
@@ -387,6 +387,7 @@ function App() {
               </select>
             </div>
 
+            {/* STATUS BADGE */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -394,7 +395,7 @@ function App() {
               background: 'rgba(16, 185, 129, 0.15)',
               border: '1px solid rgba(16, 185, 129, 0.4)',
               borderRadius: '20px',
-              padding: '3px 10px',
+              padding: '4px 10px',
               fontSize: '0.7rem',
               color: '#34d399',
               fontWeight: 700
@@ -406,7 +407,7 @@ function App() {
         </header>
 
         {/* CHATBOT UI COMPONENT CONTAINER */}
-        <main style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <main style={{ flex: 1, position: 'relative', overflow: 'hidden', height: 'calc(100vh - 52px)' }}>
           <Chatbot
             divisionName={selectedDivision}
             onNavigateToAnalytics={() => { setAnalyticsInitialTab('dashboard'); setActiveView('analytics'); }}

@@ -36,7 +36,7 @@ import {
 } from '../services/networkAnalyticsService';
 import { parseCSV } from '../services/datasetStore';
 
-export default function NetworkGraphView({ datasetState, onBackToChat }) {
+export default function NetworkGraphView({ datasetState, onBackToChat, onDatasetLoaded }) {
   const canvasRef = useRef(null);
 
   // Store state
@@ -470,7 +470,43 @@ export default function NetworkGraphView({ datasetState, onBackToChat }) {
           setUploadError('Uploaded file contains no records.');
           return;
         }
+
+        // 1. Ingest into Network Topology Graph Store
         globalNetworkStore.loadDedicatedNetworkData(records, headers, file.name);
+
+        // 2. Synchronize to Backend DuckDB Session Store
+        try {
+          const activeSessionId = localStorage.getItem('ksp_sentinel_active_session_id_Bengaluru Division') ||
+            localStorage.getItem('ksp_sentinel_active_session_id_State HQ Command') ||
+            'session_active';
+          
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('session_id', activeSessionId);
+
+          fetch('http://127.0.0.1:5000/api/upload_dataset', {
+            method: 'POST',
+            body: formData
+          }).then(res => res.json()).then(data => {
+            console.log("[NetworkGraphView] Synchronized dataset to backend DuckDB:", data);
+          }).catch(err => {
+            console.warn("[NetworkGraphView] Backend sync notice:", err);
+          });
+        } catch (syncErr) {
+          console.warn("[NetworkGraphView] Sync error:", syncErr);
+        }
+
+        // 3. Notify parent app if callback available
+        if (typeof onDatasetLoaded === 'function') {
+          onDatasetLoaded({
+            filename: file.name,
+            fileSizeBytes: file.size,
+            sha256: 'sha256_' + Date.now(),
+            headers,
+            records
+          });
+        }
+
         setIsUploadModalOpen(false);
       } catch (err) {
         setUploadError(`Failed to parse file: ${err.message}`);

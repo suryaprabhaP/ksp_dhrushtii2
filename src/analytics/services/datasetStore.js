@@ -94,14 +94,33 @@ export function computeMetrics(records) {
   const total = records.length;
   let totalLoss = 0;
   let totalResolution = 0;
+  let resCount = 0;
   let totalRecovery = 0;
+  let recCount = 0;
   let highRisk = 0;
 
+  // Dynamically identify field names
+  const sample = records[0] || {};
+  const lossKey = Object.keys(sample).find(k => /loss|amount|value|stolen/i.test(k));
+  const resKey = Object.keys(sample).find(k => /resolution|duration|days|tat|delay/i.test(k));
+  const recKey = Object.keys(sample).find(k => /recovery/i.test(k));
+  const statusKey = Object.keys(sample).find(k => /status|priority|risk|severity/i.test(k));
+
   records.forEach(r => {
-    totalLoss += (r.Loss_Amount_INR || 0);
-    totalResolution += (r.Resolution_Days || 14);
-    totalRecovery += (r.Recovery_Percentage || 50);
-    if ((r.Crime_Category || '').includes('Heinous') || (r.Loss_Amount_INR || 0) > 1000000) {
+    if (lossKey && !isNaN(Number(r[lossKey]))) {
+      totalLoss += Number(r[lossKey]);
+    }
+    if (resKey && !isNaN(Number(r[resKey])) && Number(r[resKey]) > 0) {
+      totalResolution += Number(r[resKey]);
+      resCount++;
+    }
+    if (recKey && !isNaN(Number(r[recKey]))) {
+      totalRecovery += Number(r[recKey]);
+      recCount++;
+    }
+    if (statusKey && /critical|high|pending|investigation|urgent/i.test(String(r[statusKey]))) {
+      highRisk++;
+    } else if (lossKey && Number(r[lossKey]) > 1000000) {
       highRisk++;
     }
   });
@@ -115,8 +134,8 @@ export function computeMetrics(records) {
   return {
     totalIncidents: total.toLocaleString(),
     totalLossINR: formatINR(totalLoss),
-    avgResolutionDays: `${Math.round(totalResolution / total)} Days`,
-    recoveryRatePercent: `${Math.round(totalRecovery / total)}%`,
+    avgResolutionDays: resCount > 0 ? `${Math.round(totalResolution / resCount)} Days` : (recCount > 0 ? `${Math.round(totalRecovery / recCount)}% Rec` : 'N/A'),
+    recoveryRatePercent: recCount > 0 ? `${Math.round(totalRecovery / recCount)}%` : 'N/A',
     highRiskAlerts: highRisk
   };
 }

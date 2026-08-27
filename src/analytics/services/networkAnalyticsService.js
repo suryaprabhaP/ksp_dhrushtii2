@@ -240,99 +240,69 @@ export class GraphTopologyBuilder {
       if (tNode) tNode.degree = (tNode.degree || 0) + 1;
     };
 
-    // Parse each record into meaningful criminal entity relationships
-    records.forEach((row, rowIdx) => {
-      const caseId = transactionKey && row[transactionKey] ? String(row[transactionKey]) : `FIR-${rowIdx + 1}`;
-      const lossINR = row.Loss_Amount_INR || row.loss || row.amount || 0;
-      const gender = row.Accused_Gender || row.gender || 'Unknown';
-      const age = row.Accused_Age || row.age || 35;
-      const station = row.Police_Station || row.station || '';
+    // Check for Direct Edge-List Columns
+    const hLower = headers.map(h => h.toLowerCase());
+    const srcCol = headers.find((h, i) => ['source', 'from', 'sender', 'origin', 'caller', 'node_a', 'account_a'].includes(hLower[i]));
+    const tgtCol = headers.find((h, i) => ['target', 'to', 'receiver', 'destination', 'callee', 'node_b', 'account_b'].includes(hLower[i]));
+    const relCol = headers.find((h, i) => ['relation', 'relationship', 'edge_type', 'action', 'type', 'call_type'].includes(hLower[i]));
+    const wtCol = headers.find((h, i) => ['weight', 'amount', 'duration', 'frequency', 'count', 'value'].includes(hLower[i]));
 
-      const baseMeta = { caseId, lossINR, gender, age, policeStation: station };
+    if (srcCol && tgtCol) {
+      // ── MODE 1: DIRECT EDGE-LIST INGESTION ────────────────────────────────
+      records.forEach((row, idx) => {
+        const sVal = row[srcCol];
+        const tVal = row[tgtCol];
+        if (!sVal || !tVal || String(sVal).trim() === '' || String(tVal).trim() === '' || String(sVal).trim() === 'None' || String(tVal).trim() === 'None') return;
 
-      // 1. Primary Suspect
-      const suspectCol = entityConfigs.find(ec => ec.type === 'SUSPECT' && !/co_accused/i.test(ec.header));
-      let primarySuspectNode = null;
+        const sType = /phone|caller|callee/i.test(srcCol) ? 'PHONE' : (/bank|account|upi|mule/i.test(srcCol) ? 'FINANCIAL' : (/vehicle|car/i.test(srcCol) ? 'VEHICLE' : 'SUSPECT'));
+        const tType = /phone|caller|callee/i.test(tgtCol) ? 'PHONE' : (/bank|account|upi|mule/i.test(tgtCol) ? 'FINANCIAL' : (/vehicle|car/i.test(tgtCol) ? 'VEHICLE' : 'SUSPECT'));
 
-      if (suspectCol && row[suspectCol.header]) {
-        const val = String(row[suspectCol.header]).trim();
-        if (val && val !== 'None') {
-          primarySuspectNode = addNode(val, val, 'SUSPECT', 'Suspect / Accused', suspectCol.color, baseMeta);
+        const sNode = addNode(sVal, sVal, sType, srcCol.replace(/_/g, ' '), GRAPHIFY_COLOR_PALETTE[sType] || '#38bdf8', { caseId: `EDGE-${idx + 1}` });
+        const tNode = addNode(tVal, tVal, tType, tgtCol.replace(/_/g, ' '), GRAPHIFY_COLOR_PALETTE[tType] || '#a855f7', { caseId: `EDGE-${idx + 1}` });
+
+        const relation = relCol && row[relCol] ? String(row[relCol]).toUpperCase() : 'CONNECTED_TO';
+        const weight = wtCol && Number(row[wtCol]) ? Number(row[wtCol]) : 1.0;
+
+        if (sNode && tNode) {
+          addEdge(sNode.id, tNode.id, relation, weight, `EDGE-${idx + 1}`);
         }
-      }
+      });
+    } else {
+      // ── MODE 2: ENTITY-CENTRIC BIPARTITE PROJECTION (CO-OCCURRENCE NETWORK) ─
+      records.forEach((row, rowIdx) => {
+        const caseId = transactionKey && row[transactionKey] ? String(row[transactionKey]) : `FIR-${rowIdx + 1}`;
+        const lossINR = row.Loss_Amount_INR || row.loss || row.amount || 0;
+        const gender = row.Accused_Gender || row.gender || 'Unknown';
+        const age = row.Accused_Age || row.age || 35;
+        const station = row.Police_Station || row.station || '';
 
-      // 2. Co-Accused Suspect
-      const coCol = entityConfigs.find(ec => /co_accused|associate/i.test(ec.header));
-      if (coCol && row[coCol.header]) {
-        const coVal = String(row[coCol.header]).trim();
-        if (coVal && coVal !== 'None') {
-          const coNode = addNode(coVal, coVal, 'SUSPECT', 'Co-Accused', coCol.color, baseMeta);
-          if (coNode && primarySuspectNode) {
-            addEdge(primarySuspectNode.id, coNode.id, 'CO_ACCUSED', 2.0, caseId);
+        const baseMeta = { caseId, lossINR, gender, age, policeStation: station };
+        const extractedNodes = [];
+
+        entityConfigs.forEach(ec => {
+          const rawVal = row[ec.header];
+          if (rawVal !== undefined && rawVal !== null && String(rawVal).trim() !== '' && String(rawVal).trim() !== 'None' && String(rawVal).trim() !== 'null' && String(rawVal).trim() !== 'unassigned' && String(rawVal).trim() !== '+91-99000-00000') {
+            const cleanVal = String(rawVal).trim();
+            const node = addNode(cleanVal, cleanVal, ec.type, ec.typeLabel, ec.color, baseMeta);
+            if (node && !extractedNodes.some(en => en.id === node.id)) {
+              extractedNodes.push(node);
+            }
+          }
+        });
+
+        // Form co-occurrence links across the extracted entities in this case
+        for (let i = 0; i < extractedNodes.length; i++) {
+          for (let j = i + 1; j < extractedNodes.length; j++) {
+            const nA = extractedNodes[i];
+            const nB = extractedNodes[j];
+            if (nA.id !== nB.id) {
+              const rel = `${nA.type}_TO_${nB.type}`;
+              addEdge(nA.id, nB.id, rel, 1.0, caseId);
+            }
           }
         }
-      }
-
-      // 3. Vehicles
-      const vehCol = entityConfigs.find(ec => ec.type === 'VEHICLE');
-      if (vehCol && row[vehCol.header]) {
-        const val = String(row[vehCol.header]).trim();
-        if (val && val !== 'None') {
-          const vNode = addNode(val, val, 'VEHICLE', 'Getaway Vehicle', vehCol.color, baseMeta);
-          if (vNode && primarySuspectNode) {
-            addEdge(primarySuspectNode.id, vNode.id, 'OPERATES_VEHICLE', 1.5, caseId);
-          }
-        }
-      }
-
-      // 4. Burner Phones
-      const phoneCol = entityConfigs.find(ec => ec.type === 'PHONE');
-      if (phoneCol && row[phoneCol.header]) {
-        const val = String(row[phoneCol.header]).trim();
-        if (val && val !== 'None' && val !== '+91-99000-00000') {
-          const phNode = addNode(val, val, 'PHONE', 'Burner Device', phoneCol.color, baseMeta);
-          if (phNode && primarySuspectNode) {
-            addEdge(primarySuspectNode.id, phNode.id, 'CALLER_DEVICE', 1.3, caseId);
-          }
-        }
-      }
-
-      // 5. Mule Bank / UPI Accounts
-      const finCol = entityConfigs.find(ec => ec.type === 'FINANCIAL');
-      if (finCol && row[finCol.header]) {
-        const val = String(row[finCol.header]).trim();
-        if (val && val !== 'None' && !val.includes('unassigned')) {
-          const fNode = addNode(val, val, 'FINANCIAL', 'Bank / UPI Mule', finCol.color, baseMeta);
-          if (fNode && primarySuspectNode) {
-            addEdge(primarySuspectNode.id, fNode.id, 'TRANSFERS_TO_MULE', 1.6, caseId);
-          }
-        }
-      }
-
-      // 6. Police Stations
-      const psCol = entityConfigs.find(ec => ec.type === 'POLICE_STATION');
-      if (psCol && row[psCol.header]) {
-        const val = String(row[psCol.header]).trim();
-        if (val && val !== 'None') {
-          const psNode = addNode(val, val, 'POLICE_STATION', 'Police Station', psCol.color, baseMeta);
-          if (psNode && primarySuspectNode) {
-            addEdge(primarySuspectNode.id, psNode.id, 'BOOKED_AT', 1.0, caseId);
-          }
-        }
-      }
-
-      // 7. Syndicate Operation Rings
-      const opCol = entityConfigs.find(ec => ec.type === 'OPERATION');
-      if (opCol && row[opCol.header]) {
-        const val = String(row[opCol.header]).trim();
-        if (val && val !== 'None') {
-          const opNode = addNode(val, val, 'OPERATION', 'Syndicate Ring', opCol.color, baseMeta);
-          if (opNode && primarySuspectNode) {
-            addEdge(primarySuspectNode.id, opNode.id, 'OPERATES_IN', 1.4, caseId);
-          }
-        }
-      }
-    });
+      });
+    }
 
     const nodes = Array.from(nodesMap.values());
     nodes.sort((a, b) => (b.degree || 0) - (a.degree || 0));

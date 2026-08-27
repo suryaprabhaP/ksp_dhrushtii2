@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, FileText, CheckCircle2, ArrowRight, ArrowLeft, Upload, Check, Download, AlertCircle, Phone, Lock, Calendar, MapPin, User, FilePlus, RefreshCw, X, Eye } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import { getApiUrl } from '../services/apiClient';
 
 const KARNATAKA_DISTRICTS_STATIONS = {
   'Bengaluru Urban': ['Bengaluru Urban Main PS', 'Indiranagar PS', 'Koramangala PS', 'Whitefield Cyber PS', 'Electronic City PS'],
@@ -154,7 +155,7 @@ function ComplaintPortal({ onClose, initialStation = '' }) {
     };
 
     try {
-      const res = await fetch('/api/complaints', {
+      const res = await fetch(getApiUrl('/api/complaints'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -163,7 +164,7 @@ function ComplaintPortal({ onClose, initialStation = '' }) {
       setIsSubmitting(false);
 
       if (data.success) {
-        setRefNumber(data.reference_number);
+        setRefNumber(data.acknowledgement_number || data.reference_number);
         setCurrentStep('confirmation');
       } else {
         alert('Error: ' + (data.error || 'Failed to submit complaint'));

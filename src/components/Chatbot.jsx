@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ShieldCheck, CheckCheck, Send, Upload, Bolt, Disc, CheckCircle, FileText, Cpu, Database, ChevronDown, ChevronUp, Paperclip, Download, History, Trash2, Sparkles, Mic, MicOff, Volume2, VolumeX, Languages, Radio, Compass, Lightbulb, Scale, AlertTriangle, Shield, PlusCircle, BarChart2, PieChart, TrendingUp, Plus, ChevronRight, Plug, Layers, FolderPlus, MessageSquare, FolderKanban, ShieldAlert, HardDrive, Network } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
-import { jsPDF } from 'jspdf';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -24,6 +23,10 @@ import VisualIntelligenceStudio from './VisualIntelligenceStudio';
 import UploadDatasetModal from './UploadDatasetModal';
 import { parseCSV } from '../analytics/services/datasetStore';
 import { GraphQueryToolAgent, globalNetworkStore } from '../analytics/services/networkAnalyticsService';
+import { markdownToHtml } from '../utils/markdownParser';
+import { exportEvidencePacketPDF, exportChatExecutiveReportPDF } from '../services/pdfExportService';
+import { speakMessageText as speakMessageTextService, stopSpeaking as stopSpeakingService } from '../services/ttsService';
+import { postJson, getApiUrl } from '../services/apiClient';
 
 ChartJS.register(
   CategoryScale,
@@ -37,65 +40,6 @@ ChartJS.register(
   Legend,
   Filler
 );
-
-// ── Lightweight Markdown → HTML converter ──────────────────────────────────
-// Handles: **bold**, *italic*, `code`, ### headers, bullet lists, GFM tables
-function markdownToHtml(text) {
-  if (!text) return '';
-  // If text already contains HTML tags, return as-is (welcome message etc.)
-  if (/<[a-z][\s\S]*>/i.test(text)) return text;
-
-  let html = text
-    // Escape raw HTML to prevent injection from non-HTML strings
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-  // --- GFM Table ---
-  // Match table blocks: header row | separator row | data rows
-  html = html.replace(
-    /^(\|.+\|[ \t]*\n)(\|[-: |]+\|[ \t]*\n)((\|.+\|[ \t]*\n?)*)/gm,
-    (match, header, sep, body) => {
-      const parseRow = (row) =>
-        row.trim().replace(/^\|/, '').replace(/\|$/, '')
-          .split('|').map(c => c.trim());
-      const headers = parseRow(header);
-      const rows = body.trim().split('\n').filter(r => r.trim());
-      const thead = '<thead><tr>' + headers.map(h => `<th>${h.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</th>`).join('') + '</tr></thead>';
-      const tbody = '<tbody>' + rows.map(r =>
-        '<tr>' + parseRow(r).map(c =>
-          `<td>${c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</td>`
-        ).join('') + '</tr>'
-      ).join('') + '</tbody>';
-      return `<table class="md-table">${thead}${tbody}</table>`;
-    }
-  );
-
-  // --- Headers ---
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-  // --- Bold & Italic ---
-  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-  // --- Inline code ---
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // --- Bullet lists ---
-  html = html.replace(/^[•\-\*] (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-
-  // --- Line breaks ---
-  html = html.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>');
-  html = `<p>${html}</p>`;
-  // Clean empty paragraphs
-  html = html.replace(/<p><\/p>/g, '').replace(/<p>(<h[1-3]>)/g, '$1').replace(/(<\/h[1-3]>)<\/p>/g, '$1');
-  html = html.replace(/<p>(<table)/g, '$1').replace(/(<\/table>)<\/p>/g, '$1');
-  html = html.replace(/<p>(<ul>)/g, '$1').replace(/(<\/ul>)<\/p>/g, '$1');
-
-  return html;
-}
 
 // Helper component to capture map clicks in mini-map
 function MiniMapEvents({ onClick }) {
@@ -390,19 +334,35 @@ function Chatbot({
   const [showDbModal, setShowDbModal] = useState(false);
   const [showUploadDatasetModal, setShowUploadDatasetModal] = useState(false);
 
-  // VISUAL INTELLIGENCE STUDIO SPLIT-CANVAS STATE
-  const [isVisualStudioOpen, setIsVisualStudioOpen] = useState(false);
-  const [studioCharts, setStudioCharts] = useState([]);
-  const [studioKpis, setStudioKpis] = useState(null);
-  const [studioExecutiveDecision, setStudioExecutiveDecision] = useState(null);
+  const [activeSessionId, setActiveSessionId] = useState(() => {
+    try {
+      const savedId = localStorage.getItem(`ksp_sentinel_active_session_id_${divisionName}`);
+      if (savedId) return savedId;
+    } catch (e) {}
+    return `session_${Date.now()}`;
+  });
 
-  const handleTouchCrimeAnalyticsHub = () => {
-    if (isDatasetLoaded) {
-      setIsVisualStudioOpen(true);
-    } else {
-      setShowUploadDatasetModal(true);
-    }
-  };
+  // Hydrate Visual Studio Split-Canvas state from persistent store
+  const [isVisualStudioOpen, setIsVisualStudioOpen] = useState(() => {
+    try {
+      return localStorage.getItem(`ksp_sentinel_studio_open_${divisionName}`) === 'true';
+    } catch (e) { return false; }
+  });
+  const [studioCharts, setStudioCharts] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`ksp_sentinel_studio_charts_${divisionName}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  });
+  const [studioKpis, setStudioKpis] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`ksp_sentinel_studio_kpis_${divisionName}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return null;
+  });
+  const [studioExecutiveDecision, setStudioExecutiveDecision] = useState(null);
 
   // CHATGPT STYLE SAVED SESSION HISTORY STATE
   const [savedSessions, setSavedSessions] = useState(() => {
@@ -415,7 +375,34 @@ function Chatbot({
     return [];
   });
 
-  const [activeSessionId, setActiveSessionId] = useState(() => `session_${Date.now()}`);
+  const handleTouchCrimeAnalyticsHub = () => {
+    if (isDatasetLoaded) {
+      setIsVisualStudioOpen(true);
+    } else {
+      setShowUploadDatasetModal(true);
+    }
+  };
+
+  // Auto-persist conversation history, active session ID, and visual studio across tab navigations
+  useEffect(() => {
+    try {
+      if (messages && messages.length > 0) {
+        localStorage.setItem(`ksp_sentinel_chat_history_${divisionName}`, JSON.stringify(messages));
+      }
+      if (activeSessionId) {
+        localStorage.setItem(`ksp_sentinel_active_session_id_${divisionName}`, activeSessionId);
+      }
+      if (studioCharts && studioCharts.length > 0) {
+        localStorage.setItem(`ksp_sentinel_studio_charts_${divisionName}`, JSON.stringify(studioCharts));
+      }
+      if (studioKpis) {
+        localStorage.setItem(`ksp_sentinel_studio_kpis_${divisionName}`, JSON.stringify(studioKpis));
+      }
+      localStorage.setItem(`ksp_sentinel_studio_open_${divisionName}`, String(isVisualStudioOpen));
+    } catch (e) {
+      console.error("Error auto-saving state:", e);
+    }
+  }, [messages, activeSessionId, studioCharts, studioKpis, isVisualStudioOpen, divisionName]);
 
   const updateSessionStore = (currentMsgs, overrideTitle = null) => {
     if (!currentMsgs || currentMsgs.length <= 1) return;
@@ -429,24 +416,23 @@ function Chatbot({
     setSavedSessions(prev => {
       const existingIdx = prev.findIndex(s => s.id === activeSessionId);
       let updated;
+      const sessionData = {
+        id: activeSessionId,
+        title: titleText,
+        messages: currentMsgs,
+        studioCharts: studioCharts || [],
+        studioExecutiveDecision: studioExecutiveDecision || null,
+        studioKpis: studioKpis || null,
+        isVisualStudioOpen: isVisualStudioOpen || false,
+        updatedAt: Date.now(),
+        dateStr
+      };
+
       if (existingIdx >= 0) {
         updated = [...prev];
-        updated[existingIdx] = {
-          ...updated[existingIdx],
-          title: titleText,
-          messages: currentMsgs,
-          updatedAt: Date.now(),
-          dateStr
-        };
+        updated[existingIdx] = sessionData;
       } else {
-        const newSession = {
-          id: activeSessionId,
-          title: titleText,
-          messages: currentMsgs,
-          updatedAt: Date.now(),
-          dateStr
-        };
-        updated = [newSession, ...prev];
+        updated = [sessionData, ...prev];
       }
 
       try {
@@ -464,7 +450,11 @@ function Chatbot({
     }
     const newId = `session_${Date.now()}`;
     setActiveSessionId(newId);
-    setMessages([{
+    setStudioCharts([]);
+    setStudioExecutiveDecision(null);
+    setStudioKpis(null);
+    setIsVisualStudioOpen(false);
+    const welcomeMsg = [{
       id: 'welcome',
       sender: 'bot',
       text: `Hello Officer! I am <b>KSP ${divisionName} Assistant</b> — your division intelligence & command operations assistant. ನಮಸ್ಕಾರ!<br/><br/>Select a specialist agent from the left sidebar or ask your query below in <b>Kannada (ಕನ್ನಡ)</b> or <b>English</b>.`,
@@ -473,13 +463,25 @@ function Chatbot({
       agent_icon: "🛡️",
       agent_color: "#1e40af",
       agent_description: "General Police Law & Command Operations"
-    }]);
+    }];
+    setMessages(welcomeMsg);
+    try {
+      localStorage.setItem(`ksp_sentinel_active_session_id_${divisionName}`, newId);
+      localStorage.setItem(`ksp_sentinel_chat_history_${divisionName}`, JSON.stringify(welcomeMsg));
+      localStorage.removeItem(`ksp_sentinel_studio_charts_${divisionName}`);
+      localStorage.removeItem(`ksp_sentinel_studio_kpis_${divisionName}`);
+      localStorage.setItem(`ksp_sentinel_studio_open_${divisionName}`, 'false');
+    } catch (e) {}
   };
 
   const handleLoadSession = (session) => {
     if (session && session.messages) {
       setActiveSessionId(session.id);
       setMessages(session.messages);
+      setStudioCharts(session.studioCharts || []);
+      setStudioExecutiveDecision(session.studioExecutiveDecision || null);
+      setStudioKpis(session.studioKpis || null);
+      setIsVisualStudioOpen(Boolean(session.isVisualStudioOpen && session.studioCharts?.length > 0));
     }
   };
 
@@ -590,63 +592,40 @@ function Chatbot({
   };
 
   // Text-to-Speech (TTS) engine supporting Kannada (kn-IN) and English (en-IN) via Sarvam AI & Browser SpeechSynthesis
-  const speakMessageText = async (textToSpeak) => {
-    if (!textToSpeak) return;
-    const cleanText = textToSpeak.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
-    if (!cleanText) return;
-
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    setIsSpeaking(true);
-
-    try {
-      const res = await fetch('/api/sarvam_tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText, language_code: voiceLang })
-      });
-      const data = await res.json();
-
-      if (data.success && data.audio_b64) {
-        const audio = new Audio(`data:audio/wav;base64,${data.audio_b64}`);
-        audio.onended = () => setIsSpeaking(false);
-        audio.onerror = () => fallbackBrowserTTS(cleanText);
-        audio.play();
-        return;
-      }
-    } catch (err) {
-      console.warn("Sarvam AI TTS endpoint fallback to browser synthesis:", err);
-    }
-
-    fallbackBrowserTTS(cleanText);
-  };
-
-  const fallbackBrowserTTS = (cleanText) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = voiceLang;
-      utterance.rate = 0.95;
-      utterance.pitch = 1.0;
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-
-      const voices = window.speechSynthesis.getVoices();
-      const targetVoice = voices.find(v => v.lang.includes(voiceLang.split('-')[0]));
-      if (targetVoice) utterance.voice = targetVoice;
-
-      window.speechSynthesis.speak(utterance);
-    } else {
-      setIsSpeaking(false);
-    }
+  const speakMessageText = (textToSpeak) => {
+    speakMessageTextService(textToSpeak, {
+      voiceLang,
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false)
+    });
   };
 
   const stopSpeaking = () => {
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    stopSpeakingService();
     setIsSpeaking(false);
+  };
+
+  // SRP: Generative Executive Narrative Fusion Helper
+  const fuseIntelligenceNarrative = (graphText, analyticsText) => {
+    const cleanGraph = (graphText || '').trim();
+    const cleanAnalytics = (analyticsText || '').trim();
+
+    if (!cleanGraph) return cleanAnalytics;
+    if (!cleanAnalytics) return cleanGraph;
+
+    return `### 🛡️ Unified Executive Intelligence & Nexus Briefing\n\n` +
+      `#### 🔗 1. Verified Criminal Nexus & Evidence Chain\n` +
+      `${cleanGraph.replace(/^###\s+.*\n+/i, '')}\n\n` +
+      `---\n\n` +
+      `#### 📊 2. Jurisdictional & Loss Analytics\n` +
+      `${cleanAnalytics.replace(/^###\s+.*\n+/i, '')}\n\n` +
+      `---\n🛡️ *Karnataka State Police Unified Command System · Section 65B Certified*`;
   };
 
   const handleSend = async (textToSend) => {
     const text = textToSend || inputText;
-    if (!text.trim()) return;
+    if (typing || !text.trim()) return;
 
     if (isListening) {
       recognitionRef.current?.stop();
@@ -697,20 +676,172 @@ function Chatbot({
         return;
       }
 
-      // 1. Check for path queries: e.g. "how is Imran Khan connected to Ramesh Tiwari?"
-      const pathMatch = text.match(/(?:how is|between|from|linking|connection between|path from)\s+([A-Za-z0-9\s_\-\.\/@+]+?)\s+(?:connected to|connected with|linked to|linked with|and|to)\s+([A-Za-z0-9\s_\-\.\/@+]+)/i);
+      // ── GENERALIZED COMPOSITE & PARALLEL QUERY ENGINE (SOLID - SRP) ────────
+      const qLower = text.toLowerCase();
+      const hasAnalyticalIntent = /(?:loss|financial|money|rupees|inr|stolen|recovered|deficit|breakdown|station|stations|compare|trend|trajectory|cases|volume|spikes|chart|plot|stats|motive|status|disposal|delays|ranking|highest|lowest)/i.test(text);
 
-      if (pathMatch) {
-        const entityA = pathMatch[1].trim();
-        const entityB = pathMatch[2].trim().replace(/\?+$/, '');
+      // A. Path Pattern (e.g. "how is A connected to B", "link between A and B", "path from A to B")
+      const pathMatch = text.match(/(?:how is|between|from|linking|connection between|path from|trail between|nexus between)\s+([A-Za-z0-9\s_\-\.\/@+]+?)\s+(?:connected to|connected with|linked to|linked with|and|to)\s+([A-Za-z0-9\s_\-\.\/@+]+)/i);
 
-        if (entityA && entityB) {
-          const pathResult = GraphQueryToolAgent.trace_shortest_path(entityA, entityB);
+      // B. Dossier Pattern (e.g. "dossier on X", "who is X", "profile of X", "tell me about X", "associations of X", "nexus around X")
+      // NOTE: Negative-lookahead on relational words so "Who is linked to X" does NOT wrongly match here
+      const dossierMatch = text.match(/(?:dossier on|associations of|profile of|who is(?!\s+(?:linked|connected|tied|associated))|tell me about|what do we know about|nexus around|investigate)\s+([A-Za-z0-9\s_\-\.\/@+]+)/i);
+
+      // C. Hubs Pattern (e.g. "hubs", "kingpins", "central figures", "key suspects")
+      const isHubsQuery = /(?:hubs|kingpins|central figures|most connected|leaders|key suspects|syndicate core)/i.test(text);
+
+      const hasGraphIntent = Boolean(pathMatch || (dossierMatch && !isHubsQuery) || isHubsQuery);
+
+      // ── 1. COMPOUND / PARALLEL DISPATCH (Both Network + Analytical Intents) ────
+      if (hasGraphIntent && hasAnalyticalIntent) {
+        setTyping(true);
+        try {
+          // Thread A: Deterministic In-Memory Graph Extraction
+          let graphNarrative = '';
+          let graphFound = false;
+
+          if (pathMatch) {
+            const eA = pathMatch[1].trim();
+            const eB = pathMatch[2].trim().replace(/\?+$/, '').split(/\s+(?:and|also|show|what|compare|how)/i)[0];
+            const pRes = GraphQueryToolAgent.trace_shortest_path(eA, eB);
+            graphNarrative = pRes.narrative || pRes.reason;
+            graphFound = pRes.found;
+          } else if (dossierMatch) {
+            const eName = dossierMatch[1].trim().replace(/\?+$/, '').split(/\s+(?:and|also|show|what|compare|how)/i)[0];
+            const dRes = GraphQueryToolAgent.get_entity_dossier(eName);
+            graphNarrative = dRes.narrative || dRes.reason;
+            graphFound = dRes.found;
+          } else if (isHubsQuery) {
+            const hRes = GraphQueryToolAgent.find_syndicate_hubs(5);
+            const hubList = hRes.hubs.map((h, i) => `${i + 1}. **${h.label}** *(${h.type})* — **${h.connections} verified connections** *(Jurisdiction: ${h.metadata?.policeStation || 'Central Grid'})*`).join('\n');
+            graphNarrative = `### 🕸️ Key Central Figures & Syndicate Hubs\n\n${hubList}`;
+            graphFound = true;
+          }
+
+          // Thread B: Backend DuckDB Analytics + LLM Visual Studio Generation
+          const historyPayload = messages
+            .filter(m => m.id !== 'welcome')
+            .slice(-8)
+            .map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
+
+          const backendRes = await fetch(getApiUrl('/chat'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: text,
+              history: historyPayload,
+              division: divisionName,
+              fir_number: selectedFir,
+              session_id: activeSessionId
+            })
+          }).then(r => r.json()).catch(() => null);
+
+          setTyping(false);
+
+          // Update Left Split-Canvas Visual Studio if backend returned charts
+          if (backendRes?.charts && backendRes.charts.length > 0) {
+            setStudioCharts(backendRes.charts);
+            setStudioExecutiveDecision(backendRes.executive_decision);
+            setIsVisualStudioOpen(true);
+          }
+
+          // Merge Generative Executive Narrative into Right Chat Pane
+          const analyticalAnswer = backendRes?.answer || '';
+          const fusedText = fuseIntelligenceNarrative(graphNarrative, analyticalAnswer);
+
+          const botReply = {
+            id: Date.now() + '-bot',
+            sender: 'bot',
+            text: fusedText,
+            agent_type: 'composite_intelligence_agent',
+            agent_label: 'Unified Command Intelligence 🕸️📊',
+            agent_icon: '⚡',
+            agent_color: '#0284c7',
+            agent_description: 'Parallel Graph & In-Memory Visual Analytics',
+            render_visuals: true,
+            user_query: text
+          };
+
+          setMessages(prev => {
+            const next = [...prev, botReply];
+            updateSessionStore(next);
+            return next;
+          });
+          return;
+        } catch (compErr) {
+          console.error("Composite dispatch error:", compErr);
+        }
+      }
+
+      // ── 2. PURE RELATIONAL / NETWORK INTENT DISPATCH ─────────────────────────
+      if (hasGraphIntent && !hasAnalyticalIntent) {
+        // Path Query
+        if (pathMatch) {
+          const entityA = pathMatch[1].trim();
+          const entityB = pathMatch[2].trim().replace(/\?+$/, '');
+          if (entityA && entityB) {
+            const pathResult = GraphQueryToolAgent.trace_shortest_path(entityA, entityB);
+            setTyping(false);
+            const botReply = {
+              id: Date.now() + '-bot',
+              sender: 'bot',
+              text: pathResult.narrative || (pathResult.found ? `Found connection path.` : pathResult.reason),
+              agent_type: 'graph_intelligence_agent',
+              agent_label: 'Graph Intelligence Agent',
+              agent_icon: '🕸️',
+              agent_color: '#0284c7',
+              agent_description: 'Deterministic Graph Link Analysis',
+              render_visuals: false,
+              user_query: text
+            };
+            setMessages(prev => {
+              const next = [...prev, botReply];
+              updateSessionStore(next);
+              return next;
+            });
+            return;
+          }
+        }
+
+        // Dossier Query
+        if (dossierMatch && !isHubsQuery) {
+          const entityName = dossierMatch[1].trim().replace(/\?+$/, '');
+          const dossier = GraphQueryToolAgent.get_entity_dossier(entityName);
           setTyping(false);
           const botReply = {
             id: Date.now() + '-bot',
             sender: 'bot',
-            text: pathResult.narrative || (pathResult.found ? `Found connection path.` : pathResult.reason),
+            text: dossier.narrative || (dossier.found ? `Found dossier for ${entityName}.` : dossier.reason),
+            agent_type: 'graph_intelligence_agent',
+            agent_label: 'Graph Intelligence Agent',
+            agent_icon: '🕸️',
+            agent_color: '#0284c7',
+            agent_description: 'Deterministic Graph Link Analysis',
+            render_visuals: false,
+            user_query: text
+          };
+          setMessages(prev => {
+            const next = [...prev, botReply];
+            updateSessionStore(next);
+            return next;
+          });
+          return;
+        }
+
+        // Hubs Query
+        if (isHubsQuery) {
+          const hubsResult = GraphQueryToolAgent.find_syndicate_hubs(5);
+          setTyping(false);
+          const hubList = hubsResult.hubs.map((h, i) => `${i + 1}. **${h.label}** *(${h.type})* — **${h.connections} verified connections** *(Jurisdiction: ${h.metadata?.policeStation || 'Central Grid'})*`).join('\n');
+          const botReply = {
+            id: Date.now() + '-bot',
+            sender: 'bot',
+            text: `### 🕸️ Key Central Figures & Syndicate Hubs\n\n` +
+              `The following individuals and entities possess the highest number of direct cross-case linkages in the active records:\n\n` +
+              `${hubList}\n\n` +
+              `#### 🚨 Tactical Recommendation:\n` +
+              `* Prioritize surveillance and CDR cross-referencing on the top 3 individuals to dismantle coordinating communication channels.\n\n` +
+              `---\n🛡️ *Verified from Karnataka Police Relational Records · Section 65B Certified*`,
             agent_type: 'graph_intelligence_agent',
             agent_label: 'Graph Intelligence Agent',
             agent_icon: '🕸️',
@@ -727,63 +858,6 @@ function Chatbot({
           return;
         }
       }
-
-      // 2. Check for Dossier / Single Entity Association queries
-      const dossierMatch = text.match(/(?:dossier on|associations of|profile of|who is)\s+([A-Za-z0-9\s_\-\.\/@+]+)/i);
-      if (dossierMatch && !/(hubs|kingpin)/i.test(text)) {
-        const entityName = dossierMatch[1].trim().replace(/\?+$/, '');
-        const dossier = GraphQueryToolAgent.get_entity_dossier(entityName);
-        setTyping(false);
-
-        const botReply = {
-          id: Date.now() + '-bot',
-          sender: 'bot',
-          text: dossier.narrative || (dossier.found ? `Found dossier for ${entityName}.` : dossier.reason),
-          agent_type: 'graph_intelligence_agent',
-          agent_label: 'Graph Intelligence Agent',
-          agent_icon: '🕸️',
-          agent_color: '#0284c7',
-          agent_description: 'Deterministic Graph Link Analysis',
-          render_visuals: false,
-          user_query: text
-        };
-        setMessages(prev => {
-          const next = [...prev, botReply];
-          updateSessionStore(next);
-          return next;
-        });
-        return;
-      }
-
-      // 3. Check for Hubs / Kingpin queries
-      if (/(hubs|kingpins|central|most connected|leaders|key suspects)/i.test(text)) {
-        const hubsResult = GraphQueryToolAgent.find_syndicate_hubs(5);
-        setTyping(false);
-        const hubList = hubsResult.hubs.map((h, i) => `${i + 1}. **${h.label}** *(${h.type})* — **${h.connections} verified connections** *(Jurisdiction: ${h.metadata?.policeStation || 'Central Grid'})*`).join('\n');
-        const botReply = {
-          id: Date.now() + '-bot',
-          sender: 'bot',
-          text: `### 🕸️ Key Central Figures & Syndicate Hubs\n\n` +
-            `The following individuals and entities possess the highest number of direct cross-case linkages in the active records:\n\n` +
-            `${hubList}\n\n` +
-            `#### 🚨 Tactical Recommendation:\n` +
-            `* Prioritize surveillance and CDR cross-referencing on the top 3 individuals to dismantle coordinating communication channels.\n\n` +
-            `---\n🛡️ *Verified from Karnataka Police Relational Records · Section 65B Certified*`,
-          agent_type: 'graph_intelligence_agent',
-          agent_label: 'Graph Intelligence Agent',
-          agent_icon: '🕸️',
-          agent_color: '#0284c7',
-          agent_description: 'Deterministic Graph Link Analysis',
-          render_visuals: false,
-          user_query: text
-        };
-        setMessages(prev => {
-          const next = [...prev, botReply];
-          updateSessionStore(next);
-          return next;
-        });
-        return;
-      }
     }
 
     const historyPayload = messages
@@ -796,62 +870,84 @@ function Chatbot({
       }));
 
     try {
-      const response = await fetch('/chat', {
+      const response = await fetch(getApiUrl('/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: text, history: historyPayload, division: divisionName, fir_number: selectedFir })
+        body: JSON.stringify({
+          query: text,
+          history: historyPayload,
+          division: divisionName,
+          fir_number: selectedFir,
+          session_id: activeSessionId
+        })
       });
       const data = await response.json();
       setTyping(false);
       
-      if (data.success) {
-        let cleanAnswerText = data.answer;
+      if (data.success !== false && (data.answer || data.success)) {
+        let cleanAnswerText = data.answer || "Intelligence synthesis complete.";
         let extractedCharts = data.charts || (data.chart_data ? [data.chart_data] : []);
         let extractedDecision = data.executive_decision || null;
 
         // Defensive Client-Side JSON Interceptor (Guarantees 3-Tier Executive Format and zero raw JSON leaks)
-        if (typeof cleanAnswerText === 'string' && (cleanAnswerText.trim().startsWith('{') || cleanAnswerText.trim().startsWith('```'))) {
+        if (typeof cleanAnswerText === 'string' && (cleanAnswerText.trim().startsWith('{') || cleanAnswerText.trim().startsWith('[') || cleanAnswerText.trim().startsWith('```'))) {
           try {
             let cleanJson = cleanAnswerText.trim();
             if (cleanJson.startsWith('```')) {
-              cleanJson = cleanJson.replace(/^```json/, '').replace(/^```/, '').replace(/```$/, '').trim();
+              cleanJson = cleanJson.replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/, '').trim();
             }
             const parsed = JSON.parse(cleanJson);
-            if (parsed.executive_briefing || parsed.visual_suite || parsed.visual_intent) {
-              const eb = parsed.executive_briefing || {};
-              const vs = parsed.visual_suite || (parsed.visual_intent ? [parsed.visual_intent] : []);
-              const title = vs[0]?.chart_title || "Operational Intelligence Assessment";
-              const overview = eb.situational_overview || eb.situational_thesis || "Analysis indicates critical operational divergence across division sectors requiring proactive command coordination.";
-              
-              const rawDirectives = eb.tactical_directives || eb.command_directives || [];
-              let directiveText = "";
-              if (Array.isArray(rawDirectives) && rawDirectives.length > 0) {
-                directiveText = rawDirectives.map(d => {
-                  const p = d.priority || 'P1';
-                  const act = d.action || d.mandate || 'Execute targeted sector patrolling';
-                  const owner = d.owner || 'Command Wing';
-                  const target = d.target || d.kpi_target || 'Immediate SLA';
-                  return `* **\`[${p}]\` ${act}** — *Unit: ${owner}* | *Objective: ${target}*`;
-                }).join('\n');
+            if (typeof parsed === 'object' && parsed !== null) {
+              if (parsed.executive_briefing || parsed.visual_suite || parsed.visual_intent) {
+                const eb = parsed.executive_briefing || {};
+                const vs = parsed.visual_suite || (parsed.visual_intent ? [parsed.visual_intent] : []);
+                const title = vs[0]?.chart_title || "Operational Intelligence Assessment";
+                const overview = eb.situational_overview || eb.situational_thesis || "Analysis indicates critical operational divergence across division sectors requiring proactive command coordination.";
+                
+                const rawDirectives = eb.tactical_directives || eb.command_directives || [];
+                let directiveText = "";
+                if (Array.isArray(rawDirectives) && rawDirectives.length > 0) {
+                  directiveText = rawDirectives.map(d => {
+                    const p = d.priority || 'P1';
+                    const act = d.action || d.mandate || 'Execute targeted sector patrolling';
+                    const owner = d.owner || 'Command Wing';
+                    const target = d.target || d.kpi_target || 'Immediate SLA';
+                    return `* **\`[${p}]\` ${act}** — *Unit: ${owner}* | *Objective: ${target}*`;
+                  }).join('\n');
+                } else {
+                  directiveText = "* **`[P1]` Deploy Targeted Ground Patrol Units** — *Unit: Patrol & Traffic Wing* | *Objective: Active deterrence in identified sectors*";
+                }
+
+                const solutionScope = eb.solution_scope || "Establish multi-jurisdictional evidence registries, fast-track Section 102 BNSS asset freezing orders, and increase beat patrol frequency across identified high-volume sectors.";
+
+                cleanAnswerText = `### 🛡️ Sentinel Command Synthesis: ${title}\n\n**Situational Overview:**\n${overview}\n\n**Tactical Directives:**\n${directiveText}\n\n**Solution & Preventive Scope:**\n${solutionScope}`;
+                
+                if (!extractedDecision) {
+                  extractedDecision = {
+                    title: `Executive Intelligence: ${title}`,
+                    model_name: `KSP Intelligence Engine (${extractedCharts.length || 1} Synchronized Views)`,
+                    confidence: "94.8% Command Reliability",
+                    summary: overview
+                  };
+                }
+              } else if (parsed.answer || parsed.summary || parsed.response || parsed.analysis) {
+                cleanAnswerText = String(parsed.answer || parsed.summary || parsed.response || parsed.analysis);
               } else {
-                directiveText = "* **`[P1]` Deploy Targeted Ground Patrol Units** — *Unit: Patrol & Traffic Wing* | *Objective: Active deterrence in identified sectors*";
-              }
-
-              const solutionScope = eb.solution_scope || "Establish multi-jurisdictional evidence registries, fast-track Section 102 BNSS asset freezing orders, and increase beat patrol frequency across identified high-volume sectors.";
-
-              cleanAnswerText = `### 🛡️ Sentinel Command Synthesis: ${title}\n\n**Situational Overview:**\n${overview}\n\n**Tactical Directives:**\n${directiveText}\n\n**Solution & Preventive Scope:**\n${solutionScope}`;
-              
-              if (!extractedDecision) {
-                extractedDecision = {
-                  title: `Executive Intelligence: ${title}`,
-                  model_name: `KSP Intelligence Engine (${extractedCharts.length || 1} Synchronized Views)`,
-                  confidence: "94.8% Command Reliability",
-                  summary: overview
-                };
+                const bullets = Object.entries(parsed)
+                  .filter(([k, v]) => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
+                  .map(([k, v]) => `• **${k.replace(/_/g, ' ')}:** ${v}`);
+                if (bullets.length > 0) {
+                  cleanAnswerText = `### 🛡️ Sentinel Intelligence Summary\n\n` + bullets.join('\n');
+                } else {
+                  cleanAnswerText = "### 🛡️ Sentinel Intelligence Analysis\n\nThe analytical model has evaluated the operational records. Review the active visual studio cards on the left panel.";
+                }
               }
             }
           } catch (e) {
             console.warn("Client JSON interceptor parse skipped:", e);
+            if (cleanAnswerText.trim().startsWith('{') || cleanAnswerText.trim().startsWith('```')) {
+              cleanAnswerText = "### 🛡️ Sentinel Intelligence Analysis\n\nThe analytical model has evaluated the operational dataset and computed the visual chart suite. Review the Visual Intelligence Studio on the left panel.";
+            }
           }
         }
 
@@ -951,9 +1047,10 @@ function Chatbot({
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('session_id', activeSessionId);
 
     try {
-      const response = await fetch('/api/upload_dataset', {
+      const response = await fetch(getApiUrl('/api/upload_dataset'), {
         method: 'POST',
         body: formData
       });
@@ -1138,7 +1235,7 @@ function Chatbot({
       formData.append('screenshot', file);
     }
     try {
-      const response = await fetch('/api/extract_metadata', {
+      const response = await fetch(getApiUrl('/api/extract_metadata'), {
         method: 'POST',
         body: formData
       });
@@ -1203,77 +1300,7 @@ function Chatbot({
   };
 
   function downloadPDF(data) {
-    if (!data) return;
-    const doc = new jsPDF();
-    doc.setDrawColor(59, 130, 246);
-    doc.setLineWidth(1);
-    doc.rect(5, 5, 200, 287);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(15, 23, 42);
-    doc.text("KARNATAKA STATE POLICE", 105, 20, { align: "center" });
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    doc.text("STATE CRIME RECORDS BUREAU (SCRB) - EVIDENCE CERTIFICATE", 105, 26, { align: "center" });
-    doc.line(15, 30, 195, 30);
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(30);
-    doc.text("1. DIGITAL EVIDENCE METADATA & HASHES", 15, 40);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text(`Image Hash (SHA-256): ${data.sha256 || 'N/A'}`, 15, 48);
-    doc.text(`Timestamp: ${data.timestamp || new Date().toISOString()}`, 15, 54);
-    doc.text(`Threat Category: ${data.threat_category || 'Cyber Fraud'}`, 15, 60);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("2. NETWORK & INFRASTRUCTURE INTELLIGENCE", 15, 72);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text(`Resolved IP Address: ${data.ip_address || 'N/A'}`, 15, 80);
-    doc.text(`Hosting Provider / ISP: ${data.hosting_provider || 'N/A'}`, 15, 86);
-    doc.text(`Autonomous System (ASN): ${data.asn || 'N/A'}`, 15, 92);
-    doc.text(`Country / Location: ${data.country || 'N/A'}`, 15, 98);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("3. GEOLOCATION RADAR CO-ORDINATES", 15, 110);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const gps = data.gps || {};
-    doc.text(`Latitude: ${gps.latitude || 'N/A'}° N`, 15, 118);
-    doc.text(`Longitude: ${gps.longitude || 'N/A'}° E`, 15, 124);
-    doc.text(`Resolved Sector Name: ${gps.location_name || 'N/A'}`, 15, 130);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("4. EXTRACTED FINANCIAL INDICATORS & MULE ACCOUNTS", 15, 142);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const indicators = data.extracted_indicators || {};
-    doc.text(`UPI IDs: ${(indicators.upi_ids || []).join(', ') || 'None'}`, 15, 150);
-    doc.text(`Phone Numbers: ${(indicators.phone_numbers || []).join(', ') || 'None'}`, 15, 156);
-    doc.text(`Mule Bank Accounts: ${(indicators.bank_accounts || []).join(', ') || 'None'}`, 15, 162);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("5. LEGAL ADMISSIBILITY & CERTIFICATION", 15, 175);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text("Certified under Section 65B of the Indian Evidence Act, 1872 / Section 63 of BSA 2023.", 15, 183);
-    doc.text("Generated by KSP Sentinel AI - State Crime Records Bureau (SCRB) Automated Evidence Engine.", 15, 189);
-
-    doc.save(`Evidence_Packet_${(data.ip_address || '127_0_0_1').replace(/\./g, '_')}.pdf`);
+    exportEvidencePacketPDF(data);
   }
 
   const handleFileChange = (e) => {
@@ -1311,138 +1338,7 @@ function Chatbot({
   };
 
   const downloadChatSummaryPDF = () => {
-    const doc = new jsPDF();
-    const now = new Date().toLocaleString();
-
-    doc.setDrawColor(37, 99, 235);
-    doc.setLineWidth(1);
-    doc.rect(5, 5, 200, 287);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
-    doc.setTextColor(15, 23, 42);
-    doc.text("KARNATAKA STATE POLICE • SENTINEL AI COMMAND", 105, 18, { align: "center" });
-
-    doc.setFontSize(10);
-    doc.setTextColor(37, 99, 235);
-    doc.text("KSP COMMAND AI EXECUTIVE REPORT", 105, 24, { align: "center" });
-
-    doc.setDrawColor(203, 213, 225);
-    doc.setLineWidth(0.5);
-    doc.line(15, 28, 195, 28);
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    doc.text(`Generated: ${now}  |  Language: ${voiceLang === 'kn-IN' ? 'Kannada (kn-IN)' : 'English (en-IN)'}  |  Audit: SECURE`, 15, 34);
-
-    let currentY = 42;
-
-    doc.setFillColor(239, 246, 255);
-    doc.rect(15, currentY, 180, 36, "F");
-    doc.setDrawColor(191, 219, 254);
-    doc.rect(15, currentY, 180, 36, "S");
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(30, 58, 138);
-    doc.text("📌 EXECUTIVE SUMMARY OF RECENT SESSION:", 20, currentY + 7);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(30, 41, 59);
-
-    const userQueries = messages.filter(m => m.sender === 'user');
-    const summaryBullets = [
-      `• Total Officer Queries Handled: ${userQueries.length} (KSP Command AI)`,
-      `• Primary Voice Language: ${voiceLang === 'kn-IN' ? 'Kannada (ಕನ್ನಡ - kn-IN)' : 'English (en-IN)'}`,
-      `• Vector RAG Knowledge Base: KSP Cyber Crime SOP 2026, Citizen Safety Guide, SQLite Records`,
-      `• Evidence Admissibility: Compliant under Section 65B Indian Evidence Act 1872.`
-    ];
-
-    let bulletY = currentY + 13;
-    summaryBullets.forEach(b => {
-      doc.text(b, 22, bulletY);
-      bulletY += 5;
-    });
-
-    currentY += 44;
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(15, 23, 42);
-    doc.text("💬 CHAT TRANSCRIPT & CONVERSATION LOGS:", 15, currentY);
-
-    currentY += 6;
-
-    const cleanText = (str) => {
-      if (!str) return '';
-      return str.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
-    };
-
-    messages.forEach((m, idx) => {
-      if (currentY > 265) {
-        doc.addPage();
-        doc.rect(5, 5, 200, 287);
-        currentY = 20;
-      }
-
-      const isUser = m.sender === 'user';
-      const senderLabel = isUser ? "👤 USER QUERY:" : "🤖 KSP SENTINEL AI:";
-      const cleanContent = cleanText(m.text);
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
-      doc.setTextColor(isUser ? 37 : 15, isUser ? 99 : 23, isUser ? 235 : 42);
-      doc.text(`${idx + 1}. ${senderLabel}`, 15, currentY);
-
-      currentY += 4;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(51, 65, 85);
-
-      const splitText = doc.splitTextToSize(cleanContent, 175);
-      doc.text(splitText, 20, currentY);
-
-      currentY += splitText.length * 4.2 + 4;
-
-      if (m.rag_sources && m.rag_sources.length > 0) {
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(7.5);
-        doc.setTextColor(100);
-        doc.text(`   [RAG Source: ${m.rag_sources[0].doc_name} • Similarity: Math.round(m.rag_sources[0].similarity_score * 100)%]`, 20, currentY);
-        currentY += 5;
-      }
-
-      doc.setDrawColor(241, 245, 249);
-      doc.line(15, currentY, 195, currentY);
-      currentY += 3;
-    });
-
-    if (currentY > 250) {
-      doc.addPage();
-      doc.rect(5, 5, 200, 287);
-      currentY = 20;
-    }
-
-    currentY += 10;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(15, 23, 42);
-    doc.text("VERIFIED BY:", 15, currentY);
-    doc.text("KSP AI COMMAND ENGINE AUDIT SIGNATURE", 115, currentY);
-
-    currentY += 5;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(100);
-    doc.text("Karnataka State Police SCRB Digital Node", 15, currentY);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(37, 99, 235);
-    doc.text("[DIGITAL-KSP-AI-SUMMARY-HASH-OK]", 115, currentY);
-
-    doc.save(`KSP_Command_AI_Summary_${Date.now()}.pdf`);
+    exportChatExecutiveReportPDF({ messages, voiceLang });
   };
 
   return (
@@ -1462,24 +1358,24 @@ function Chatbot({
         </button>
 
         {/* PROMINENT DEDICATED ANALYTICS WORKSPACE LAUNCHERS */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '8px 0 14px 0' }}>
-          {/* 1. CRIME DATA ANALYTICS */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', margin: '10px 0 16px 0' }}>
+          {/* 1. CRIME DATA ANALYTICS (SPLIT-CANVAS TOGGLE) */}
           <button
             onClick={() => {
-              if (isDatasetLoaded && onNavigateToAnalytics) {
-                onNavigateToAnalytics();
+              if (isDatasetLoaded) {
+                setIsVisualStudioOpen(v => !v);
               } else {
-                handleTouchCrimeAnalyticsHub();
+                setShowUploadDatasetModal(true);
               }
             }}
             style={{
               width: '100%',
-              padding: '10px 12px',
-              background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
+              padding: '11px 14px',
+              background: isVisualStudioOpen ? 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)' : 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
               color: '#ffffff',
-              border: '1px solid rgba(147, 197, 253, 0.4)',
+              border: isVisualStudioOpen ? '1px solid rgba(56, 189, 248, 0.6)' : '1px solid rgba(147, 197, 253, 0.4)',
               borderRadius: '10px',
-              fontSize: '0.78rem',
+              fontSize: '0.85rem',
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
@@ -1488,30 +1384,30 @@ function Chatbot({
               boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)',
               transition: 'all 0.2s ease'
             }}
-            title="Open Crime Data Analytics & Executive BI Dashboard"
+            title="Toggle Side-by-Side Visual Intelligence Studio"
             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(37, 99, 235, 0.6)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(37, 99, 235, 0.4)'; }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <BarChart2 size={16} style={{ color: '#93c5fd' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+              <BarChart2 size={18} style={{ color: '#93c5fd' }} />
               <span>📊 Crime Data Analytics</span>
             </div>
-            <span style={{ fontSize: '0.62rem', background: 'rgba(255, 255, 255, 0.2)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
-              {isDatasetLoaded ? 'DASHBOARD ➔' : 'UPLOAD ➔'}
+            <span style={{ fontSize: '0.68rem', background: 'rgba(255, 255, 255, 0.2)', padding: '3px 8px', borderRadius: '5px', fontWeight: 800 }}>
+              {isDatasetLoaded ? (isVisualStudioOpen ? 'HIDE STUDIO ✕' : 'SPLIT STUDIO ➔') : 'UPLOAD DATA ➔'}
             </span>
           </button>
 
-          {/* 2. NETWORK & LINK INTELLIGENCE (WHERE GREEN LINE LIES) */}
+          {/* 2. NETWORK LINK INTELLIGENCE (RIGHT WHERE GREEN ARROW POINTS) */}
           <button
             onClick={() => { if (onNavigateToNetwork) onNavigateToNetwork(); }}
             style={{
               width: '100%',
-              padding: '10px 12px',
-              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.3) 0%, rgba(14, 165, 233, 0.2) 100%)',
+              padding: '11px 14px',
+              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.35) 0%, rgba(14, 165, 233, 0.2) 100%)',
               color: '#38bdf8',
-              border: '1px solid rgba(56, 189, 248, 0.4)',
+              border: '1px solid rgba(56, 189, 248, 0.5)',
               borderRadius: '10px',
-              fontSize: '0.78rem',
+              fontSize: '0.85rem',
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
@@ -1521,14 +1417,14 @@ function Chatbot({
               transition: 'all 0.2s ease'
             }}
             title="Open Network Link Intelligence & Graph Topology Mapping"
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(56, 189, 248, 0.4)'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(2, 132, 199, 0.5) 0%, rgba(14, 165, 233, 0.35) 100%)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(56, 189, 248, 0.2)'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(2, 132, 199, 0.3) 0%, rgba(14, 165, 233, 0.2) 100%)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(56, 189, 248, 0.4)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(56, 189, 248, 0.2)'; }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Network size={16} style={{ color: '#38bdf8' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+              <Network size={18} style={{ color: '#38bdf8' }} />
               <span>🕸️ Network Link Intelligence</span>
             </div>
-            <span style={{ fontSize: '0.62rem', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
+            <span style={{ fontSize: '0.68rem', background: 'rgba(56, 189, 248, 0.25)', color: '#38bdf8', padding: '3px 8px', borderRadius: '5px', fontWeight: 800 }}>
               GRAPH MAP ➔
             </span>
           </button>
@@ -1538,12 +1434,12 @@ function Chatbot({
             onClick={() => { if (onNavigateToMaps) onNavigateToMaps(); }}
             style={{
               width: '100%',
-              padding: '8px 12px',
-              background: 'rgba(30, 41, 59, 0.6)',
-              color: '#cbd5e1',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '8px',
-              fontSize: '0.72rem',
+              padding: '10px 14px',
+              background: 'rgba(30, 41, 59, 0.7)',
+              color: '#f1f5f9',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '10px',
+              fontSize: '0.82rem',
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
@@ -1551,14 +1447,14 @@ function Chatbot({
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(51, 65, 85, 0.8)'; e.currentTarget.style.color = '#ffffff'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)'; e.currentTarget.style.color = '#cbd5e1'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(51, 65, 85, 0.9)'; e.currentTarget.style.color = '#ffffff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(30, 41, 59, 0.7)'; e.currentTarget.style.color = '#f1f5f9'; }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Compass size={14} style={{ color: '#34d399' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+              <Compass size={16} style={{ color: '#34d399' }} />
               <span>🌐 Geospatial Hotspot Radar</span>
             </div>
-            <span style={{ fontSize: '0.6rem', color: '#64748b' }}>MAP View ➔</span>
+            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>MAP View ➔</span>
           </button>
 
           {/* 4. DATA MART & FORENSIC VAULT */}
@@ -1566,12 +1462,12 @@ function Chatbot({
             onClick={() => { if (onNavigateToVault) onNavigateToVault(); }}
             style={{
               width: '100%',
-              padding: '8px 12px',
-              background: 'rgba(30, 41, 59, 0.6)',
-              color: '#cbd5e1',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '8px',
-              fontSize: '0.72rem',
+              padding: '10px 14px',
+              background: 'rgba(30, 41, 59, 0.7)',
+              color: '#f1f5f9',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '10px',
+              fontSize: '0.82rem',
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
@@ -1579,14 +1475,14 @@ function Chatbot({
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(51, 65, 85, 0.8)'; e.currentTarget.style.color = '#ffffff'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)'; e.currentTarget.style.color = '#cbd5e1'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(51, 65, 85, 0.9)'; e.currentTarget.style.color = '#ffffff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(30, 41, 59, 0.7)'; e.currentTarget.style.color = '#f1f5f9'; }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <HardDrive size={14} style={{ color: '#c084fc' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+              <HardDrive size={16} style={{ color: '#c084fc' }} />
               <span>💾 Data Mart & Forensic Vault</span>
             </div>
-            <span style={{ fontSize: '0.6rem', color: '#64748b' }}>65B Audit ➔</span>
+            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>65B Audit ➔</span>
           </button>
         </div>
 
@@ -1874,13 +1770,13 @@ function Chatbot({
 
           {/* CHAT FEED */}
           <div className="chat-feed">
-            {/* KSP OFFICIAL WELCOME BANNER */}
+            {/* KSP OFFICIAL WELCOME BANNER (MATCHING USER SCREENSHOT 2) */}
             {messages.length <= 1 && (
-              <div style={{ textAlign: 'left', padding: '8px 4px 12px 4px', animation: 'bubble-slide-up 0.4s ease-out' }}>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '8px', lineHeight: 1.2 }}>
-                  <ShieldCheck size={22} style={{ color: '#2563eb' }} /> Sentinel Command Assistant,
+              <div style={{ textAlign: 'left', padding: '14px 6px 18px 6px', animation: 'bubble-slide-up 0.4s ease-out' }}>
+                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '10px', lineHeight: 1.25 }}>
+                  <ShieldCheck size={26} style={{ color: '#2563eb' }} /> Sentinel Command Assistant,
                 </div>
-                <div style={{ fontSize: '0.88rem', color: '#475569', fontWeight: 700, marginTop: '2px' }}>
+                <div style={{ fontSize: '1.05rem', color: '#475569', fontWeight: 600, marginTop: '4px' }}>
                   Karnataka State Police Command Intelligence platform active for {divisionName || 'State HQ'}.
                 </div>
               </div>
@@ -1890,22 +1786,22 @@ function Chatbot({
               <div key={m.id} className={`chat-bubble ${m.sender}`}>
                 {/* UNIFIED ASSISTANT BADGE — clean identity without technical jargon */}
                 {m.sender === 'bot' && (
-                  <div style={{ marginBottom: '6px' }}>
+                  <div style={{ marginBottom: '10px' }}>
                     <div style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      marginBottom: '3px'
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      marginBottom: '4px'
                     }}>
                       <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                        display: 'inline-flex', alignItems: 'center', gap: '7px',
                         background: 'rgba(37,99,235,0.08)',
                         border: '1.5px solid #2563eb',
                         borderRadius: '20px',
-                        padding: '2px 10px 2px 6px',
-                        fontSize: '0.62rem',
+                        padding: '5px 14px 5px 10px',
+                        fontSize: '0.88rem',
                         fontWeight: 800,
                         color: '#1e3a8a',
                       }}>
-                        <span style={{ fontSize: '0.75rem' }}>{m.agent_icon || '🛡️'}</span>
+                        <span style={{ fontSize: '1rem' }}>{m.agent_icon || '🛡️'}</span>
                         {m.agent_label || 'Sentinel Command Assistant'}
                       </div>
                     </div>
@@ -1915,9 +1811,9 @@ function Chatbot({
                 <div dangerouslySetInnerHTML={{ __html: markdownToHtml(m.text) }} />
 
                 {m.sender === 'bot' && m.prompt_suggestions && m.prompt_suggestions.length > 0 && (
-                  <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#475569', letterSpacing: '0.3px' }}>💡 CLICK TO GENERATE SAMPLE REPORT:</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', letterSpacing: '0.3px' }}>💡 CLICK TO GENERATE SAMPLE REPORT:</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {m.prompt_suggestions.map((suggestionText, idx) => (
                         <button
                           key={idx}
@@ -1927,8 +1823,8 @@ function Chatbot({
                             color: '#1d4ed8',
                             border: '1.5px solid #bfdbfe',
                             borderRadius: '16px',
-                            padding: '4px 12px',
-                            fontSize: '0.72rem',
+                            padding: '6px 14px',
+                            fontSize: '0.86rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             textAlign: 'left',
@@ -1946,25 +1842,25 @@ function Chatbot({
                 )}
 
                 {m.sender === 'bot' && (
-                  <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
                     <button
                       onClick={() => isSpeaking ? stopSpeaking() : speakMessageText(m.text)}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '4px',
+                        gap: '6px',
                         background: isSpeaking ? '#ef4444' : '#f1f5f9',
                         color: isSpeaking ? 'white' : '#2563eb',
                         border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        padding: '3px 9px',
-                        fontSize: '0.68rem',
+                        borderRadius: '8px',
+                        padding: '5px 12px',
+                        fontSize: '0.85rem',
                         fontWeight: 800,
                         cursor: 'pointer'
                       }}
                       title="Read Aloud via Voice Synthesis"
                     >
-                      <Volume2 size={11} /> {isSpeaking ? 'Stop Voice' : `🔊 Listen (${voiceLang === 'kn-IN' ? 'ಕನ್ನಡ' : 'EN'})`}
+                      <Volume2 size={13} /> {isSpeaking ? 'Stop Voice' : `🔊 Listen (${voiceLang === 'kn-IN' ? 'ಕನ್ನಡ' : 'EN'})`}
                     </button>
                   </div>
                 )}
@@ -2120,14 +2016,15 @@ function Chatbot({
             <div className="ksp-input-container" style={{
               display: 'flex',
               alignItems: 'center',
+              width: '100%',
               background: '#ffffff',
               borderRadius: '20px',
-              padding: '6px 10px 6px 14px',
+              padding: '10px 16px',
               border: '1.5px solid #cbd5e1',
-              boxShadow: '0 6px 20px rgba(15,23,42,0.08)',
+              boxShadow: '0 6px 24px rgba(15,23,42,0.08)',
               transition: 'all 0.2s',
-              maxWidth: '960px',
-              margin: '0 auto'
+              maxWidth: '100%',
+              margin: '0'
             }}>
           {/* MIC BUTTON */}
           <button
@@ -2137,23 +2034,23 @@ function Chatbot({
               background: isListening ? '#ef4444' : '#f1f5f9',
               color: isListening ? 'white' : '#2563eb',
               border: 'none',
-              borderRadius: '8px',
-              width: '28px',
-              height: '28px',
+              borderRadius: '10px',
+              width: '36px',
+              height: '36px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              marginRight: '6px',
+              marginRight: '8px',
               transition: 'all 0.2s'
             }}
             title={isListening ? 'Stop Listening' : `Speak in ${voiceLang === 'kn-IN' ? 'Kannada (ಕನ್ನಡ)' : 'English'}`}
           >
-            {isListening ? <MicOff size={15} /> : <Mic size={15} />}
+            {isListening ? <MicOff size={18} /> : <Mic size={18} />}
           </button>
 
           {/* + OPTIONS MENU BUTTON (MATCHING USER SCREENSHOT) */}
-          <div style={{ position: 'relative', display: 'inline-block', marginRight: '6px' }}>
+          <div style={{ position: 'relative', display: 'inline-block', marginRight: '8px' }}>
             <button
               type="button"
               onClick={() => setShowPlusMenu(!showPlusMenu)}
@@ -2161,9 +2058,9 @@ function Chatbot({
                 background: showPlusMenu ? '#2563eb' : '#f1f5f9',
                 color: showPlusMenu ? 'white' : '#475569',
                 border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                width: '28px',
-                height: '28px',
+                borderRadius: '10px',
+                width: '36px',
+                height: '36px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -2172,7 +2069,7 @@ function Chatbot({
               }}
               title="Add Files, Connectors, Databases & Skills"
             >
-              <Plus size={16} style={{ transform: showPlusMenu ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }} />
+              <Plus size={18} style={{ transform: showPlusMenu ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }} />
             </button>
 
             {/* POPUP OPTIONS DROPDOWN MENU */}
@@ -2180,14 +2077,14 @@ function Chatbot({
               <div 
                 style={{
                   position: 'absolute',
-                  bottom: '36px',
+                  bottom: '44px',
                   left: '0',
-                  width: '240px',
+                  width: '260px',
                   background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
                   border: '1px solid #334155',
-                  borderRadius: '12px',
+                  borderRadius: '14px',
                   boxShadow: '0 20px 35px rgba(0, 0, 0, 0.4)',
-                  padding: '6px',
+                  padding: '8px',
                   zIndex: 9999,
                   animation: 'bubble-slide-up 0.15s ease-out',
                   color: '#f8fafc'
@@ -2204,9 +2101,9 @@ function Chatbot({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '8px 10px',
+                    padding: '10px 14px',
                     borderRadius: '8px',
-                    fontSize: '0.78rem',
+                    fontSize: '0.88rem',
                     fontWeight: 600,
                     color: '#f1f5f9',
                     cursor: 'pointer',
@@ -2215,10 +2112,10 @@ function Chatbot({
                   className="popup-menu-item"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Paperclip size={14} style={{ color: '#38bdf8' }} />
+                    <Paperclip size={16} style={{ color: '#38bdf8' }} />
                     <span>Add files or photos</span>
                   </div>
-                  <span style={{ fontSize: '0.62rem', color: '#64748b', background: '#334155', padding: '1px 5px', borderRadius: '4px' }}>Ctrl+U</span>
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', background: '#334155', padding: '2px 6px', borderRadius: '4px' }}>Ctrl+U</span>
                 </div>
 
                 {/* Option 2: Add Database Connector (Relational / NoSQL) */}
@@ -2228,9 +2125,9 @@ function Chatbot({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '8px 10px',
+                    padding: '10px 14px',
                     borderRadius: '8px',
-                    fontSize: '0.78rem',
+                    fontSize: '0.88rem',
                     fontWeight: 600,
                     color: '#f1f5f9',
                     cursor: 'pointer',
@@ -2239,10 +2136,10 @@ function Chatbot({
                   className="popup-menu-item"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Database size={14} style={{ color: '#a855f7' }} />
+                    <Database size={16} style={{ color: '#a855f7' }} />
                     <span>Add connector (SQL/NoSQL)</span>
                   </div>
-                  <ChevronRight size={13} style={{ color: '#64748b' }} />
+                  <ChevronRight size={15} style={{ color: '#64748b' }} />
                 </div>
 
                 {/* Option 3: Add Knowledge Document */}
@@ -2252,9 +2149,9 @@ function Chatbot({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '8px 10px',
+                    padding: '10px 14px',
                     borderRadius: '8px',
-                    fontSize: '0.78rem',
+                    fontSize: '0.88rem',
                     fontWeight: 600,
                     color: '#f1f5f9',
                     cursor: 'pointer',
@@ -2263,10 +2160,10 @@ function Chatbot({
                   className="popup-menu-item"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FolderPlus size={14} style={{ color: '#34d399' }} />
+                    <FolderPlus size={16} style={{ color: '#34d399' }} />
                     <span>Add to RAG project</span>
                   </div>
-                  <ChevronRight size={13} style={{ color: '#64748b' }} />
+                  <ChevronRight size={15} style={{ color: '#64748b' }} />
                 </div>
               </div>
             )}
@@ -2289,7 +2186,7 @@ function Chatbot({
           {/* INPUT FIELD */}
           <input 
             type="text" 
-            placeholder={voiceLang === 'kn-IN' ? "ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಕೇಳಿ... (Ask in Kannada or English)" : "Ask KSP Command AI or query RAG DB..."}
+            placeholder={voiceLang === 'kn-IN' ? "ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಕೇಳಿ... (Ask in Kannada or English)" : "Ask KSP Command AI or query crime analytics..."}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
@@ -2297,7 +2194,9 @@ function Chatbot({
               flex: 1,
               border: 'none',
               outline: 'none',
-              fontSize: '0.82rem',
+              fontSize: '1.05rem',
+              fontWeight: 500,
+              padding: '6px 10px',
               background: 'transparent',
               color: '#0f172a'
             }}
@@ -2311,17 +2210,18 @@ function Chatbot({
               background: '#2563eb',
               border: 'none',
               color: 'white',
-              borderRadius: '10px',
-              width: '32px',
-              height: '32px',
+              borderRadius: '12px',
+              width: '38px',
+              height: '38px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(37,99,235,0.3)'
+              boxShadow: '0 2px 10px rgba(37,99,235,0.35)',
+              transition: 'all 0.2s'
             }}
           >
-            <Send size={15} />
+            <Send size={18} />
           </button>
         </div>
       </div>

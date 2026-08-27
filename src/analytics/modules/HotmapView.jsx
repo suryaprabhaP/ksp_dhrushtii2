@@ -73,7 +73,10 @@ export default function HotmapView({ records = [] }) {
     });
 
     return () => {
-      // Cleanup on unmount handled gracefully
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
     };
   }, [filteredPoints, selectedDivisionFilter]);
 
