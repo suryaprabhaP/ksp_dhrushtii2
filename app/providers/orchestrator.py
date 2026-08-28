@@ -4,6 +4,7 @@ KSP Sentinel AI — LLM Provider Orchestrator (SOLID: DIP Cascading Failover)
 import logging
 from typing import Dict, List, Tuple
 from app.providers.base import BaseLLMProvider
+from app.providers.zoho_provider import ZohoQuickMLProvider
 from app.providers.groq_provider import GroqProvider
 from app.providers.gemini_provider import GeminiProvider
 
@@ -13,10 +14,10 @@ log = logging.getLogger("standalone.orchestrator")
 class ProviderOrchestrator:
     """
     OCP: Manages priority-ordered inference provider cascading and automatic failover.
-    Default Cascade: Groq (Llama-3.3-70b) -> Google Gemini Flash -> Offline Rule-Based Fallback.
+    Primary: Zoho Catalyst QuickML (GLM-4.7B & Knowledge RAG) -> Groq -> Gemini -> Offline Fallback.
     """
     def __init__(self, providers: List[BaseLLMProvider] = None):
-        self.providers = providers or [GroqProvider(), GeminiProvider()]
+        self.providers = providers or [ZohoQuickMLProvider(), GroqProvider(), GeminiProvider()]
 
     def complete(self, messages: List[Dict[str, str]], json_mode: bool = False, max_tokens: int = 2500) -> Tuple[str, str]:
         last_error = None

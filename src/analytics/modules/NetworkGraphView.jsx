@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Share2,
   Search,
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  Play,
-  Pause,
   UploadCloud,
   FileText,
   Shield,
@@ -26,7 +24,11 @@ import {
   Car,
   Smartphone,
   CreditCard,
-  MapPin
+  MapPin,
+  Play,
+  Pause,
+  Sliders,
+  Sparkles
 } from 'lucide-react';
 import {
   globalNetworkStore,
@@ -41,12 +43,15 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
 
   // Store state
   const [networkData, setNetworkData] = useState(() => globalNetworkStore.getState());
-  const [isPhysicsRunning, setIsPhysicsRunning] = useState(true);
   const [selectedNode, setSelectedNode] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
-  const [focusedNeighborhood, setFocusedNeighborhood] = useState(null); // Set of node IDs
+  const [focusedNeighborhood, setFocusedNeighborhood] = useState(null); // Set of node IDs expanded/inspected
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilterType, setActiveFilterType] = useState('ALL');
+
+  // Hub Slicing & Centrality State
+  const [minDegreeThreshold, setMinDegreeThreshold] = useState(2);
+  const [isPhysicsActive, setIsPhysicsActive] = useState(true);
 
   // Shortest Path Finder UI State
   const [pathStartQuery, setPathStartQuery] = useState('');
@@ -61,13 +66,19 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
   // Canvas Viewport Transform (Pan & Zoom)
   const transformRef = useRef({ x: 0, y: 0, scale: 0.85 });
   const isDraggingCanvasRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
   const draggedNodeRef = useRef(null);
+  const dragStartRef = useRef({ x: 0, y: 0 });
 
   // Synchronize with Global Store and Primary Dataset State
   useEffect(() => {
     const unsubscribe = globalNetworkStore.subscribe(state => {
       setNetworkData(state);
+      // If dataset has large node count, ensure intelligent default degree threshold
+      if (state.nodes?.length > 150) {
+        setMinDegreeThreshold(2);
+      } else {
+        setMinDegreeThreshold(1);
+      }
     });
 
     if (datasetState?.isLoaded && datasetState?.rawRecords?.length > 0 && !networkData.isLocked) {
@@ -79,27 +90,59 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
   }, [datasetState]);
 
   // Nodes, Edges & Dynamic Feature Types
-  const nodes = networkData.nodes;
-  const edges = networkData.edges;
+  const rawNodes = networkData.nodes || [];
+  const rawEdges = networkData.edges || [];
   const featureTypes = networkData.featureTypes || [];
 
-  // Filtered Nodes by Entity Type
-  const filteredNodes = useMemo(() => {
-    if (activeFilterType === 'ALL') return nodes;
-    return nodes.filter(n => n.type === activeFilterType);
-  }, [nodes, activeFilterType]);
+  // ==========================================
+  // HUB SLICING & VISIBLE NODES COMPUTATION
+  // ==========================================
+  const { visibleNodes, visibleEdges, visibleNodeIds } = useMemo(() => {
+    if (!rawNodes || rawNodes.length === 0) {
+      return { visibleNodes: [], visibleEdges: [], visibleNodeIds: new Set() };
+    }
 
-  const filteredNodeIds = useMemo(() => new Set(filteredNodes.map(n => n.id)), [filteredNodes]);
+    const expandedIds = focusedNeighborhood || new Set();
+    const pathNodeIds = new Set(activePathResult?.pathNodes?.map(pn => pn.id) || []);
+    const searchLower = searchQuery.trim().toLowerCase();
+
+    // 1. Identify which nodes qualify to be visible
+    const filtered = rawNodes.filter(n => {
+      // Shortest path nodes always visible
+      if (pathNodeIds.has(n.id)) return true;
+      // Clicked/Expanded neighborhood nodes always visible
+      if (expandedIds.has(n.id)) return true;
+      // Search matches always visible
+      if (searchLower.length >= 2 && (n.label.toLowerCase().includes(searchLower) || n.rawId?.toLowerCase().includes(searchLower))) {
+        return true;
+      }
+      // Entity type filter
+      if (activeFilterType !== 'ALL' && n.type !== activeFilterType) return false;
+      // Hub Slicing Degree Threshold
+      return (n.degree || 1) >= minDegreeThreshold;
+    });
+
+    const vNodeIds = new Set(filtered.map(n => n.id));
+
+    // 2. Identify visible edges (both endpoints must be in visible set)
+    const vEdges = rawEdges.filter(e => {
+      const sId = typeof e.source === 'object' ? e.source.id : e.source;
+      const tId = typeof e.target === 'object' ? e.target.id : e.target;
+      return vNodeIds.has(sId) && vNodeIds.has(tId);
+    });
+
+    return { visibleNodes: filtered, visibleEdges: vEdges, visibleNodeIds: vNodeIds };
+  }, [rawNodes, rawEdges, minDegreeThreshold, focusedNeighborhood, activePathResult, searchQuery, activeFilterType]);
 
   // Autocomplete Suggestions for Search
   const searchSuggestions = useMemo(() => {
     if (!searchQuery.trim() || searchQuery.length < 2) return [];
     const q = searchQuery.toLowerCase();
-    return nodes.filter(n => n.label.toLowerCase().includes(q) || n.rawId?.toLowerCase().includes(q) || n.id.toLowerCase().includes(q)).slice(0, 8);
-  }, [searchQuery, nodes]);
+    return rawNodes.filter(n => n.label.toLowerCase().includes(q) || n.rawId?.toLowerCase().includes(q) || n.id.toLowerCase().includes(q)).slice(0, 8);
+  }, [searchQuery, rawNodes]);
 
   // ==========================================
-  // FLUID GRAPHIFY PHYSICS SIMULATION LOOP
+  // FORCE-DIRECTED PHYSICS & GRAPH RENDERING LOOP
   // ==========================================
   useEffect(() => {
     let animationFrameId;
@@ -115,83 +158,93 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
     window.addEventListener('resize', handleResize);
 
     const simulationStep = () => {
-      if (isPhysicsRunning && nodes.length > 0) {
-        const kBase = 240; // Base Spring Rest Length
-        const maxRepulsiveDist = 600;
+      // 1. Physics Engine Step (Only on visibleNodes - max ~100 nodes, blazing fast!)
+      if (isPhysicsActive && visibleNodes.length > 0) {
+        const kBase = 220;
+        const maxRepulsiveDist = 750;
         const damping = 0.84;
-        const centerGravity = 0.005;
+        const centerGravity = 0.003;
 
-        // 1. Repulsion & Dynamic Collision Relaxation between all node pairs
-        for (let i = 0; i < nodes.length; i++) {
-          const na = nodes[i];
-          const ra = Math.max(10, Math.min(24, 9 + (na.degree || 1) * 1.5));
+        // A. Repulsion & Strict Collision Relaxation (Anti-Gravity)
+        for (let i = 0; i < visibleNodes.length; i++) {
+          const na = visibleNodes[i];
+          const ra = Math.max(12, Math.min(26, 10 + (na.degree || 1) * 1.6));
 
-          for (let j = i + 1; j < nodes.length; j++) {
-            const nb = nodes[j];
-            const rb = Math.max(10, Math.min(24, 9 + (nb.degree || 1) * 1.5));
-            const minAllowedDist = ra + rb + 44; // Enhanced collision separation buffer
+          for (let j = i + 1; j < visibleNodes.length; j++) {
+            const nb = visibleNodes[j];
+            const rb = Math.max(12, Math.min(26, 10 + (nb.degree || 1) * 1.6));
+            // Strict anti-collision buffer so labels & badges never touch
+            const minAllowedDist = ra + rb + 75;
 
             const dx = nb.x - na.x;
             const dy = nb.y - na.y;
             const distSq = dx * dx + dy * dy || 1;
             const dist = Math.sqrt(distSq);
 
-            // Hard Non-Penetration Resolution (Instantly pushes overlapping circles & labels apart)
             if (dist < minAllowedDist) {
-              const overlap = (minAllowedDist - dist) * 0.6;
+              const overlap = (minAllowedDist - dist) * 0.65;
               const nx = (dx / dist) * overlap;
               const ny = (dy / dist) * overlap;
-              if (draggedNodeRef.current?.id !== na.id) { na.x -= nx; na.y -= ny; na.vx -= nx * 0.4; na.vy -= ny * 0.4; }
-              if (draggedNodeRef.current?.id !== nb.id) { nb.x += nx; nb.y += ny; nb.vx += nx * 0.4; nb.vy += ny * 0.4; }
+              if (draggedNodeRef.current?.id !== na.id) { na.x -= nx; na.y -= ny; }
+              if (draggedNodeRef.current?.id !== nb.id) { nb.x += nx; nb.y += ny; }
             } else if (dist < maxRepulsiveDist) {
-              // Smooth Coulomb Repulsion
-              const force = Math.min(26, 4600 / (distSq + 45));
+              // High-powered global magnetic repulsion
+              const force = Math.min(32, 5800 / (distSq + 40));
               const fx = (dx / dist) * force;
               const fy = (dy / dist) * force;
-
-              if (draggedNodeRef.current?.id !== na.id) { na.vx -= fx; na.vy -= fy; }
-              if (draggedNodeRef.current?.id !== nb.id) { nb.vx += fx; nb.vy += fy; }
+              if (draggedNodeRef.current?.id !== na.id) {
+                na.vx = (na.vx || 0) - fx;
+                na.vy = (na.vy || 0) - fy;
+              }
+              if (draggedNodeRef.current?.id !== nb.id) {
+                nb.vx = (nb.vx || 0) + fx;
+                nb.vy = (nb.vy || 0) + fy;
+              }
             }
           }
 
-          // Gentle Center Pull
           if (draggedNodeRef.current?.id !== na.id) {
-            na.vx -= na.x * centerGravity;
-            na.vy -= na.y * centerGravity;
+            na.vx = (na.vx || 0) - na.x * centerGravity;
+            na.vy = (na.vy || 0) - na.y * centerGravity;
           }
         }
 
-        // 2. Adaptive Spring attraction along multi-hop edges
-        edges.forEach(e => {
-          const sourceNode = typeof e.source === 'object' ? e.source : nodes.find(n => n.id === e.source);
-          const targetNode = typeof e.target === 'object' ? e.target : nodes.find(n => n.id === e.target);
+        // B. Gentle Spring Attraction along Visible Edges
+        visibleEdges.forEach(e => {
+          const sourceNode = typeof e.source === 'object' ? e.source : rawNodes.find(n => n.id === e.source);
+          const targetNode = typeof e.target === 'object' ? e.target : rawNodes.find(n => n.id === e.target);
           if (!sourceNode || !targetNode) return;
+          if (!visibleNodeIds.has(sourceNode.id) || !visibleNodeIds.has(targetNode.id)) return;
 
-          // Adaptive spring length based on node degrees
-          const k = kBase + Math.min(120, (sourceNode.degree + targetNode.degree) * 6);
-
+          const k = kBase + Math.min(100, (sourceNode.degree + targetNode.degree) * 6);
           const dx = targetNode.x - sourceNode.x;
           const dy = targetNode.y - sourceNode.y;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
           const displacement = dist - k;
-          const force = Math.min(14, Math.max(-14, displacement * 0.024));
+          const force = Math.min(8, Math.max(-8, displacement * 0.016));
 
           const fx = (dx / dist) * force;
           const fy = (dy / dist) * force;
 
-          if (draggedNodeRef.current?.id !== sourceNode.id) { sourceNode.vx += fx; sourceNode.vy += fy; }
-          if (draggedNodeRef.current?.id !== targetNode.id) { targetNode.vx -= fx; targetNode.vy -= fy; }
+          if (draggedNodeRef.current?.id !== sourceNode.id) {
+            sourceNode.vx = (sourceNode.vx || 0) + fx;
+            sourceNode.vy = (sourceNode.vy || 0) + fy;
+          }
+          if (draggedNodeRef.current?.id !== targetNode.id) {
+            targetNode.vx = (targetNode.vx || 0) - fx;
+            targetNode.vy = (targetNode.vy || 0) - fy;
+          }
         });
 
-        // 3. Update positions with velocity damping & NaN safeguards
-        nodes.forEach(n => {
-          if (draggedNodeRef.current && draggedNodeRef.current.id === n.id) {
+        // C. Integrate Velocities
+        visibleNodes.forEach(n => {
+          if (draggedNodeRef.current?.id === n.id) {
             n.vx = 0;
             n.vy = 0;
             return;
           }
-          n.vx = Math.max(-7, Math.min(7, (isNaN(n.vx) ? 0 : n.vx) * damping));
-          n.vy = Math.max(-7, Math.min(7, (isNaN(n.vy) ? 0 : n.vy) * damping));
+          n.vx = Math.max(-8, Math.min(8, (n.vx || 0) * damping));
+          n.vy = Math.max(-8, Math.min(8, (n.vy || 0) * damping));
           n.x += n.vx;
           n.y += n.vy;
           if (isNaN(n.x)) n.x = 0;
@@ -199,11 +252,8 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
         });
       }
 
-      // ==========================================
-      // RENDER CANVAS (GRAPHIFY AESTHETICS)
-      // ==========================================
+      // 2. Clear & Transform
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       ctx.save();
       ctx.translate(canvas.width / 2 + transformRef.current.x, canvas.height / 2 + transformRef.current.y);
       ctx.scale(transformRef.current.scale, transformRef.current.scale);
@@ -211,10 +261,10 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
       const activeFocus = selectedNode || hoveredNode;
       const activeNeighborhoodSet = focusedNeighborhood;
 
-      // 1. Draw Edges
-      edges.forEach(e => {
-        const sourceNode = typeof e.source === 'object' ? e.source : nodes.find(n => n.id === e.source);
-        const targetNode = typeof e.target === 'object' ? e.target : nodes.find(n => n.id === e.target);
+      // 3. Draw Edges
+      visibleEdges.forEach(e => {
+        const sourceNode = typeof e.source === 'object' ? e.source : rawNodes.find(n => n.id === e.source);
+        const targetNode = typeof e.target === 'object' ? e.target : rawNodes.find(n => n.id === e.target);
         if (!sourceNode || !targetNode) return;
 
         const isPathEdge = activePathResult?.pathEdges?.some(
@@ -224,8 +274,6 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
         const isFocusedEdge = activeFocus
           ? (sourceNode.id === activeFocus.id || targetNode.id === activeFocus.id)
           : false;
-
-        const isFiltered = filteredNodeIds.has(sourceNode.id) && filteredNodeIds.has(targetNode.id);
 
         ctx.beginPath();
         ctx.moveTo(sourceNode.x, sourceNode.y);
@@ -237,46 +285,42 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           ctx.shadowColor = '#38bdf8';
           ctx.shadowBlur = 14;
         } else if (isFocusedEdge) {
-          // Graphify Highlighted Neighbor Edge (Neon Violet / Purple)
           ctx.strokeStyle = '#a855f7';
-          ctx.lineWidth = 2.4;
+          ctx.lineWidth = 2.6;
           ctx.shadowColor = '#a855f7';
           ctx.shadowBlur = 10;
         } else if (activeFocus) {
-          // Dim background edges
-          ctx.strokeStyle = 'rgba(148, 163, 184, 0.04)';
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
           ctx.lineWidth = 0.8;
           ctx.shadowBlur = 0;
         } else {
-          // Standard Graphify clean link
-          ctx.strokeStyle = isFiltered ? 'rgba(148, 163, 184, 0.25)' : 'rgba(148, 163, 184, 0.04)';
-          ctx.lineWidth = 1.1;
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
+          ctx.lineWidth = 1.2;
           ctx.shadowBlur = 0;
         }
 
         ctx.stroke();
       });
 
-      // 2. Draw Nodes
-      nodes.forEach(n => {
+      // 4. Draw Nodes
+      visibleNodes.forEach(n => {
         const isSelected = selectedNode?.id === n.id;
         const isHovered = hoveredNode?.id === n.id;
         const isPathNode = activePathResult?.pathNodes?.some(pn => pn.id === n.id);
         const isNeighborhood = activeNeighborhoodSet ? activeNeighborhoodSet.has(n.id) : true;
-        const isFiltered = filteredNodeIds.has(n.id);
 
         const radius = Math.max(9, Math.min(24, 8 + (n.degree || 1) * 1.5));
         const opacity = activeFocus
-          ? (isNeighborhood || isSelected || isHovered || isPathNode ? 1.0 : 0.12)
-          : (isFiltered ? 1.0 : 0.15);
+          ? (isNeighborhood || isSelected || isHovered || isPathNode ? 1.0 : 0.2)
+          : 1.0;
 
         ctx.save();
         ctx.globalAlpha = opacity;
 
-        // God Node / Hub Halo
-        if (n.degree >= 5 || isPathNode || isSelected || isHovered) {
+        // God Node / Hub Glow Halo
+        if (n.degree >= 4 || isPathNode || isSelected || isHovered) {
           ctx.beginPath();
-          ctx.arc(n.x, n.y, radius + 7, 0, Math.PI * 2);
+          ctx.arc(n.x, n.y, radius + 8, 0, Math.PI * 2);
           ctx.fillStyle = isPathNode ? 'rgba(56, 189, 248, 0.45)' : isSelected ? 'rgba(239, 68, 68, 0.45)' : isHovered ? 'rgba(168, 85, 247, 0.45)' : `${n.color}35`;
           ctx.fill();
         }
@@ -292,12 +336,31 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           ? '#a855f7'
           : n.color || '#94a3b8';
         ctx.fill();
-        ctx.lineWidth = isSelected || isHovered ? 3.2 : 1.8;
-        ctx.strokeStyle = isSelected ? '#ffffff' : isHovered ? '#f8fafc' : 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = isSelected || isHovered ? 3.2 : 2.0;
+        ctx.strokeStyle = isSelected ? '#ffffff' : isHovered ? '#f8fafc' : 'rgba(255, 255, 255, 0.9)';
         ctx.stroke();
 
+        // Hidden Connections Expand Badge indicator
+        const hiddenCount = (n.degree || 0) - (focusedNeighborhood?.has(n.id) ? (n.degree || 0) : 0);
+        if (n.degree > 1 && !focusedNeighborhood?.has(n.id) && minDegreeThreshold > 1) {
+          // Draw subtle "+k" indicator on God Node
+          ctx.beginPath();
+          ctx.arc(n.x + radius * 0.75, n.y - radius * 0.75, 7, 0, Math.PI * 2);
+          ctx.fillStyle = '#38bdf8';
+          ctx.fill();
+          ctx.strokeStyle = '#0f172a';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          ctx.font = 'bold 8px Inter, sans-serif';
+          ctx.fillStyle = '#0f172a';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`+${n.degree}`, n.x + radius * 0.75, n.y - radius * 0.75);
+        }
+
         // Node Label
-        if (transformRef.current.scale > 0.45 || isSelected || isHovered || isPathNode || n.degree >= 3) {
+        if (transformRef.current.scale > 0.45 || isSelected || isHovered || isPathNode || n.degree >= 2) {
           const fontSize = isSelected || isHovered || isPathNode ? 11.5 : 10;
           ctx.font = `${isSelected || isHovered || isPathNode ? 'bold ' : '600 '}${fontSize}px Inter, system-ui, sans-serif`;
           ctx.fillStyle = isPathNode ? '#38bdf8' : isHovered ? '#c084fc' : '#f8fafc';
@@ -309,7 +372,6 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
       });
 
       ctx.restore();
-
       animationFrameId = requestAnimationFrame(simulationStep);
     };
 
@@ -319,10 +381,10 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [isPhysicsRunning, nodes, edges, selectedNode, hoveredNode, focusedNeighborhood, activePathResult, filteredNodeIds]);
+  }, [visibleNodes, visibleEdges, visibleNodeIds, selectedNode, hoveredNode, focusedNeighborhood, activePathResult, isPhysicsActive, minDegreeThreshold]);
 
   // ==========================================
-  // FLUID MOUSE DRAG & HIT TEST HANDLERS
+  // INTERACTION HANDLERS (CLICK TO EXPAND, DRAG NODE, PAN & ZOOM)
   // ==========================================
   const getCanvasMousePos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
@@ -337,8 +399,8 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
   const handleMouseDown = (e) => {
     const { x, y, rawX, rawY } = getCanvasMousePos(e);
 
-    // Hit test with generous grab radius
-    const clickedNode = nodes.find(n => {
+    // Hit test to click & inspect a node (from visible nodes only)
+    const clickedNode = visibleNodes.find(n => {
       const radius = Math.max(14, Math.min(28, 9 + (n.degree || 1) * 1.5));
       const dx = n.x - x;
       const dy = n.y - y;
@@ -349,14 +411,30 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
       draggedNodeRef.current = clickedNode;
       setSelectedNode(clickedNode);
 
-      // Compute 1-hop & 2-hop neighborhood
+      // Compute 1-hop connected neighborhood to reveal & expand into physics simulation!
       const neighbors = new Set([clickedNode.id]);
-      edges.forEach(edge => {
+      rawEdges.forEach(edge => {
         const s = typeof edge.source === 'object' ? edge.source.id : edge.source;
         const t = typeof edge.target === 'object' ? edge.target.id : edge.target;
         if (s === clickedNode.id) neighbors.add(t);
         if (t === clickedNode.id) neighbors.add(s);
       });
+
+      // Position newly revealed leaf nodes near the clicked parent so they spring out organically
+      neighbors.forEach(nId => {
+        if (!visibleNodeIds.has(nId)) {
+          const targetNode = rawNodes.find(n => n.id === nId);
+          if (targetNode) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 60 + Math.random() * 50;
+            targetNode.x = clickedNode.x + Math.cos(angle) * dist;
+            targetNode.y = clickedNode.y + Math.sin(angle) * dist;
+            targetNode.vx = Math.cos(angle) * 4;
+            targetNode.vy = Math.sin(angle) * 4;
+          }
+        }
+      });
+
       setFocusedNeighborhood(neighbors);
     } else {
       isDraggingCanvasRef.current = true;
@@ -368,7 +446,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
     const { x, y } = getCanvasMousePos(e);
 
     if (draggedNodeRef.current) {
-      // Fluid Real-Time Node Movement under Cursor
+      // Move dragged node directly with mouse
       draggedNodeRef.current.x = x;
       draggedNodeRef.current.y = y;
       draggedNodeRef.current.vx = 0;
@@ -378,7 +456,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
       transformRef.current.y = e.clientY - dragStartRef.current.y;
     } else {
       // Hover detection
-      const found = nodes.find(n => {
+      const found = visibleNodes.find(n => {
         const radius = Math.max(14, Math.min(28, 9 + (n.degree || 1) * 1.5));
         const dx = n.x - x;
         const dy = n.y - y;
@@ -389,8 +467,8 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
   };
 
   const handleMouseUp = () => {
-    draggedNodeRef.current = null;
     isDraggingCanvasRef.current = false;
+    draggedNodeRef.current = null;
   };
 
   const handleWheel = (e) => {
@@ -411,12 +489,27 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
     };
 
     const neighbors = new Set([node.id]);
-    edges.forEach(edge => {
+    rawEdges.forEach(edge => {
       const s = typeof edge.source === 'object' ? edge.source.id : edge.source;
       const t = typeof edge.target === 'object' ? edge.target.id : edge.target;
       if (s === node.id) neighbors.add(t);
       if (t === node.id) neighbors.add(s);
     });
+
+    neighbors.forEach(nId => {
+      if (!visibleNodeIds.has(nId)) {
+        const targetNode = rawNodes.find(n => n.id === nId);
+        if (targetNode) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 60 + Math.random() * 50;
+          targetNode.x = node.x + Math.cos(angle) * dist;
+          targetNode.y = node.y + Math.sin(angle) * dist;
+          targetNode.vx = Math.cos(angle) * 4;
+          targetNode.vy = Math.sin(angle) * 4;
+        }
+      }
+    });
+
     setFocusedNeighborhood(neighbors);
   };
 
@@ -433,7 +526,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
   // Execute Shortest Path Traversal
   const handleExecutePathFinder = () => {
     if (!pathStartQuery || !pathTargetQuery) return;
-    const result = GraphPathSolver.findShortestPath(nodes, edges, pathStartQuery, pathTargetQuery);
+    const result = GraphPathSolver.findShortestPath(rawNodes, rawEdges, pathStartQuery, pathTargetQuery);
     setActivePathResult(result);
     if (result.found && result.startNode) {
       flyToNode(result.startNode);
@@ -556,11 +649,11 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
               Network Link Intelligence & Graph Topology
               <span style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', fontWeight: 800 }}>
-                {networkData.isLocked ? `${nodes.length} Entities · ${edges.length} Multi-Hop Links` : 'Awaiting Dataset'}
+                {networkData.isLocked ? `Showing ${visibleNodes.length} of ${rawNodes.length} Entities (Hub Sliced)` : 'Awaiting Dataset'}
               </span>
             </div>
             <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-              Fluid Force-Directed Drag & Drop · Real Investigative Entity Linkage (Zero Demographic Noise)
+              Centrality Slicing & Organic Physics Simulation · Click Hubs (+k) to Expand Leaves
             </div>
           </div>
         </div>
@@ -634,7 +727,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: n.color }} />
                     <span style={{ fontWeight: 700, color: '#f8fafc' }}>{n.label}</span>
                   </div>
-                  <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{n.typeLabel}</span>
+                  <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{n.typeLabel} ({n.degree} links)</span>
                 </div>
               ))}
             </div>
@@ -693,80 +786,212 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onWheel={handleWheel}
-          style={{ width: '100%', height: '100%', cursor: isDraggingCanvasRef.current ? 'grabbing' : draggedNodeRef.current ? 'grabbing' : 'grab' }}
+          style={{
+            width: '100%',
+            height: '100%',
+            cursor: draggedNodeRef.current ? 'grabbing' : (isDraggingCanvasRef.current ? 'grabbing' : (hoveredNode ? 'pointer' : 'grab'))
+          }}
         />
 
-        {/* DYNAMIC FEATURE FILTER BAR (TOP LEFT) */}
-        <div style={{
-          position: 'absolute',
-          top: '16px',
-          left: '16px',
-          backgroundColor: 'rgba(15, 23, 42, 0.88)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          borderRadius: '10px',
-          padding: '6px 10px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-          zIndex: 10,
-          maxWidth: '80%',
-          overflowX: 'auto'
-        }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', marginRight: '4px' }}>FILTER:</span>
-          <button
-            onClick={() => setActiveFilterType('ALL')}
-            style={{
-              padding: '4px 8px',
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: activeFilterType === 'ALL' ? '#38bdf8' : 'transparent',
-              color: activeFilterType === 'ALL' ? '#0f172a' : '#94a3b8',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            All Entities ({nodes.length})
-          </button>
+        {/* EMPTY STATE BANNER WHEN NO DATASET IS LOADED */}
+        {rawNodes.length === 0 && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            backgroundColor: 'rgba(15, 23, 42, 0.88)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '16px',
+            padding: '32px 40px',
+            backdropFilter: 'blur(16px)',
+            maxWidth: '440px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+            zIndex: 15
+          }}>
+            <div style={{
+              width: '54px',
+              height: '54px',
+              borderRadius: '14px',
+              backgroundColor: 'rgba(56, 189, 248, 0.15)',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px auto'
+            }}>
+              <Network size={28} style={{ color: '#38bdf8' }} />
+            </div>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
+              No Active Network Dataset
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
+              Upload a crime records CSV or syndicate link ledger to enable relational topology mapping and multi-hop link tracing.
+            </p>
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '8px',
+                border: '1px solid rgba(56, 189, 248, 0.5)',
+                backgroundColor: '#0284c7',
+                color: '#ffffff',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px rgba(2, 132, 199, 0.4)'
+              }}
+            >
+              <UploadCloud size={16} /> Attach Network / CDR File
+            </button>
+          </div>
+        )}
 
-          {featureTypes.map(ft => {
-            const isSelected = activeFilterType === ft.type;
-            return (
-              <button
-                key={ft.type}
-                onClick={() => setActiveFilterType(ft.type)}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: isSelected ? ft.color : 'transparent',
-                  color: isSelected ? '#0f172a' : '#cbd5e1',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: ft.color }} />
-                <span>{ft.label}</span>
-                <span style={{ opacity: 0.7, fontSize: '0.62rem' }}>({ft.count})</span>
-              </button>
-            );
-          })}
+        {/* DYNAMIC FEATURE & CENTRALITY FILTER BAR (TOP LEFT) */}
+        {rawNodes.length > 0 && (
+          <div style={{
+            position: 'absolute',
+            top: '16px',
+            left: '16px',
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            backdropFilter: 'blur(14px)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            borderRadius: '10px',
+            padding: '8px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            zIndex: 10,
+            maxWidth: '85%'
+          }}>
+          {/* Row 1: Hub Slicing Centrality Quick Presets & Slider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Sliders size={12} /> HUB SLICING:
+            </span>
+
+            <button
+              onClick={() => setMinDegreeThreshold(1)}
+              style={{
+                padding: '3px 8px',
+                fontSize: '0.66rem',
+                fontWeight: 700,
+                borderRadius: '4px',
+                border: 'none',
+                backgroundColor: minDegreeThreshold === 1 ? '#38bdf8' : 'rgba(255,255,255,0.06)',
+                color: minDegreeThreshold === 1 ? '#0f172a' : '#94a3b8',
+                cursor: 'pointer'
+              }}
+            >
+              All Entities (Degree ≥ 1)
+            </button>
+
+            <button
+              onClick={() => setMinDegreeThreshold(2)}
+              style={{
+                padding: '3px 8px',
+                fontSize: '0.66rem',
+                fontWeight: 700,
+                borderRadius: '4px',
+                border: 'none',
+                backgroundColor: minDegreeThreshold === 2 ? '#38bdf8' : 'rgba(255,255,255,0.06)',
+                color: minDegreeThreshold === 2 ? '#0f172a' : '#94a3b8',
+                cursor: 'pointer'
+              }}
+            >
+              Major Hubs (Degree ≥ 2)
+            </button>
+
+            <button
+              onClick={() => setMinDegreeThreshold(4)}
+              style={{
+                padding: '3px 8px',
+                fontSize: '0.66rem',
+                fontWeight: 700,
+                borderRadius: '4px',
+                border: 'none',
+                backgroundColor: minDegreeThreshold === 4 ? '#38bdf8' : 'rgba(255,255,255,0.06)',
+                color: minDegreeThreshold === 4 ? '#0f172a' : '#94a3b8',
+                cursor: 'pointer'
+              }}
+            >
+              God Nodes (Degree ≥ 4)
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '6px' }}>
+              <span style={{ fontSize: '0.64rem', color: '#64748b' }}>Threshold:</span>
+              <input
+                type="range"
+                min="1"
+                max="8"
+                step="1"
+                value={minDegreeThreshold}
+                onChange={(e) => setMinDegreeThreshold(parseInt(e.target.value))}
+                style={{ width: '70px', height: '4px', accentColor: '#38bdf8', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#38bdf8' }}>{minDegreeThreshold}</span>
+            </div>
+          </div>
+
+          {/* Row 2: Entity Type Filters */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto' }}>
+            <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#64748b', marginRight: '2px' }}>ENTITY:</span>
+            <button
+              onClick={() => setActiveFilterType('ALL')}
+              style={{
+                padding: '3px 7px',
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                borderRadius: '4px',
+                border: 'none',
+                backgroundColor: activeFilterType === 'ALL' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
+                color: activeFilterType === 'ALL' ? '#38bdf8' : '#94a3b8',
+                cursor: 'pointer'
+              }}
+            >
+              All Types
+            </button>
+
+            {featureTypes.map(ft => {
+              const isSelected = activeFilterType === ft.type;
+              return (
+                <button
+                  key={ft.type}
+                  onClick={() => setActiveFilterType(ft.type)}
+                  style={{
+                    padding: '3px 7px',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    borderRadius: '4px',
+                    border: 'none',
+                    backgroundColor: isSelected ? `${ft.color}30` : 'transparent',
+                    color: isSelected ? ft.color : '#cbd5e1',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: ft.color }} />
+                  <span>{ft.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
+        )}
 
         {/* FLOATING CANVAS CONTROLS (BOTTOM LEFT) */}
         <div style={{
           position: 'absolute',
           bottom: '16px',
           left: '16px',
-          backgroundColor: 'rgba(15, 23, 42, 0.85)',
+          backgroundColor: 'rgba(15, 23, 42, 0.88)',
           backdropFilter: 'blur(12px)',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: '10px',
@@ -777,12 +1002,22 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
           zIndex: 10
         }}>
+          {/* Physics Play/Pause Toggle */}
           <button
-            onClick={() => setIsPhysicsRunning(!isPhysicsRunning)}
-            title={isPhysicsRunning ? 'Pause Physics Simulation' : 'Resume Physics'}
-            style={{ background: 'transparent', border: 'none', color: '#38bdf8', cursor: 'pointer', padding: '4px' }}
+            onClick={() => setIsPhysicsActive(!isPhysicsActive)}
+            title={isPhysicsActive ? "Pause Physics Simulation" : "Resume Physics Simulation"}
+            style={{
+              background: isPhysicsActive ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+              border: 'none',
+              color: isPhysicsActive ? '#38bdf8' : '#94a3b8',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center'
+            }}
           >
-            {isPhysicsRunning ? <Pause size={16} /> : <Play size={16} />}
+            {isPhysicsActive ? <Pause size={15} /> : <Play size={15} />}
           </button>
           <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
           <button
@@ -799,10 +1034,11 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           >
             <ZoomOut size={16} />
           </button>
+          <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
           <button
             onClick={handleResetView}
             title="Reset View & Center Canvas"
-            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+            style={{ background: 'transparent', border: 'none', color: '#38bdf8', cursor: 'pointer', padding: '4px' }}
           >
             <RotateCcw size={16} />
           </button>
@@ -1001,7 +1237,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
                 {Array.from(focusedNeighborhood || []).filter(id => id !== selectedNode.id).map(nId => {
-                  const target = nodes.find(n => n.id === nId);
+                  const target = rawNodes.find(n => n.id === nId);
                   if (!target) return null;
                   return (
                     <div

@@ -295,6 +295,7 @@ function Chatbot({
   onNavigateToMaps,
   onNavigateToVault,
   onDatasetIngested,
+  onSessionReset,
   isDatasetLoaded,
   datasetState = null
 }) {
@@ -454,6 +455,12 @@ function Chatbot({
     setStudioExecutiveDecision(null);
     setStudioKpis(null);
     setIsVisualStudioOpen(false);
+
+    // SOLID Event Delegation: notify parent controller to reset data mart & network stores
+    if (onSessionReset) {
+      onSessionReset();
+    }
+
     const welcomeMsg = [{
       id: 'welcome',
       sender: 'bot',

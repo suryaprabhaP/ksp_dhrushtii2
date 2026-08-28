@@ -649,6 +649,10 @@ class NetworkTopologyStore {
     };
     this.notify();
   }
+
+  clearDataset() {
+    this.reset();
+  }
 }
 
 export const globalNetworkStore = new NetworkTopologyStore();

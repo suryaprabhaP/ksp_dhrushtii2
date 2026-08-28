@@ -114,6 +114,12 @@ function App() {
     }));
   };
 
+  // Central Session Reset Handler (SOLID: App.jsx orchestrates data lifecycle)
+  const handleSessionReset = () => {
+    setDatasetState(initialDatasetState);
+    globalNetworkStore.clearDataset();
+  };
+
   // MOCK LOGIN PORTAL VIEW
   if (!isLoggedIn) {
     return (
@@ -415,6 +421,7 @@ function App() {
             onNavigateToMaps={() => { setAnalyticsInitialTab('hotspot_maps'); setActiveView('analytics'); }}
             onNavigateToVault={() => { setAnalyticsInitialTab('vault'); setActiveView('analytics'); }}
             onDatasetIngested={handleDatasetLoaded}
+            onSessionReset={handleSessionReset}
             isDatasetLoaded={datasetState.isLoaded}
             datasetState={datasetState}
           />

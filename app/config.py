@@ -14,10 +14,17 @@ if ENV_PATH.exists():
 else:
     load_dotenv()
 
-GROQ_API_KEY   = os.getenv("GROQ_API_KEY", "")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-PORT           = int(os.getenv("PORT", 5000))
-AUDIT_LOG_PATH = BASE_DIR / "audit_trace.jsonl"
+GROQ_API_KEY          = os.getenv("GROQ_API_KEY", "")
+GEMINI_API_KEY        = os.getenv("GEMINI_API_KEY", "")
+ZOHO_ACCESS_TOKEN     = os.getenv("ZOHO_ACCESS_TOKEN", "")
+ZOHO_REFRESH_TOKEN    = os.getenv("ZOHO_REFRESH_TOKEN", "")
+ZOHO_CLIENT_ID        = os.getenv("client_id", "")
+ZOHO_CLIENT_SECRET    = os.getenv("client_secret", "")
+ZOHO_API_DOMAIN       = os.getenv("ZOHO_API_DOMAIN", "https://www.zohoapis.in")
+CATALYST_PROJECT_ID   = os.getenv("CATALYST_PROJECT_ID", "54626000000013049")
+CATALYST_ORG_ID       = os.getenv("CATALYST_ORG_ID", "60077159195")
+PORT                  = int(os.getenv("PORT", 5000))
+AUDIT_LOG_PATH        = BASE_DIR / "audit_trace.jsonl"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # HARDENED SYSTEM PROMPTS (SOLID: SRP - Anti-Meta-Programming Guardrails)
