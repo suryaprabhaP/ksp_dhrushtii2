@@ -21,6 +21,7 @@ import ChartAnalysisModal from './ChartAnalysisModal';
 import DatabaseConnectorModal from './DatabaseConnectorModal';
 import VisualIntelligenceStudio from './VisualIntelligenceStudio';
 import UploadDatasetModal from './UploadDatasetModal';
+import AudioForensicsPanel from './AudioForensicsPanel';
 import NetworkGraphView from '../analytics/modules/NetworkGraphView';
 import { parseCSV } from '../analytics/services/datasetStore';
 import { GraphQueryToolAgent, globalNetworkStore } from '../analytics/services/networkAnalyticsService';
@@ -204,7 +205,8 @@ function InlineChartCard({ message, onOpenModal }) {
 
 const VIEW_STATES = Object.freeze({
   CHAT: 'CHAT_VIEW',
-  NETWORK: 'NETWORK_VIEW'
+  NETWORK: 'NETWORK_VIEW',
+  AUDIO_FORENSICS: 'AUDIO_FORENSICS_VIEW'
 });
 
 const customMiniIcon = L.divIcon({
@@ -1447,6 +1449,23 @@ function Chatbot({
             </div>
             <span className="nav-btn-badge">65B ➔</span>
           </button>
+
+          {/* 5. VOICE FORENSICS & STT INTEL (BILINGUAL SPOTIFY LYRICS & HITL GATEWAY) */}
+          <button
+            onClick={() => {
+              setActiveMainView(prev => prev === VIEW_STATES.AUDIO_FORENSICS ? VIEW_STATES.CHAT : VIEW_STATES.AUDIO_FORENSICS);
+            }}
+            className={`ksp-sidebar-nav-btn ${activeMainView === VIEW_STATES.AUDIO_FORENSICS ? 'active' : ''}`}
+            title="Open Standalone Voice Forensics & STT Speech Intelligence Studio"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+              <Mic size={16} className="nav-btn-icon" style={{ color: '#a855f7' }} />
+              <span>Voice Forensics & STT</span>
+            </div>
+            <span className="nav-btn-badge" style={{ borderColor: 'rgba(168, 85, 247, 0.4)', color: '#c084fc' }}>
+              {activeMainView === VIEW_STATES.AUDIO_FORENSICS ? 'ACTIVE ✕' : 'AUDIO ➔'}
+            </span>
+          </button>
         </div>
 
         {/* SAVED SESSIONS HISTORY PANEL */}
@@ -2196,6 +2215,29 @@ function Chatbot({
     </div>
   </div>
 </div>
+        ) : activeMainView === VIEW_STATES.AUDIO_FORENSICS ? (
+          <div style={{ flex: 1, width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <AudioForensicsPanel
+              sessionId={activeSessionId || 'default_session'}
+              divisionName={divisionName}
+              onBackToChat={() => setActiveMainView(VIEW_STATES.CHAT)}
+              onEvidenceInjected={(evidence) => {
+                setMessages(prev => [
+                  ...prev,
+                  {
+                    id: Date.now(),
+                    sender: 'bot',
+                    text: `🎙️ <b>Official Audio Evidence Ingested into Session RAG!</b><br/>Verified Markdown document <code>${evidence.doc_name}</code> (${evidence.chunk_count} chunks) is now indexed in memory.<br/><br/><b>Transcript Summary:</b> "${evidence.transcript_en ? evidence.transcript_en.slice(0, 180) + '...' : 'Speech statement processed.'}"<br/><br/>💡 <i>The <b>Document & Legal Agent</b> is active and can answer questions or perform forensic cross-referencing across this audio recording.</i>`,
+                    agent_type: 'document_agent',
+                    agent_label: 'Document & Legal Agent',
+                    agent_icon: '📜',
+                    agent_color: '#0284c7',
+                    agent_description: 'DuckDB RAG Document & SOP Engine'
+                  }
+                ]);
+              }}
+            />
+          </div>
         ) : (
           <div style={{ flex: 1, width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <NetworkGraphView

@@ -13,6 +13,7 @@ class BaseLLMProvider(ILLMProvider):
     without modifying agent or routing code.
     """
     name: str = "base"
+    tags: List[str] = []
 
     @abstractmethod
     def complete(self, messages: List[Dict[str, str]], json_mode: bool = False, max_tokens: int = 1000) -> Tuple[str, str]:

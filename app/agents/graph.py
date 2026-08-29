@@ -129,7 +129,8 @@ class GraphAgent(BaseAgent):
                 try:
                     narrative = orchestrator.generate_completion(
                         forensic_prompt,
-                        system_instruction="You are a Senior Police Intelligence Analyst. Provide clear, realistic, and legally sound forensic crime briefings."
+                        system_instruction="You are a Senior Police Intelligence Analyst. Provide clear, realistic, and legally sound forensic crime briefings.",
+                        required_tags=self.manifest.required_provider_tags
                     )
                 except Exception as e:
                     log.warning(f"[GraphAgent] Neural synthesis fallback: {e}")
@@ -192,7 +193,8 @@ A verified **{hops}-hop relational chain** connects **{p_nodes[0]['label']}** to
             try:
                 narrative = orchestrator.generate_completion(
                     forensic_prompt,
-                    system_instruction="You are a Senior Police Intelligence Analyst. Provide clear, realistic, and legally sound forensic crime briefings."
+                    system_instruction="You are a Senior Police Intelligence Analyst. Provide clear, realistic, and legally sound forensic crime briefings.",
+                    required_tags=self.manifest.required_provider_tags
                 )
             except Exception as e:
                 log.warning(f"[GraphAgent] Hubs synthesis fallback: {e}")

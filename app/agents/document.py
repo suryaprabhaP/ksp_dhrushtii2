@@ -32,7 +32,8 @@ class DocumentAgent(BaseAgent):
             color="#10b981",
             description="Trigger for legal sections (IPC, BNS, BNSS, BSA, IT Act, CrPC), FIR filing procedures, Section 65B certification, evidence PDFs, or statutory police SOPs.",
             requires_visual_studio=False,
-            system_prompt=KSP_DOCUMENT_PROMPT
+            system_prompt=KSP_DOCUMENT_PROMPT,
+            required_provider_tags=["rag_document", "free_reasoning"]
         )
 
     def execute(self, ctx: ExecutionContext) -> AgentResponse:
@@ -73,14 +74,19 @@ class DocumentAgent(BaseAgent):
             {"role": "system", "content": system_content}
         ]
 
-        for h in ctx.history[-4:]:
+        for h in ctx.history:
             if isinstance(h, dict) and h.get("role") in ("user", "assistant") and h.get("content"):
                 messages.append({"role": h["role"], "content": h["content"]})
 
         messages.append({"role": "user", "content": ctx.query})
 
         # ── 3. Orchestrated LLM Completion (Zoho QuickML / Groq / Gemini) ─────
-        answer, provider = llm_complete(messages, json_mode=False, max_tokens=750)
+        answer, provider = llm_complete(
+            messages,
+            json_mode=False,
+            max_tokens=750,
+            required_tags=self.manifest.required_provider_tags
+        )
         manifest = self.manifest
 
         # ── 4. Dynamic Suggested Actions ──────────────────────────────────────

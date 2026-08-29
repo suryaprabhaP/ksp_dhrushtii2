@@ -11,6 +11,7 @@ log = logging.getLogger("standalone.provider.groq")
 
 class GroqProvider(BaseLLMProvider):
     name = "groq"
+    tags = ["free_reasoning", "json_schema"]
     MODELS = ["qwen/qwen3.8-27b", "qwen/qwen3.6-27b", "openai/gpt-oss-120b"]
 
     def __init__(self):

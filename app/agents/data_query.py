@@ -49,7 +49,12 @@ class DataQueryAgent(BaseAgent):
                 messages.append({"role": h["role"], "content": h["content"]})
         messages.append({"role": "user", "content": ctx.query})
 
-        answer, provider = llm_complete(messages, json_mode=False, max_tokens=200)
+        answer, provider = llm_complete(
+            messages,
+            json_mode=False,
+            max_tokens=200,
+            required_tags=self.manifest.required_provider_tags
+        )
         manifest = self.manifest
 
         return AgentResponse(

@@ -3,6 +3,7 @@ KSP Sentinel AI — DuckDB Document Storage & Search Engine (SOLID: DIP + SRP)
 Thread-safe, session-isolated document store for PDFs, FIRs, and SOP circulars.
 """
 import io
+import json
 import logging
 import re
 import threading
@@ -45,6 +46,18 @@ class DuckDBDocumentStore(IDocumentRepository):
                         chunk_count INTEGER,
                         file_size_kb DOUBLE,
                         ingested_at VARCHAR
+                    )
+                """)
+                con.execute("""
+                    CREATE TABLE IF NOT EXISTS staged_transcripts (
+                        stage_id VARCHAR PRIMARY KEY,
+                        session_id VARCHAR,
+                        filename VARCHAR,
+                        transcript_kn VARCHAR,
+                        transcript_en VARCHAR,
+                        entities VARCHAR,
+                        created_at VARCHAR,
+                        status VARCHAR
                     )
                 """)
                 self.sessions[session_id] = {
@@ -258,6 +271,141 @@ class DuckDBDocumentStore(IDocumentRepository):
             con = self._get_connection(session_id)
             count = con.execute("SELECT COUNT(*) FROM doc_registry").fetchone()[0]
             return count > 0
+
+    def stage_transcript(
+        self,
+        session_id: str,
+        stage_id: str,
+        filename: str,
+        transcript_kn: str,
+        transcript_en: str,
+        entities: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Sandboxed stage insertion for human-in-the-loop audio review.
+        Does NOT ingest into doc_chunks RAG table yet.
+        """
+        con = self._get_connection(session_id)
+        created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        entities_json = json.dumps(entities) if isinstance(entities, dict) else str(entities or "{}")
+
+        with self._lock:
+            con.execute("DELETE FROM staged_transcripts WHERE stage_id = ?", [stage_id])
+            con.execute(
+                """
+                INSERT INTO staged_transcripts (stage_id, session_id, filename, transcript_kn, transcript_en, entities, created_at, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'staged')
+                """,
+                [stage_id, session_id, filename, transcript_kn, transcript_en, entities_json, created_at]
+            )
+
+        log.info(f"[DocumentStore] Staged audio transcript '{stage_id}' for session '{session_id}'")
+        return {
+            "success": True,
+            "stage_id": stage_id,
+            "session_id": session_id,
+            "filename": filename,
+            "created_at": created_at,
+            "status": "staged"
+        }
+
+    def get_staged_transcripts(self, session_id: str) -> List[Dict[str, Any]]:
+        """
+        Retrieves all currently staged (un-injected) audio transcripts for a session.
+        Allows UI rehydration across tab switching.
+        """
+        with self._lock:
+            if session_id not in self.sessions:
+                return []
+            con = self._get_connection(session_id)
+            rows = con.execute(
+                """
+                SELECT stage_id, session_id, filename, transcript_kn, transcript_en, entities, created_at, status
+                FROM staged_transcripts
+                WHERE session_id = ? AND status = 'staged'
+                ORDER BY created_at DESC
+                """,
+                [session_id]
+            ).fetchall()
+
+            result = []
+            for r in rows:
+                try:
+                    ents = json.loads(r[5]) if r[5] else {}
+                except Exception:
+                    ents = {}
+                result.append({
+                    "stage_id": r[0],
+                    "session_id": r[1],
+                    "filename": r[2],
+                    "transcript_kn": r[3],
+                    "transcript_en": r[4],
+                    "entities": ents,
+                    "created_at": r[6],
+                    "status": r[7]
+                })
+            return result
+
+    def confirm_and_inject_transcript(
+        self,
+        session_id: str,
+        stage_id: str,
+        markdown_content: str,
+        filename: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Human-in-the-Loop Gateway:
+        Moves verified transcript from staged state to official session doc_chunks RAG table.
+        """
+        con = self._get_connection(session_id)
+        doc_name = filename if filename else f"audio_statement_{stage_id}.md"
+        if not doc_name.lower().endswith(".md"):
+            doc_name = f"{doc_name}.md"
+
+        # Strict Replacement Model: Purge any previously injected audio documents from session RAG
+        with self._lock:
+            audio_docs = con.execute("SELECT doc_name FROM doc_registry WHERE doc_name LIKE 'audio_%'").fetchall()
+            for (old_doc,) in audio_docs:
+                con.execute("DELETE FROM doc_chunks WHERE doc_name = ?", [old_doc])
+                con.execute("DELETE FROM doc_registry WHERE doc_name = ?", [old_doc])
+                log.info(f"[DocumentStore] Strict Replacement: Purged prior audio doc '{old_doc}' from session '{session_id}'")
+
+            # Mark staged entry as injected and discard any previous staged entries
+            con.execute(
+                "UPDATE staged_transcripts SET status = 'injected' WHERE stage_id = ?",
+                [stage_id]
+            )
+            con.execute(
+                "DELETE FROM staged_transcripts WHERE session_id = ? AND stage_id != ? AND status = 'staged'",
+                [session_id, stage_id]
+            )
+
+        # Ingest into official DuckDB Document Store
+        ingest_res = self.ingest_document(
+            session_id=session_id,
+            filename=doc_name,
+            file_bytes=markdown_content.encode("utf-8")
+        )
+
+        log.info(f"[DocumentStore] Confirmed and injected audio transcript '{doc_name}' into RAG for session '{session_id}'")
+        return {
+            "success": True,
+            "stage_id": stage_id,
+            "doc_name": doc_name,
+            "session_id": session_id,
+            "chunk_count": ingest_res.get("chunk_count", 0),
+            "file_size_kb": ingest_res.get("file_size_kb", 0.0),
+            "ingested_at": ingest_res.get("ingested_at", "")
+        }
+
+    def delete_staged_transcript(self, session_id: str, stage_id: str) -> bool:
+        """Discards an unconfirmed staged transcript."""
+        with self._lock:
+            if session_id not in self.sessions:
+                return False
+            con = self._get_connection(session_id)
+            con.execute("DELETE FROM staged_transcripts WHERE stage_id = ?", [stage_id])
+            return True
 
     def clear_session(self, session_id: str) -> None:
         """Completely drops session storage."""

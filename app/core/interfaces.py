@@ -20,6 +20,7 @@ class AgentManifest:
     requires_visual_studio: bool = False
     system_prompt: str = ""
     trigger_examples: List[str] = field(default_factory=list)
+    required_provider_tags: List[str] = field(default_factory=lambda: ["free_reasoning"])
 
 
 @dataclass
@@ -33,6 +34,8 @@ class ExecutionContext:
     division: str = "Bengaluru Division"
     session_id: Optional[str] = None
     fir_number: Optional[str] = None
+    memory_summary: Optional[str] = None
+    last_agent_type: Optional[str] = None
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -135,6 +138,8 @@ class ILLMProvider(ABC):
     """
     DIP: Abstract interface for neural inference providers.
     """
+    tags: List[str] = []
+
     @abstractmethod
     def complete(self, messages: List[Dict[str, str]], json_mode: bool = False, max_tokens: int = 1000) -> tuple[str, str]:
         pass

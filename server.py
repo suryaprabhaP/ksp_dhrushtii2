@@ -19,11 +19,15 @@ from pathlib import Path
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-from app.config import AUDIT_LOG_PATH, GEMINI_API_KEY, GROQ_API_KEY, PORT
+from app.config import ANALYTICS_SEED, AUDIT_LOG_PATH, GEMINI_API_KEY, GROQ_API_KEY, MAP_MARKERS_SEED, PORT
 import app.bootstrap  # Registers all specialized domain agents
 from app.blueprints.calendar import calendar_bp
+from app.blueprints.forensics import forensics_bp
+from app.blueprints.mcp_social import mcp_social_bp
 from app.core.audit import AuditLogger
+from app.core.classifier import classifier
 from app.core.interfaces import ExecutionContext
+from app.core.memory import MemoryAgent
 from app.core.registry import registry
 from app.core.router import router
 from app.engine.document_store import document_store
@@ -39,6 +43,8 @@ CORS(app)
 
 # Register Blueprints (SOLID: SRP + OCP)
 app.register_blueprint(calendar_bp, url_prefix="/api/calendar")
+app.register_blueprint(forensics_bp)
+app.register_blueprint(mcp_social_bp)
 
 audit_logger = AuditLogger(AUDIT_LOG_PATH)
 
@@ -53,7 +59,6 @@ def chat():
 
     body = request.get_json(silent=True) or {}
     user_query = str(body.get("query") or "").strip()
-    history = body.get("history") or []
     division = body.get("division", "Bengaluru Division")
     session_id = body.get("session_id", "default_session")
     officer_id = body.get("officer_id", "OFFICER_BGL_001")
@@ -63,17 +68,20 @@ def chat():
         return jsonify({"success": False, "error": "Query cannot be empty"}), 400
 
     try:
-        # History string preview for context-aware routing
-        history_preview = ""
-        for h in history[-4:]:
-            if isinstance(h, dict) and h.get("content"):
-                history_preview += f"{h.get('role', 'user')}: {h.get('content')}\n"
+        # ── 1. Stateful History & Context Retrieval from DuckDB (SOLID: SRP) ──
+        history, memory_summary, last_agent_type = MemoryAgent.get_session_history(session_id)
 
-        # ── 1. Schema-Driven Intent Classification (OCP) ──────────────────────
-        intent = router.classify(user_query, history_preview=history_preview)
-        log.info(f"[Chat Dispatch] Session: '{session_id}' | Query: '{user_query[:50]}...' -> Intent: [{intent}]")
+        # ── 2. Context-Aware LLM Intent Classification (OCP + DIP) ───────────
+        classification = classifier.classify(
+            query=user_query,
+            recent_history=history,
+            last_agent_type=last_agent_type,
+            memory_summary=memory_summary
+        )
+        intent = classification.intent
+        log.info(f"[Chat Dispatch] Session: '{session_id}' | Query: '{user_query[:50]}...' -> Intent: [{intent}] | Follow-up: {classification.is_followup}")
 
-        # ── 2. Guardrail Interception ─────────────────────────────────────────
+        # ── 3. Guardrail Interception ─────────────────────────────────────────
         if intent == "GUARDRAIL":
             return jsonify({
                 "success": True,
@@ -90,14 +98,16 @@ def chat():
                 "suggested_actions": ["Analyze cyber crime statistics", "Review Section 65B procedures"]
             }), 200
 
-        # ── 3. Polymorphic Agent Execution with Chain of Responsibility (LSP + DIP) ──
+        # ── 4. Polymorphic Agent Execution with Chain of Responsibility (LSP + DIP) ──
         agent = registry.get_agent(intent) or registry.get_agent("CONVERSATIONAL")
         ctx = ExecutionContext(
             query=user_query,
             history=history,
             division=division,
             session_id=session_id,
-            fir_number=fir_number
+            fir_number=fir_number,
+            memory_summary=memory_summary,
+            last_agent_type=last_agent_type
         )
 
         response = agent.execute(ctx)
@@ -109,7 +119,11 @@ def chat():
             delegated_agent = registry.get_agent(target_intent) or registry.get_agent("DOCUMENT")
             response = delegated_agent.execute(ctx)
 
-        # ── 4. Cryptographic Section 65B Audit Logging ────────────────────────
+        # ── 5. Stateful Turn Persistence in DuckDB ────────────────────────────
+        MemoryAgent.save_session_turn(session_id, "user", user_query, agent_type=intent)
+        MemoryAgent.save_session_turn(session_id, "assistant", response.answer, agent_type=response.agent_type)
+
+        # ── 6. Cryptographic Section 65B Audit Logging ────────────────────────
         audit_logger.log_event(
             event_type="OFFICER_QUERY_RESOLVED",
             session_id=session_id,
@@ -118,6 +132,7 @@ def chat():
             details={
                 "query": user_query,
                 "intent": intent,
+                "is_followup": classification.is_followup,
                 "provider": response.provider,
                 "charts_count": len(response.charts),
                 "visuals_updated": response.visuals_updated
@@ -452,34 +467,146 @@ def zia_identity_scanner():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@app.route("/api/complaints", methods=["POST"])
-def register_complaint():
-    try:
-        data = request.get_json(silent=True) or {}
-        citizen_name = data.get("citizen_name", "Anonymous Citizen")
-        phone = data.get("phone", "N/A")
-        station = data.get("station", "General Jurisdiction")
-        category = data.get("category", "General Complaint")
-        ack_no = f"KSP-ACK-2026-{int(time.time() * 1000) % 1000000:06d}"
+# ── In-Memory Complaints Store for Session Portals ───────────────────────────
+COMPLAINTS_STORE = [
+    {
+        "id": "KSP-ACK-2026-004128",
+        "citizen_name": "Siddharth Rao",
+        "phone": "+91 98450 12345",
+        "incident": {
+            "category": "Cyber Financial Fraud",
+            "police_station": "Koramangala Police Station",
+            "district": "Bengaluru Urban",
+            "division": "Bengaluru Division",
+            "description": "Unauthorized debit of ₹85,000 via fraudulent electricity bill payment link.",
+            "loss_amount": "₹85,000"
+        },
+        "status": "Assigned to Cyber Crime Cell",
+        "created_at": "2026-07-14 09:30"
+    },
+    {
+        "id": "KSP-ACK-2026-004129",
+        "citizen_name": "Ananya Hegde",
+        "phone": "+91 94480 56789",
+        "incident": {
+            "category": "Vehicle Theft",
+            "police_station": "Devaraja Police Station",
+            "district": "Mysuru",
+            "division": "Mysuru Division",
+            "description": "Two-wheeler theft from public parking near Devaraja market.",
+            "loss_amount": "₹70,000"
+        },
+        "status": "FIR Drafted & Under Review",
+        "created_at": "2026-07-14 11:15"
+    }
+]
 
-        audit_logger.log_event(
-            event_type="CITIZEN_COMPLAINT_REGISTERED",
-            session_id="citizen_portal",
-            officer_id="PORTAL_AUTO_INGEST",
-            action=f"Complaint: {category} by {citizen_name}",
-            details={"ack_no": ack_no, "station": station, "phone": phone}
-        )
+
+@app.route("/api/complaints", methods=["GET", "POST"])
+def handle_complaints():
+    if request.method == "POST":
+        try:
+            data = request.get_json(silent=True) or {}
+            citizen_name = data.get("citizen_name", "Anonymous Citizen")
+            phone = data.get("phone", "N/A")
+            station = data.get("station", "General Jurisdiction")
+            district = data.get("district", "Bengaluru Urban")
+            division = data.get("division", "Bengaluru Division")
+            category = data.get("category", "General Complaint")
+            description = data.get("description", "")
+            ack_no = f"KSP-ACK-2026-{int(time.time() * 1000) % 1000000:06d}"
+            now_str = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+
+            complaint_entry = {
+                "id": ack_no,
+                "citizen_name": citizen_name,
+                "phone": phone,
+                "incident": {
+                    "category": category,
+                    "police_station": station,
+                    "district": district,
+                    "division": division,
+                    "description": description,
+                    "loss_amount": data.get("loss_amount", "N/A")
+                },
+                "status": "Under Initial Verification by Station House Officer",
+                "created_at": now_str
+            }
+            COMPLAINTS_STORE.insert(0, complaint_entry)
+
+            audit_logger.log_event(
+                event_type="CITIZEN_COMPLAINT_REGISTERED",
+                session_id="citizen_portal",
+                officer_id="PORTAL_AUTO_INGEST",
+                action=f"Complaint: {category} by {citizen_name}",
+                details={"ack_no": ack_no, "station": station, "phone": phone}
+            )
+
+            return jsonify({
+                "success": True,
+                "acknowledgement_number": ack_no,
+                "reference_number": ack_no,
+                "message": "Complaint successfully registered in Karnataka Police Unified Portal.",
+                "status": "Under Initial Verification by Station House Officer",
+                "assigned_station": station,
+                "created_at": now_str
+            }), 201
+        except Exception as e:
+            log.error(f"Complaint registration error: {e}", exc_info=True)
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    else:  # GET complaints
+        station = request.args.get("station", "").strip().lower()
+        district = request.args.get("district", "").strip().lower()
+        division = request.args.get("division", "").strip().lower()
+        is_head = request.args.get("is_head", "false").lower() in ("true", "1", "yes")
+
+        filtered = COMPLAINTS_STORE
+        if not is_head and station:
+            filtered = [
+                c for c in COMPLAINTS_STORE
+                if station in c.get("incident", {}).get("police_station", "").lower() or
+                   station in c.get("incident", {}).get("district", "").lower()
+            ]
+        elif not is_head and district:
+            filtered = [
+                c for c in COMPLAINTS_STORE
+                if district in c.get("incident", {}).get("district", "").lower()
+            ]
+        elif not is_head and division:
+            filtered = [
+                c for c in COMPLAINTS_STORE
+                if division in c.get("incident", {}).get("division", "").lower()
+            ]
 
         return jsonify({
             "success": True,
-            "acknowledgement_number": ack_no,
-            "message": "Complaint successfully registered in Karnataka Police Unified Portal.",
-            "status": "Under Initial Verification by Station House Officer",
-            "assigned_station": station
+            "count": len(filtered),
+            "complaints": filtered
         }), 200
-    except Exception as e:
-        log.error(f"Complaint registration error: {e}", exc_info=True)
-        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/analytics", methods=["GET"])
+def get_analytics():
+    """
+    Returns high-level crime volume, annual trends, and category breakdowns for Dashboards.
+    """
+    return jsonify({
+        "success": True,
+        **ANALYTICS_SEED
+    }), 200
+
+
+@app.route("/api/map_markers", methods=["GET"])
+def get_map_markers():
+    """
+    Returns Karnataka GIS sector markers and severity heatmaps for MainMap.jsx.
+    """
+    return jsonify({
+        "success": True,
+        "count": len(MAP_MARKERS_SEED),
+        "markers": MAP_MARKERS_SEED
+    }), 200
 
 
 @app.route("/api/extract_metadata", methods=["POST"])

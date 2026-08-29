@@ -71,9 +71,11 @@ class AnalyticalAgent(BaseAgent):
         for h in ctx.history[-8:]:
             if h.get("role") in ("user", "assistant") and h.get("content"):
                 messages.append({"role": h["role"], "content": h["content"]})
-        messages.append({"role": "user", "content": ctx.query})
-
-        raw_output, provider = llm_complete(messages, json_mode=True)
+        raw_output, provider = llm_complete(
+            messages,
+            json_mode=True,
+            required_tags=self.manifest.required_provider_tags
+        )
         answer, charts, decision = parse_dual_stream_response(raw_output, session_id=ctx.session_id, user_query=ctx.query)
 
         manifest = self.manifest

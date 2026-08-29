@@ -11,6 +11,7 @@ log = logging.getLogger("standalone.provider.gemini")
 
 class GeminiProvider(BaseLLMProvider):
     name = "gemini"
+    tags = ["free_reasoning", "json_schema"]
     MODEL = "gemini-2.0-flash"
 
     def __init__(self):

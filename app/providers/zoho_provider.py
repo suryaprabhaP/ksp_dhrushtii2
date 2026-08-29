@@ -47,6 +47,7 @@ ZOHO_KNOWLEDGE_DOCS = get_knowledge_doc_ids()
 
 class ZohoQuickMLProvider(BaseLLMProvider):
     name = "zoho_quickml"
+    tags = ["rag_document"]
 
     def __init__(self):
         self.access_token = ZOHO_ACCESS_TOKEN
@@ -132,7 +133,14 @@ class ZohoQuickMLProvider(BaseLLMProvider):
                         lower_resp = response_text.strip().lower()
                         # If Zoho QuickML cloud KB cannot find the info in its 51 documents,
                         # fail over so downstream LLM providers (Groq/Gemini) synthesize in-prompt evidence chunks.
-                        if "cannot find the relevant information" in lower_resp or "unable to find" in lower_resp:
+                        scope_limit_indicators = (
+                            "cannot find the relevant information", "unable to find",
+                            "outside the scope", "cannot provide", "does not contain",
+                            "no information", "not mentioned in", "not found in the document",
+                            "based on the provided context", "insufficient information",
+                            "no specific solution", "no specific countermeasures"
+                        )
+                        if any(ind in lower_resp for ind in scope_limit_indicators):
                             log.info("[ZohoQuickMLProvider] Query outside cloud KB scope. Cascading to next provider...")
                             raise RuntimeError(f"Zoho QuickML KB scope limit: {response_text}")
                         return response_text, self.name

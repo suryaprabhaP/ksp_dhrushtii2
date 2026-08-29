@@ -1,0 +1,42 @@
+[
+  {
+    "turn": 1,
+    "query": "Analyze this case narrative: A gang of three wearing yellow helmets used gas cutters on an ATM in Mysuru at midnight. What is their likely Modus Operandi and what countermeasures should we take?",
+    "expected": "pattern_agent",
+    "actual": "pattern_agent",
+    "agent_label": "Pattern Intelligence Agent",
+    "provider": "groq",
+    "charts_count": 0,
+    "answer_full": "Listen up. We are looking at a classic, high-risk, high-reward job. Three men, yellow helmets, gas cutters, midnight strike on an ATM in Mysuru. This isn't a spontaneous crime of passion; this is premeditated, technical, and coordinated.\n\nHere is my read on the situation, the likely M.O., and exactly where you need to focus your resources tonight.\n\n### 1. Deception & Contradiction Detection: The \"Yellow Helmet\" Clue\n\nFirst, let’s talk about the helmets. In Karnataka, yellow helmets are often associated with specific delivery services (like Swiggy/Zomero riders) or certain local transport groups. Why would a gang use them?\n\n*   **The Alibi Trap:** If they are caught on CCTV, they might claim they were just \"passing by\" or that the helmets were stolen. However, wearing *matching* helmets suggests they bought them specifically for the job to create a uniform front, or they are using them to blend in with the late-night delivery crowd to avoid suspicion from passing police or civilians.\n*   **The Contradiction to Hunt:** If any of the three are identified, check their social media or phone records for the *previous* 48 hours. Did they buy gas cylinders? Did they buy welding masks? Did they post photos of \"work\" or \"projects\" that don’t match their declared jobs?\n*   **Psychological Pressure Point:** Interrogators should not ask, \"Did you rob the ATM?\" They should ask, \"Why did you choose yellow helmets? Were you trying to look like delivery boys to avoid being stopped at the checkpoint on [Specific Road]?\" This forces them to explain the *logic* of their disguise, which often leads to slips in the timeline.\n\n### 2. Modus Operandi (M.O.) Extraction\n\nBased on the tools and timing, here is the likely playbook:\n\n*   **Reconnaissance (The \"Look\"):** They did not just walk up and cut. They spent days or weeks observing the ATM. They knew the camera blind spots, the exact time the security guard (if any) takes a break, and the location of the gas cylinder storage (if the ATM is in a mall or bank branch with a kitchen).\n*   **The \"Gas Cutter\" Signature:** This is a hallmark of **high-intimidation, low-tech precision**."
+  },
+  {
+    "turn": 2,
+    "query": "so what will be my next step from here for interrogating nearby gas cylinder vendors?",
+    "expected": "pattern_agent",
+    "actual": "pattern_agent",
+    "agent_label": "Pattern Intelligence Agent",
+    "provider": "groq",
+    "charts_count": 0,
+    "answer_full": "Listen closely. Interrogating gas cylinder vendors is not about asking them, \"Did you sell a cylinder to three men in yellow helmets?\" That is a leading question that will shut them down instantly. Vendors in this line of work are paranoid; they know that selling to criminals is a crime, and they will lie to protect themselves.\n\nYou are not looking for a confession. You are looking for **anomalies in the sales pattern**.\n\nHere is your tactical directive for the vendor sweep. Do not send a single officer. Send a small, quiet team. Do not wear uniforms. Approach them as routine market inspectors or local intelligence, not as homicide/robbery detectives.\n\n### 1. The \"Anomaly\" Question Set (Do NOT ask about the crime)\n\nDo not mention the ATM. Do not mention the helmets. Do not mention the date of the crime. Instead, ask about **unusual behavior** in the last 72 hours.\n\n*   **Question 1 (The Cash Check):** \"Have you had any customers who paid in large denominations (500s or 2000s) for a standard cylinder, where they seemed to be in a hurry and didn't ask for a receipt?\"\n    *   *Why:* Criminals avoid paper trails. A standard cylinder costs 900-1100 INR. If someone pays 2000 INR in cash and leaves without a bill, that is a red flag.\n*   **Question 2 (The \"Extra\" Item):** \"Did anyone ask about buying *welding masks*, *cutting nozzles*, or *extra regulator hoses* along with the cylinder?\"\n    *   *Why:* A gas cutter needs a specific nozzle. Most home users buy a standard cylinder. If someone buys a cylinder *and* asks for industrial cutting accessories, that is your smoking gun.\n*   **Question 3 (The Vehicle):** \"Did any customer arrive in a vehicle that looked out of place? Like a bike with a heavy load, or a car that was parked for a long time while they were inside?\"\n    *   *Why:* They need to transport the cutter and the cylinder. A standard two-wheeler with a passenger is common, but a bike with a bulky bag or a car that idles for 10 minutes is suspicious.\n*   **Question 4"
+  },
+  {
+    "turn": 3,
+    "query": "Now visualize the crime breakdown and station rankings across districts",
+    "expected": "analytical_agent",
+    "actual": "analytical_agent",
+    "agent_label": "Analytics Agent",
+    "provider": "data_guard",
+    "charts_count": 0,
+    "answer_full": "⚠️ **No Authorized Dataset Attached to Investigation**\n\nI currently do not have an active crime dataset loaded in this investigation session. Please click the **'+' (Upload Dataset)** button in the chat bar or sidebar to attach a CSV/Excel file before requesting statistical analysis or charts."
+  },
+  {
+    "turn": 4,
+    "query": "What is the tactical solution scope for addressing the highest district workload?",
+    "expected": "analytical_agent",
+    "actual": "pattern_agent",
+    "agent_label": "Pattern Intelligence Agent",
+    "provider": "groq",
+    "charts_count": 0,
+    "answer_full": "Listen, \"workload\" is a bureaucratic word. In the field, we call it **bottlenecks**. If one district in the Mysuru Division is drowning in cases—whether it’s ATM robberies, auto-thefts, or cyber frauds—it means the local station is bleeding resources. They are reactive, not proactive.\n\nHere is the tactical solution scope to break the bottleneck. We are not going to add more police constables; we are going to **triage, automate, and centralize** the low-value tasks so the senior officers can focus on high-value investigations.\n\n### 1. The \"Triage\" Protocol (Immediate 48-Hour Action)\n\nThe highest workload district is likely clogged with \"low-hanging fruit\" cases that are tying up senior officers.\n\n*   **Action:** Implement a strict **Case Classification Matrix** at the station level.\n    *   **Category A (High Value):** Homicide, organized crime, large-scale fraud, ATM robberies. *These get the Station House Officer (SHO) and senior inspectors.*\n    *   **Category B (Medium Value):** Theft from vehicles, simple larceny, minor assaults. *These get junior inspectors and constables.*\n    *   **Category C (Low Value/Administrative):** Missing persons (non-vulnerable), minor property disputes, noise complaints. *These get redirected to community policing volunteers or automated digital tracking.*\n*   **Tactical Directive:** Order the SHO of the high-workload district to **stop personally handling Category C cases**. If the SHO is writing FIRs for minor thefts, they are not investigating the ATM gang. Free them up.\n\n### 2. Centralize the \"Digital Noise\" (Cyber & Fraud)\n\nIf the workload is driven by cyber frauds (UPI scams, fake job offers), the local station is wasting hours on victim interviews that are identical.\n\n*   **Action:** Create a **Divisional Cyber Cell** (if not already active) to handle all initial victim interviews for cyber frauds.\n*   **Tactical Directive:**\n    *   Victims in the high-workload district should be directed to a **centralized Cyber Help Desk** in Mysuru city, not their local station.\n    *   The local station only receives the **final digital forensic report** and the **bank trace**.\n    *   This removes 40-"
+  }
+]

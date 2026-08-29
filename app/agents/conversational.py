@@ -28,12 +28,17 @@ class ConversationalAgent(BaseAgent):
             {"role": "system", "content": self.manifest.system_prompt},
             {"role": "system", "content": f"Division context: {ctx.division}."}
         ]
-        for h in ctx.history[-6:]:
-            if h.get("role") in ("user", "assistant") and h.get("content"):
+        for h in ctx.history:
+            if isinstance(h, dict) and h.get("role") in ("user", "assistant") and h.get("content"):
                 messages.append({"role": h["role"], "content": h["content"]})
         messages.append({"role": "user", "content": ctx.query})
 
-        answer, provider = llm_complete(messages, json_mode=False, max_tokens=300)
+        answer, provider = llm_complete(
+            messages,
+            json_mode=False,
+            max_tokens=300,
+            required_tags=self.manifest.required_provider_tags
+        )
         manifest = self.manifest
 
         return AgentResponse(

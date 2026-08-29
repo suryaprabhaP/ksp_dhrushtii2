@@ -60,7 +60,8 @@ SUB-AGENT REPORTS:
         synthesized_answer = orchestrator.generate_completion(
             prompt=synthesis_input,
             system_instruction=self.manifest.system_prompt,
-            max_tokens=2000
+            max_tokens=2000,
+            required_tags=self.manifest.required_provider_tags
         )
         
         return AgentResponse(

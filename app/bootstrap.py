@@ -9,6 +9,7 @@ from app.agents.data_query import DataQueryAgent
 from app.agents.document import DocumentAgent
 from app.agents.graph import GraphAgent
 from app.agents.federated import FederatedAgent
+from app.agents.pattern import PatternAgent
 
 log = logging.getLogger("standalone.bootstrap")
 
@@ -21,7 +22,8 @@ def initialize_system():
     registry.register(DocumentAgent())
     registry.register(GraphAgent())
     registry.register(FederatedAgent())
-    log.info("KSP Sentinel AI: All domain agents initialized and registered (including GraphAgent).")
+    registry.register(PatternAgent())
+    log.info("KSP Sentinel AI: All domain agents initialized and registered (including PatternAgent & GraphAgent).")
 
 
 initialize_system()
