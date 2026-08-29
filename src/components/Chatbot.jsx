@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, CheckCheck, Send, Upload, Bolt, Disc, CheckCircle, FileText, Cpu, Database, ChevronDown, ChevronUp, Paperclip, Download, History, Trash2, Sparkles, Mic, MicOff, Volume2, VolumeX, Languages, Radio, Compass, Lightbulb, Scale, AlertTriangle, Shield, PlusCircle, BarChart2, PieChart, TrendingUp, Plus, ChevronRight, Plug, Layers, FolderPlus, MessageSquare, FolderKanban, ShieldAlert, HardDrive, Network } from 'lucide-react';
+import { ShieldCheck, CheckCheck, Send, Upload, Bolt, Disc, CheckCircle, FileText, Cpu, Database, ChevronDown, ChevronUp, Paperclip, Download, History, Trash2, Sparkles, Mic, MicOff, Volume2, VolumeX, Languages, Radio, Compass, Lightbulb, Scale, AlertTriangle, Shield, PlusCircle, BarChart2, PieChart, TrendingUp, Plus, ChevronRight, Plug, Layers, FolderPlus, MessageSquare, FolderKanban, ShieldAlert, HardDrive, Network, RotateCw } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -21,6 +21,7 @@ import ChartAnalysisModal from './ChartAnalysisModal';
 import DatabaseConnectorModal from './DatabaseConnectorModal';
 import VisualIntelligenceStudio from './VisualIntelligenceStudio';
 import UploadDatasetModal from './UploadDatasetModal';
+import NetworkGraphView from '../analytics/modules/NetworkGraphView';
 import { parseCSV } from '../analytics/services/datasetStore';
 import { GraphQueryToolAgent, globalNetworkStore } from '../analytics/services/networkAnalyticsService';
 import { markdownToHtml } from '../utils/markdownParser';
@@ -201,6 +202,11 @@ function InlineChartCard({ message, onOpenModal }) {
   );
 }
 
+const VIEW_STATES = Object.freeze({
+  CHAT: 'CHAT_VIEW',
+  NETWORK: 'NETWORK_VIEW'
+});
+
 const customMiniIcon = L.divIcon({
   className: 'custom-pin',
   html: `<div style="background-color:#ef4444; width:10px; height:10px; border-radius:50%; border:2px solid white;"></div>`,
@@ -334,6 +340,7 @@ function Chatbot({
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showDbModal, setShowDbModal] = useState(false);
   const [showUploadDatasetModal, setShowUploadDatasetModal] = useState(false);
+  const [activeMainView, setActiveMainView] = useState(VIEW_STATES.CHAT);
 
   const [activeSessionId, setActiveSessionId] = useState(() => {
     try {
@@ -449,6 +456,7 @@ function Chatbot({
     if (messages.length > 1) {
       updateSessionStore(messages);
     }
+    setActiveMainView(VIEW_STATES.CHAT);
     const newId = `session_${Date.now()}`;
     setActiveSessionId(newId);
     setStudioCharts([]);
@@ -483,6 +491,7 @@ function Chatbot({
 
   const handleLoadSession = (session) => {
     if (session && session.messages) {
+      setActiveMainView(VIEW_STATES.CHAT);
       setActiveSessionId(session.id);
       setMessages(session.messages);
       setStudioCharts(session.studioCharts || []);
@@ -1350,159 +1359,106 @@ function Chatbot({
 
   return (
     <div className="full-screen-chat-layout">
-      {/* LEFT SIDEBAR PANEL (ChatGPT Style - Dark Navy Sidebar) */}
+      {/* LEFT SIDEBAR PANEL (Karnataka Police Dark-Green & Gold Obsidian Theme) */}
       <div className="chat-sidebar-panel">
-        <div className="sidebar-brand">
-          <img src="/ksp_police_logo.png" alt="Logo" style={{ width: 26, height: 26 }} />
-          <div>
-            <h3>SENTINEL ASSISTANT</h3>
-            <div style={{ fontSize: '0.62rem', color: '#93c5fd', fontWeight: 800 }}>Unified KSP Intelligence Console</div>
+        {/* BRAND LOGO HEADER */}
+        <div className="sidebar-brand-ksp">
+          <div className="brand-emblem-wrap">
+            <img src="/ksp_police_logo.png" alt="KSP Logo" />
+          </div>
+          <div className="brand-text-wrap">
+            <div className="brand-state-title">KARNATAKA STATE POLICE</div>
+            <div className="brand-main-title">KSP SENTINEL</div>
+            <div className="brand-sub-title">CRIME INTELLIGENCE ASSISTANT</div>
           </div>
         </div>
 
-        <button className="sidebar-new-chat-btn" onClick={handleNewConversation} title="Start new conversation session">
+        <button className="sidebar-new-chat-btn-ksp" onClick={handleNewConversation} title="Start new conversation session">
           <Plus size={16} /> New Conversation
         </button>
 
-        {/* PROMINENT DEDICATED ANALYTICS WORKSPACE LAUNCHERS */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', margin: '10px 0 16px 0' }}>
-          {/* 1. CRIME DATA ANALYTICS (SPLIT-CANVAS TOGGLE) */}
+        <div className="sidebar-section-header">COMMAND CENTER</div>
+
+        {/* DEDICATED ANALYTICS WORKSPACE LAUNCHERS */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {/* 1. CRIME DATA ANALYTICS */}
           <button
             onClick={() => {
+              if (activeMainView !== VIEW_STATES.CHAT) {
+                setActiveMainView(VIEW_STATES.CHAT);
+              }
               if (isDatasetLoaded) {
                 setIsVisualStudioOpen(v => !v);
               } else {
                 setShowUploadDatasetModal(true);
               }
             }}
-            style={{
-              width: '100%',
-              padding: '11px 14px',
-              background: isVisualStudioOpen ? 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)' : 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
-              color: '#ffffff',
-              border: isVisualStudioOpen ? '1px solid rgba(56, 189, 248, 0.6)' : '1px solid rgba(147, 197, 253, 0.4)',
-              borderRadius: '10px',
-              fontSize: '0.85rem',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)',
-              transition: 'all 0.2s ease'
-            }}
+            className={`ksp-sidebar-nav-btn ${(activeMainView === VIEW_STATES.CHAT && isVisualStudioOpen) ? 'active' : ''}`}
             title="Toggle Side-by-Side Visual Intelligence Studio"
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(37, 99, 235, 0.6)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(37, 99, 235, 0.4)'; }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <BarChart2 size={18} style={{ color: '#93c5fd' }} />
-              <span>📊 Crime Data Analytics</span>
+              <BarChart2 size={16} className="nav-btn-icon" />
+              <span>Crime Data Analytics</span>
             </div>
-            <span style={{ fontSize: '0.68rem', background: 'rgba(255, 255, 255, 0.2)', padding: '3px 8px', borderRadius: '5px', fontWeight: 800 }}>
-              {isDatasetLoaded ? (isVisualStudioOpen ? 'HIDE STUDIO ✕' : 'SPLIT STUDIO ➔') : 'UPLOAD DATA ➔'}
+            <span className="nav-btn-badge">
+              {isDatasetLoaded ? ((activeMainView === VIEW_STATES.CHAT && isVisualStudioOpen) ? 'STUDIO ✕' : 'STUDIO ➔') : 'DATA ➔'}
             </span>
           </button>
 
-          {/* 2. NETWORK LINK INTELLIGENCE (RIGHT WHERE GREEN ARROW POINTS) */}
+          {/* 2. NETWORK LINK INTELLIGENCE */}
           <button
-            onClick={() => { if (onNavigateToNetwork) onNavigateToNetwork(); }}
-            style={{
-              width: '100%',
-              padding: '11px 14px',
-              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.35) 0%, rgba(14, 165, 233, 0.2) 100%)',
-              color: '#38bdf8',
-              border: '1px solid rgba(56, 189, 248, 0.5)',
-              borderRadius: '10px',
-              fontSize: '0.85rem',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-              boxShadow: '0 2px 10px rgba(56, 189, 248, 0.2)',
-              transition: 'all 0.2s ease'
+            onClick={() => {
+              setActiveMainView(prev => prev === VIEW_STATES.NETWORK ? VIEW_STATES.CHAT : VIEW_STATES.NETWORK);
             }}
-            title="Open Network Link Intelligence & Graph Topology Mapping"
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(56, 189, 248, 0.4)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(56, 189, 248, 0.2)'; }}
+            className={`ksp-sidebar-nav-btn ${activeMainView === VIEW_STATES.NETWORK ? 'active' : ''}`}
+            title="Toggle Network Link Intelligence & Graph Topology Mapping"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <Network size={18} style={{ color: '#38bdf8' }} />
-              <span>🕸️ Network Link Intelligence</span>
+              <Network size={16} className="nav-btn-icon" />
+              <span>Network Link Intelligence</span>
             </div>
-            <span style={{ fontSize: '0.68rem', background: 'rgba(56, 189, 248, 0.25)', color: '#38bdf8', padding: '3px 8px', borderRadius: '5px', fontWeight: 800 }}>
-              GRAPH MAP ➔
+            <span className="nav-btn-badge">
+              {activeMainView === VIEW_STATES.NETWORK ? 'ACTIVE ✕' : 'GRAPH ➔'}
             </span>
           </button>
 
           {/* 3. GEOSPATIAL HOTSPOT RADAR */}
           <button
             onClick={() => { if (onNavigateToMaps) onNavigateToMaps(); }}
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              background: 'rgba(30, 41, 59, 0.7)',
-              color: '#f1f5f9',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: '10px',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(51, 65, 85, 0.9)'; e.currentTarget.style.color = '#ffffff'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(30, 41, 59, 0.7)'; e.currentTarget.style.color = '#f1f5f9'; }}
+            className="ksp-sidebar-nav-btn"
+            title="Open Geospatial Hotspot Radar"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <Compass size={16} style={{ color: '#34d399' }} />
-              <span>🌐 Geospatial Hotspot Radar</span>
+              <Compass size={16} className="nav-btn-icon" />
+              <span>Geospatial Hotspot Radar</span>
             </div>
-            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>MAP View ➔</span>
+            <span className="nav-btn-badge">MAP ➔</span>
           </button>
 
           {/* 4. DATA MART & FORENSIC VAULT */}
           <button
             onClick={() => { if (onNavigateToVault) onNavigateToVault(); }}
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              background: 'rgba(30, 41, 59, 0.7)',
-              color: '#f1f5f9',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: '10px',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(51, 65, 85, 0.9)'; e.currentTarget.style.color = '#ffffff'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(30, 41, 59, 0.7)'; e.currentTarget.style.color = '#f1f5f9'; }}
+            className="ksp-sidebar-nav-btn"
+            title="Open Data Mart & Forensic 65B Audit Vault"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <HardDrive size={16} style={{ color: '#c084fc' }} />
-              <span>💾 Data Mart & Forensic Vault</span>
+              <HardDrive size={16} className="nav-btn-icon" />
+              <span>Data Mart & Forensic Vault</span>
             </div>
-            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>65B Audit ➔</span>
+            <span className="nav-btn-badge">65B ➔</span>
           </button>
         </div>
 
-        {/* CHATGPT STYLE RECENT SAVED SESSIONS HISTORY PANEL */}
-        <div className="sidebar-section" style={{ marginTop: 'auto', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '140px' }}>
-          <div className="sidebar-section-title" style={{ justifyContent: 'space-between', marginBottom: '6px' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#94a3b8' }}>
-              <History size={13} style={{ color: '#60a5fa' }} /> RECENT SESSIONS ({savedSessions.length})
+        {/* SAVED SESSIONS HISTORY PANEL */}
+        <div className="sidebar-section" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '120px', marginTop: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', padding: '0 4px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.62rem', fontWeight: 800, color: '#889e90', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+              <History size={12} style={{ color: '#c9a96e' }} /> RECENT SESSIONS ({savedSessions.length})
             </span>
             {savedSessions.length > 0 && (
               <button 
                 onClick={handleClearAllSessions}
-                style={{ background: 'transparent', color: '#ef4444', border: 'none', fontSize: '0.62rem', fontWeight: 800, cursor: 'pointer' }}
+                style={{ background: 'transparent', color: '#ef4444', border: 'none', fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer' }}
                 title="Clear all saved sessions"
               >
                 Clear All
@@ -1512,7 +1468,7 @@ function Chatbot({
 
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
             {savedSessions.length === 0 ? (
-              <div style={{ fontSize: '0.68rem', color: '#64748b', fontStyle: 'italic', padding: '6px 4px' }}>
+              <div style={{ fontSize: '0.68rem', color: '#889e90', fontStyle: 'italic', padding: '6px 4px' }}>
                 No saved chat sessions. Ask a query and click "+ New Conversation" to save.
               </div>
             ) : (
@@ -1520,27 +1476,16 @@ function Chatbot({
                 <div
                   key={session.id}
                   onClick={() => handleLoadSession(session)}
-                  style={{
-                    background: activeSessionId === session.id ? 'rgba(37, 99, 235, 0.35)' : 'rgba(30, 41, 59, 0.7)',
-                    border: activeSessionId === session.id ? '1px solid #3b82f6' : '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '8px',
-                    padding: '7px 9px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '6px',
-                    transition: 'all 0.15s ease'
-                  }}
+                  className={`sidebar-saved-session-item ${activeSessionId === session.id ? 'active' : ''}`}
                   title={`Click to view: ${session.title}`}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
-                    <MessageSquare size={13} style={{ color: activeSessionId === session.id ? '#60a5fa' : '#94a3b8', flexShrink: 0 }} />
+                    <MessageSquare size={13} style={{ color: activeSessionId === session.id ? '#c9a96e' : '#889e90', flexShrink: 0 }} />
                     <div style={{ overflow: 'hidden', flex: 1 }}>
                       <div style={{ fontSize: '0.72rem', fontWeight: 700, color: activeSessionId === session.id ? '#ffffff' : '#cbd5e1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {session.title || 'Conversation Session'}
                       </div>
-                      <div style={{ fontSize: '0.58rem', color: '#64748b', marginTop: '1px' }}>
+                      <div style={{ fontSize: '0.58rem', color: '#889e90', marginTop: '1px' }}>
                         {session.dateStr || 'Saved'} • {session.messages?.length || 0} msgs
                       </div>
                     </div>
@@ -1551,7 +1496,7 @@ function Chatbot({
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: '#94a3b8',
+                      color: '#889e90',
                       cursor: 'pointer',
                       padding: '2px 4px',
                       borderRadius: '4px',
@@ -1561,7 +1506,7 @@ function Chatbot({
                     }}
                     title="Delete this session"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#889e90'}
                   >
                     <Trash2 size={12} />
                   </button>
@@ -1570,13 +1515,29 @@ function Chatbot({
             )}
           </div>
         </div>
+
+        {/* SYSTEM STATUS WIDGET MATCHING MOCKUP */}
+        <div className="sidebar-system-status-box">
+          <div className="system-status-header">SYSTEM STATUS</div>
+          <div className="system-status-body">
+            <span className="system-status-dot"></span>
+            <span>All Systems Operational</span>
+          </div>
+          <div className="system-status-footer">
+            <div className="system-status-time">
+              <div>Data Stream Active</div>
+            </div>
+            <RotateCw size={12} style={{ color: '#889e90' }} />
+          </div>
+        </div>
       </div>
 
       {/* MAIN CHAT CANVAS (Light White Theme like 2nd image) */}
       <div className="chat-main-canvas">
-        <div id="view-chat">
-          {/* Top KSP Official Header Toolbar */}
-          <div className="chat-guardrail" style={{ justifyContent: 'space-between', padding: '10px 20px', gap: '8px', flexWrap: 'wrap', background: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
+        {activeMainView === VIEW_STATES.CHAT ? (
+          <div id="view-chat">
+            {/* Top KSP Official Header Toolbar */}
+            <div className="chat-guardrail" style={{ justifyContent: 'space-between', padding: '10px 20px', gap: '8px', flexWrap: 'wrap', background: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <img src="/ksp_police_logo.png" alt="KSP Logo" style={{ width: 20, height: 20 }} />
               <span style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '0.88rem' }}>
@@ -2234,6 +2195,16 @@ function Chatbot({
       </div>
     </div>
   </div>
+</div>
+        ) : (
+          <div style={{ flex: 1, width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <NetworkGraphView
+              datasetState={datasetState}
+              onBackToChat={() => setActiveMainView(VIEW_STATES.CHAT)}
+              onDatasetLoaded={onDatasetIngested}
+            />
+          </div>
+        )}
 
       {showComplaintPortal && (
         <ComplaintPortal onClose={() => setShowComplaintPortal(false)} />
@@ -2282,7 +2253,6 @@ function Chatbot({
       />
       </div>
     </div>
-  </div>
   );
 }
 

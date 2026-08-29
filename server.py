@@ -21,10 +21,12 @@ from flask_cors import CORS
 
 from app.config import AUDIT_LOG_PATH, GEMINI_API_KEY, GROQ_API_KEY, PORT
 import app.bootstrap  # Registers all specialized domain agents
+from app.blueprints.calendar import calendar_bp
 from app.core.audit import AuditLogger
 from app.core.interfaces import ExecutionContext
 from app.core.registry import registry
 from app.core.router import router
+from app.engine.document_store import document_store
 from app.engine.session_store import session_store
 from app.engine.visual_intelligence import VisualSuiteBuilder
 
@@ -34,6 +36,9 @@ log = logging.getLogger("standalone.server")
 
 app = Flask(__name__)
 CORS(app)
+
+# Register Blueprints (SOLID: SRP + OCP)
+app.register_blueprint(calendar_bp, url_prefix="/api/calendar")
 
 audit_logger = AuditLogger(AUDIT_LOG_PATH)
 
@@ -85,25 +90,7 @@ def chat():
                 "suggested_actions": ["Analyze cyber crime statistics", "Review Section 65B procedures"]
             }), 200
 
-        # ── 3. Data-Empty Baseline Guard ──────────────────────────────────────
-        has_dataset = session_store.has_dataset(session_id)
-        if intent in ("ANALYTICAL", "DATA_QUERY") and not has_dataset:
-            return jsonify({
-                "success": True,
-                "answer": "⚠️ **No Authorized Dataset Attached to Investigation**\n\nI currently do not have an active crime dataset loaded in this investigation session. Please click the **'+' (Upload Dataset)** button in the chat bar or sidebar to attach a CSV/Excel file before requesting statistical analysis or charts.",
-                "agent_type": "data_empty_agent",
-                "agent_label": "KSP Sentinel Data Guard",
-                "agent_icon": "⚠️",
-                "agent_color": "#f59e0b",
-                "charts": [],
-                "executive_decision": None,
-                "provider": "rule_guard",
-                "visuals_updated": False,
-                "data_available": False,
-                "suggested_actions": ["Attach Crime Dataset", "Ask Procedural / Legal Questions", "Review IPC/BNS Sections"]
-            }), 200
-
-        # ── 4. Polymorphic Agent Execution (LSP + DIP) ────────────────────────
+        # ── 3. Polymorphic Agent Execution with Chain of Responsibility (LSP + DIP) ──
         agent = registry.get_agent(intent) or registry.get_agent("CONVERSATIONAL")
         ctx = ExecutionContext(
             query=user_query,
@@ -115,7 +102,14 @@ def chat():
 
         response = agent.execute(ctx)
 
-        # ── 5. Cryptographic Section 65B Audit Logging ────────────────────────
+        # Handle Chain of Responsibility Delegation (e.g. Analytical/Graph -> Document RAG)
+        if response.handoff_target:
+            target_intent = response.handoff_target
+            log.info(f"Chain of Responsibility: Delegating [{intent}] -> [{target_intent}] for query: {user_query[:50]}")
+            delegated_agent = registry.get_agent(target_intent) or registry.get_agent("DOCUMENT")
+            response = delegated_agent.execute(ctx)
+
+        # ── 4. Cryptographic Section 65B Audit Logging ────────────────────────
         audit_logger.log_event(
             event_type="OFFICER_QUERY_RESOLVED",
             session_id=session_id,
@@ -149,9 +143,11 @@ def chat():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# POST /api/upload_dataset — Polymorphic Ingestion & LLM Schema Sniffing
+# POST /api/upload_dataset & /api/upload_document — Polymorphic Ingestion
 # ══════════════════════════════════════════════════════════════════════════════
 @app.route("/api/upload_dataset", methods=["POST"])
+@app.route("/api/upload_document", methods=["POST"])
+@app.route("/api/upload", methods=["POST"])
 def upload_dataset():
     try:
         if "file" not in request.files:
@@ -163,51 +159,136 @@ def upload_dataset():
         officer_id = request.form.get("officer_id", "OFFICER_BGL_001")
         content_bytes = f.read()
 
-        # ── File Format Guardrail ─────────────────────────────────────────────
-        valid_extensions = (".csv", ".json", ".xlsx", ".xls")
-        if not filename.lower().endswith(valid_extensions):
-            log.warning(f"[Upload Guard] Rejected unsupported file: {filename}")
+        lower_name = filename.lower()
+        tabular_extensions = (".csv", ".json", ".xlsx", ".xls")
+        document_extensions = (".pdf", ".txt", ".md", ".docx", ".log")
+
+        # ── Branch 1: Unstructured Document / PDF / FIR Ingestion ─────────────
+        if lower_name.endswith(document_extensions):
+            doc_meta = document_store.ingest_document(session_id, filename, content_bytes)
+            audit_logger.log_event(
+                event_type="DOCUMENT_INGESTED",
+                session_id=session_id,
+                officer_id=officer_id,
+                action=f"Ingested Document {filename} ({doc_meta['chunk_count']} chunks)",
+                details=doc_meta
+            )
             return jsonify({
-                "success": False,
-                "error": "Unstructured Document Detected",
-                "message": "PDFs and unstructured documents cannot be rendered as charts or graphs. Please upload structured ledgers (CSV, Excel .xlsx, or JSON dumps) for visual analytics."
-            }), 400
+                "success": True,
+                "filename": filename,
+                "session_id": session_id,
+                "file_size": f"{doc_meta['file_size_kb']} KB",
+                "doc_type": "Session DuckDB Document Index",
+                "chunk_count": doc_meta["chunk_count"],
+                "visuals_updated": False,
+                "message": f"Successfully indexed '{filename}' ({doc_meta['chunk_count']} chunks) into session '{session_id}'. Document Agent is ready to synthesize answers."
+            }), 200
 
-        meta = session_store.ingest_dataset(session_id, filename, content_bytes)
-        overview = VisualSuiteBuilder.build_baseline_overview(session_id, table_name=meta["table_name"])
+        # ── Branch 2: Structured Tabular Ledger Ingestion ─────────────────────
+        elif lower_name.endswith(tabular_extensions):
+            meta = session_store.ingest_dataset(session_id, filename, content_bytes)
+            overview = VisualSuiteBuilder.build_baseline_overview(session_id, table_name=meta["table_name"])
 
-        audit_logger.log_event(
-            event_type="DATASET_INGESTED",
-            session_id=session_id,
-            officer_id=officer_id,
-            action=f"Ingested {filename} ({meta['row_count']} rows) [{meta.get('classification', 'DUAL')}]",
-            details={
+            audit_logger.log_event(
+                event_type="DATASET_INGESTED",
+                session_id=session_id,
+                officer_id=officer_id,
+                action=f"Ingested {filename} ({meta['row_count']} rows) [{meta.get('classification', 'DUAL')}]",
+                details={
+                    "row_count": meta["row_count"],
+                    "columns": meta["columns"],
+                    "table_name": meta["table_name"],
+                    "classification": meta.get("classification")
+                }
+            )
+
+            return jsonify({
+                "success": True,
+                "filename": filename,
+                "session_id": session_id,
+                "file_size": f"{round(len(content_bytes) / 1024, 1)} KB",
+                "doc_type": "DuckDB In-Memory Table",
+                "table_name": meta["table_name"],
+                "classification": meta.get("classification", "DUAL"),
                 "row_count": meta["row_count"],
                 "columns": meta["columns"],
-                "table_name": meta["table_name"],
-                "classification": meta.get("classification")
-            }
-        )
+                "active_tables": meta.get("active_tables", []),
+                "kpis": overview.get("kpis", {}),
+                "baseline_charts": overview.get("charts", []),
+                "visuals_updated": True,
+                "message": f"Successfully ingested {meta['row_count']:,} records into DuckDB session '{session_id}' [{meta.get('classification', 'DUAL')}]"
+            }), 200
 
-        return jsonify({
-            "success": True,
-            "filename": filename,
-            "session_id": session_id,
-            "file_size": f"{round(len(content_bytes) / 1024, 1)} KB",
-            "doc_type": "DuckDB In-Memory Table",
-            "table_name": meta["table_name"],
-            "classification": meta.get("classification", "DUAL"),
-            "row_count": meta["row_count"],
-            "columns": meta["columns"],
-            "active_tables": meta.get("active_tables", []),
-            "kpis": overview.get("kpis", {}),
-            "baseline_charts": overview.get("charts", []),
-            "visuals_updated": True,
-            "message": f"Successfully ingested {meta['row_count']:,} records into DuckDB session '{session_id}' [{meta.get('classification', 'DUAL')}]"
-        }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Unsupported File Format",
+                "message": f"Unsupported file format '{filename}'. Supported types: CSV, Excel (.xlsx, .xls), JSON, PDF, TXT, MD, DOCX."
+            }), 400
 
     except Exception as e:
         log.error(f"Upload error: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/datasets", methods=["GET"])
+def list_datasets():
+    session_id = request.args.get("session_id", "default_session")
+    docs = document_store.list_documents(session_id)
+    has_tabular = session_store.has_dataset(session_id)
+    tables = list(session_store.sessions.get(session_id, {}).get("tables", {}).keys()) if has_tabular else []
+
+    return jsonify({
+        "success": True,
+        "session_id": session_id,
+        "documents": docs,
+        "tabular_tables": tables,
+        "has_tabular_dataset": has_tabular,
+        "has_documents": bool(docs)
+    }), 200
+
+
+@app.route("/api/datasets/<path:filename>", methods=["DELETE"])
+def delete_dataset(filename: str):
+    session_id = request.args.get("session_id", "default_session")
+    doc_deleted = document_store.delete_document(session_id, filename)
+    table_deleted = session_store.delete_table(session_id, filename) if hasattr(session_store, "delete_table") else False
+
+    return jsonify({
+        "success": doc_deleted or table_deleted,
+        "message": f"Dataset/document '{filename}' deleted from session '{session_id}'"
+    }), 200
+
+
+@app.route("/api/rag_search", methods=["POST"])
+def rag_search_api():
+    try:
+        data = request.get_json(silent=True) or {}
+        query = data.get("query", "").strip()
+        session_id = data.get("session_id", "default_session")
+        limit = int(data.get("limit", 5))
+
+        if not query:
+            return jsonify({"success": False, "error": "Query parameter is required"}), 400
+
+        chunks = document_store.search_chunks(session_id, query, limit=limit)
+        return jsonify({
+            "success": True,
+            "query": query,
+            "session_id": session_id,
+            "count": len(chunks),
+            "results": [
+                {
+                    "chunk_id": c.chunk_id,
+                    "doc_name": c.doc_name,
+                    "chunk_index": c.chunk_index,
+                    "content": c.content,
+                    "score": c.score
+                }
+                for c in chunks
+            ]
+        }), 200
+    except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 

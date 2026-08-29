@@ -25,6 +25,20 @@ class DataQueryAgent(BaseAgent):
         )
 
     def execute(self, ctx: ExecutionContext) -> AgentResponse:
+        # Chain of Responsibility: Check if dataset exists in session
+        if not ctx.session_id or not session_store.has_dataset(ctx.session_id):
+            return AgentResponse(
+                answer="",
+                agent_type="data_query_agent",
+                agent_label=self.manifest.label,
+                agent_icon=self.manifest.icon,
+                agent_color=self.manifest.color,
+                charts=[],
+                executive_decision=None,
+                provider="chain_of_responsibility",
+                handoff_target="DOCUMENT"
+            )
+
         schema_summary = session_store.get_schema_summary(ctx.session_id) if ctx.session_id else ""
         messages = [
             {"role": "system", "content": self.manifest.system_prompt},

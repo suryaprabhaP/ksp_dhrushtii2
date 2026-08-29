@@ -32,6 +32,36 @@ class AnalyticalAgent(BaseAgent):
         )
 
     def execute(self, ctx: ExecutionContext) -> AgentResponse:
+        # Chain of Responsibility: Check if dataset exists in session
+        if not ctx.session_id or not session_store.has_dataset(ctx.session_id):
+            q_lower = ctx.query.lower()
+            explicit_chart = any(w in q_lower for w in ["chart", "plot", "line graph", "bar chart", "pie chart", "doughnut", "histogram", "scatter", "visualize", "draw a graph"])
+            if explicit_chart:
+                return AgentResponse(
+                    answer="⚠️ **No Authorized Dataset Attached to Investigation**\n\nI currently do not have an active crime dataset loaded in this investigation session. Please click the **'+' (Upload Dataset)** button in the chat bar or sidebar to attach a CSV/Excel file before requesting statistical analysis or charts.",
+                    agent_type="analytical_agent",
+                    agent_label=self.manifest.label,
+                    agent_icon=self.manifest.icon,
+                    agent_color=self.manifest.color,
+                    charts=[],
+                    executive_decision=None,
+                    provider="data_guard",
+                    visuals_updated=False,
+                    data_available=False
+                )
+            # Graceful handoff to DocumentAgent (Zoho QuickML Knowledge Base RAG)
+            return AgentResponse(
+                answer="",
+                agent_type="analytical_agent",
+                agent_label=self.manifest.label,
+                agent_icon=self.manifest.icon,
+                agent_color=self.manifest.color,
+                charts=[],
+                executive_decision=None,
+                provider="chain_of_responsibility",
+                handoff_target="DOCUMENT"
+            )
+
         target_table = session_store.get_table_for_query(ctx.session_id, ctx.query) if ctx.session_id else None
         schema_summary = session_store.get_schema_summary(ctx.session_id, table_name=target_table) if ctx.session_id else ""
         messages = [

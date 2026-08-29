@@ -18,8 +18,8 @@ from app.providers.base import BaseLLMProvider
 
 log = logging.getLogger("standalone.provider.zoho")
 
-# 51 Indexed Knowledge Base Document IDs from Zoho Catalyst Knowledge Store
-ZOHO_KNOWLEDGE_DOCS = [
+# Default 51 Indexed Knowledge Base Document IDs from Zoho Catalyst Knowledge Store
+_DEFAULT_KNOWLEDGE_DOCS = [
     "3407000000004223", "3407000000003546", "3407000000004461", "3407000000004473",
     "3407000000004469", "3407000000004465", "3407000000003542", "3407000000003527",
     "3407000000003502", "3407000000004439", "3407000000003512", "3407000000003506",
@@ -34,6 +34,15 @@ ZOHO_KNOWLEDGE_DOCS = [
     "3407000000003363", "3407000000003346", "3407000000004315", "3407000000004308",
     "3407000000004304", "3407000000003343", "3407000000003351"
 ]
+
+def get_knowledge_doc_ids() -> List[str]:
+    """Dynamically loads knowledge doc IDs from environment or default catalogue."""
+    env_docs = os.getenv("ZOHO_KNOWLEDGE_DOCS", "")
+    if env_docs:
+        return [d.strip() for d in env_docs.split(",") if d.strip()]
+    return list(_DEFAULT_KNOWLEDGE_DOCS)
+
+ZOHO_KNOWLEDGE_DOCS = get_knowledge_doc_ids()
 
 
 class ZohoQuickMLProvider(BaseLLMProvider):
@@ -120,6 +129,12 @@ class ZohoQuickMLProvider(BaseLLMProvider):
                     data = res.json()
                     response_text = data.get("response", "")
                     if response_text:
+                        lower_resp = response_text.strip().lower()
+                        # If Zoho QuickML cloud KB cannot find the info in its 51 documents,
+                        # fail over so downstream LLM providers (Groq/Gemini) synthesize in-prompt evidence chunks.
+                        if "cannot find the relevant information" in lower_resp or "unable to find" in lower_resp:
+                            log.info("[ZohoQuickMLProvider] Query outside cloud KB scope. Cascading to next provider...")
+                            raise RuntimeError(f"Zoho QuickML KB scope limit: {response_text}")
                         return response_text, self.name
 
                 raise RuntimeError(f"Zoho QuickML returned status {res.status_code}: {res.text[:200]}")

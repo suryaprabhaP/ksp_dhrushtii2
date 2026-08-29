@@ -2,6 +2,7 @@
 KSP Sentinel AI — Federated Agent (SOLID: Orchestrator)
 """
 import logging
+from app.config import KSP_FEDERATED_PROMPT
 from app.core.interfaces import BaseAgent, ExecutionContext, AgentResponse, AgentManifest
 from app.agents.analytical import AnalyticalAgent
 from app.agents.graph import GraphAgent
@@ -19,7 +20,7 @@ class FederatedAgent(BaseAgent):
             color="#a855f7",
             description="Trigger when query asks for both analytical trends and network topology.",
             requires_visual_studio=True,
-            system_prompt="You are a federated synthesizer.",
+            system_prompt=KSP_FEDERATED_PROMPT,
             trigger_examples=["trajectory and trace the network"]
         )
 
@@ -30,7 +31,7 @@ class FederatedAgent(BaseAgent):
         analytics_agent = AnalyticalAgent()
         graph_agent = GraphAgent()
         
-        # Execute concurrently or sequentially. Here we do sequentially for safety with DuckDB session.
+        # Execute sequentially for safety with DuckDB session.
         log.info("[FederatedAgent] -> Spawning Analytics Sub-Task")
         analytics_res = analytics_agent.execute(ctx)
         
@@ -45,25 +46,20 @@ class FederatedAgent(BaseAgent):
             combined_charts.extend(graph_res.charts)
             
         # Synthesize answers using the orchestrator
-        synthesis_prompt = f"""You are the Chief Intelligence Commander synthesizing a federated response.
-The user asked: "{ctx.query}"
+        synthesis_input = f"""OFFICER QUERY: "{ctx.query}"
 
-We dispatched this to two specialized sub-agents:
+SUB-AGENT REPORTS:
 
-1. ANALYTICS AGENT REPORT:
+1. ANALYTICS INVESTIGATIVE REPORT:
 {analytics_res.answer}
 
-2. NETWORK AGENT REPORT:
+2. NETWORK FORENSIC REPORT:
 {graph_res.answer}
-
-Synthesize a single, cohesive, professional executive briefing that combines BOTH findings seamlessly.
-Do NOT just paste them side by side. Weave the statistical data (caseloads, trajectories) together with the graph intelligence (mules, networks).
-Use bolding for key entities and metrics.
 """
         
         synthesized_answer = orchestrator.generate_completion(
-            prompt=synthesis_prompt,
-            system_instruction="You are a senior KSP intelligence synthesizer.",
+            prompt=synthesis_input,
+            system_instruction=self.manifest.system_prompt,
             max_tokens=2000
         )
         

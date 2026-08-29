@@ -89,8 +89,13 @@ graphify-out/
 **/graphify-out/**
 analysis_vault/
 **/analysis_vault/**
+findings/
+**/findings/**
 .graphify/
 .graphifyignore
+*.pdf
+scratch/
+**/scratch/**
 
 # 8. OS & Editor Artifacts
 .DS_Store

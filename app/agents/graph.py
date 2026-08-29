@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Dict, Any, List
 from app.core.interfaces import BaseAgent, AgentManifest, ExecutionContext, AgentResponse
+from app.config import KSP_GRAPH_NEXUS_PROMPT, KSP_GRAPH_HUBS_PROMPT
 from app.engine.session_store import session_store
 from app.engine.graph_engine import GraphEngine
 from app.providers.orchestrator import orchestrator
@@ -42,15 +43,27 @@ class GraphAgent(BaseAgent):
 
         # ── 1. Ingest Data from Session Store into Graph Topology ─────────────
         if not session_id or not session_store.has_dataset(session_id):
+            explicit_graph_visual = any(w in q_lower for w in ["network graph", "graph visualization", "render graph", "draw graph", "plot network", "topology chart"])
+            if explicit_graph_visual:
+                return AgentResponse(
+                    answer="### 🕸️ Graph Intelligence Active\n\nNo operational case dataset is currently loaded in memory. Please upload a crime records CSV or syndicate link ledger to enable relational intelligence.",
+                    agent_type="graph_intelligence_agent",
+                    agent_label=self.manifest.label,
+                    agent_icon=self.manifest.icon,
+                    agent_color=self.manifest.color,
+                    provider="graph_engine",
+                    visuals_updated=False,
+                    data_available=False
+                )
+            # Chain of Responsibility: Hand off relational/evidence questions to DocumentAgent (Zoho QuickML Knowledge Base RAG)
             return AgentResponse(
-                answer="### 🕸️ Graph Intelligence Active\n\nNo operational case dataset is currently loaded in memory. Please upload a crime records CSV or syndicate link ledger to enable relational intelligence.",
+                answer="",
                 agent_type="graph_intelligence_agent",
                 agent_label=self.manifest.label,
                 agent_icon=self.manifest.icon,
                 agent_color=self.manifest.color,
-                provider="graph_engine",
-                visuals_updated=False,
-                data_available=False
+                provider="chain_of_responsibility",
+                handoff_target="DOCUMENT"
             )
 
         # Retrieve records across all active tables in DuckDB
@@ -106,35 +119,13 @@ class GraphAgent(BaseAgent):
                 assets_str = ", ".join([f"{sa['typeLabel']} `{sa['label']}`" for sa in shared_assets]) or "None"
 
                 # Synthesize Neural Forensic Intelligence Briefing via Orchestrator
-                forensic_prompt = f"""You are KSP Sentinel AI, a Lead Police Forensic Crime Intelligence Analyst.
-Analyze the following VERIFIED graph facts and deliver a structured investigative briefing for senior police command:
-
-TARGET ENTITY NEXUS: '{p_nodes[0]['label']}' to '{p_nodes[-1]['label']}' ({hops}-hop connection)
-VERIFIED RELATIONAL PATH:
-{steps_str}
-
-IDENTIFIED SHARED EVIDENTIARY ASSETS:
-{assets_str}
-
-OUTPUT FORMAT (Use this exact 4-tier structure):
-### 🕸️ Forensic Link Intelligence: Connection between {p_nodes[0]['label']} and {p_nodes[-1]['label']}
-
-**1. Executive Scheme Diagnosis**
-[2-3 thoughtful sentences explaining the underlying criminal operation, money laundering funnel, or modus operandi revealed by this link.]
-
-**2. Relational Link Chain & Shared Assets**
-{steps_str}
-• **Key Shared Assets:** {assets_str}
-
-**3. Syndicate Role Breakdown**
-• **Primary Coordinator / Anchor:** [Who initiates or coordinates this chain]
-• **Financial / Logistical Mules:** [Intermediate accounts, devices, or transport assets]
-
-**4. Tactical Interception Plan**
-• **[P1] Asset Freeze (Sec 102 BNSS):** [Immediate bank/UPI freeze order on specific identifiers]
-• **[P2] Section 91 CrPC Notice:** [Telecom/CDR subpoena directive for call logs]
-• **[P3] Surveillance & Interception:** [Checkpost/patrol alert for transport assets]
-"""
+                forensic_prompt = KSP_GRAPH_NEXUS_PROMPT.format(
+                    source_node=p_nodes[0]['label'],
+                    target_node=p_nodes[-1]['label'],
+                    hops=hops,
+                    steps_str=steps_str,
+                    assets_str=assets_str
+                )
                 try:
                     narrative = orchestrator.generate_completion(
                         forensic_prompt,
@@ -193,30 +184,11 @@ A verified **{hops}-hop relational chain** connects **{p_nodes[0]['label']}** to
 
             hub_text = "\n".join(hub_bullets)
 
-            forensic_prompt = f"""You are KSP Sentinel AI, a Lead Police Forensic Crime Intelligence Analyst.
-Analyze the following TOP CONNECTED NETWORK HUBS and deliver a structured investigative briefing for senior police command:
-
-GRAPH METRICS: {graph['node_count']:,} canonical entities, {graph['edge_count']:,} verified links
-TOP RANKED HUBS:
-{hub_text}
-
-OUTPUT FORMAT:
-### 🕸️ Forensic Intelligence Briefing: Central Syndicate Hubs & Key Actors
-
-**1. Executive Syndicate Diagnosis**
-[2-3 sentences explaining the overarching crime pattern, structural hierarchy, and inter-station nexus formed by these hubs.]
-
-**2. Key Syndicate Hubs & Structural Centrality**
-{hub_text}
-
-**3. Operational Vulnerability & Chokepoint Analysis**
-[Identify which node(s) if arrested or frozen will dismantle the network's liquidity or logistics.]
-
-**4. Tactical Interception & Legal Directives**
-• **[P1] Priority CDR Sweep:** Issue Section 91 CrPC notices for telecom tower dump and call record analysis on top nodes.
-• **[P2] Section 102 BNSS Asset Freezing:** Freeze connected digital wallets, mule bank accounts, and UPI IDs.
-• **[P3] Inter-Station Command Cell:** Establish a joint investigative task force across the named jurisdictions.
-"""
+            forensic_prompt = KSP_GRAPH_HUBS_PROMPT.format(
+                node_count=graph['node_count'],
+                edge_count=graph['edge_count'],
+                hub_text=hub_text
+            )
             try:
                 narrative = orchestrator.generate_completion(
                     forensic_prompt,

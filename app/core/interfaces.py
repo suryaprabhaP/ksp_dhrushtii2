@@ -52,6 +52,7 @@ class AgentResponse:
     visuals_updated: bool = False
     data_available: bool = True
     suggested_actions: List[str] = field(default_factory=list)
+    handoff_target: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -67,6 +68,7 @@ class AgentResponse:
             "visuals_updated": self.visuals_updated,
             "data_available": self.data_available,
             "suggested_actions": self.suggested_actions,
+            "handoff_target": self.handoff_target,
         }
 
 
@@ -111,6 +113,24 @@ class IDatasetRepository(ABC):
         pass
 
 
+class IDataConnector(ABC):
+    """
+    DIP + ISP: Abstract Universal Data Fabric interface.
+    Decouples agents from physical storage (DuckDB CSV, live SQL, or NoSQL Catalyst Datastore).
+    """
+    @abstractmethod
+    def has_active_connection(self, session_id: str) -> bool:
+        pass
+
+    @abstractmethod
+    def execute_query(self, session_id: str, query: str) -> tuple[list, list]:
+        pass
+
+    @abstractmethod
+    def get_schema_summary(self, session_id: str) -> str:
+        pass
+
+
 class ILLMProvider(ABC):
     """
     DIP: Abstract interface for neural inference providers.
@@ -122,3 +142,42 @@ class ILLMProvider(ABC):
     @abstractmethod
     def is_available(self) -> bool:
         pass
+
+
+@dataclass
+class DocumentChunk:
+    """
+    Data contract for retrieved document snippets.
+    """
+    chunk_id: str
+    doc_name: str
+    chunk_index: int
+    content: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    score: float = 0.0
+
+
+class IDocumentRepository(ABC):
+    """
+    DIP: Abstract interface for session-isolated document chunk storage and semantic/lexical retrieval.
+    """
+    @abstractmethod
+    def ingest_document(self, session_id: str, filename: str, file_bytes: bytes) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def search_chunks(self, session_id: str, query: str, limit: int = 5) -> List[DocumentChunk]:
+        pass
+
+    @abstractmethod
+    def list_documents(self, session_id: str) -> List[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def delete_document(self, session_id: str, filename: str) -> bool:
+        pass
+
+    @abstractmethod
+    def has_documents(self, session_id: str) -> bool:
+        pass
+
