@@ -221,24 +221,28 @@ export default function TranscriptActiveView({
           </div>
         </div>
 
-        {/* Dual Column ElevenLabs Lyrics Display */}
+        {/* Dual Column Bilingual Display */}
         <div style={{
           flex: 1,
+          minHeight: '260px',
           overflowY: 'auto',
+          overflowX: 'hidden',
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
           gap: '16px',
           padding: '2px'
         }}>
           {/* Column 1: Kannada Original */}
           <div style={{
+            minWidth: 0,
             background: 'rgba(15, 23, 42, 0.65)',
             borderRadius: '16px',
             padding: '18px',
             border: '1px solid rgba(255,255,255,0.06)',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.3)'
+            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.3)',
+            overflow: 'hidden'
           }}>
             <div style={{
               fontSize: '0.74rem',
@@ -268,13 +272,15 @@ export default function TranscriptActiveView({
 
           {/* Column 2: English Translation */}
           <div style={{
+            minWidth: 0,
             background: 'rgba(15, 23, 42, 0.65)',
             borderRadius: '16px',
             padding: '18px',
             border: '1px solid rgba(255,255,255,0.06)',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.3)'
+            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.3)',
+            overflow: 'hidden'
           }}>
             <div style={{
               fontSize: '0.74rem',
