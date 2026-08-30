@@ -65,7 +65,7 @@ class AgentRegistry:
         for manifest in self.get_manifests():
             lines.append(f"- {manifest.intent_name.upper()}: {manifest.description}")
 
-        lines.append("- GUARDRAIL: Off-topic queries unrelated to police work, crime, law, or Karnataka governance.")
+        lines.append("- GUARDRAIL: Strictly off-topic inquiries unrelated to police work or general assistance (e.g. cooking recipes, movies, cricket scores, stocks, entertainment, personal relationship advice).")
 
         if last_agent_type:
             lines.append(f"\nPrevious Responding Agent: {last_agent_type.upper()}")

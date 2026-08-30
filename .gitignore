@@ -71,6 +71,7 @@ audit_trace.jsonl
 *.sqlite
 *.sqlite3
 *.duckdb
+*.db
 
 # 6. Datasets & Sensitive Data Files
 *.csv
@@ -97,6 +98,11 @@ findings/
 *.pdf
 scratch/
 **/scratch/**
+
+# 9. Root-level internal planning / analysis documents
+audio_forensics_failure_analysis.md
+implementation_plan.md
+multiturn_test_results.json
 
 # 8. OS & Editor Artifacts
 .DS_Store

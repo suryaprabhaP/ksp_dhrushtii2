@@ -37,9 +37,10 @@ def audio_transcribe_and_stage():
     4. Stages the verified evidence into DuckDB sandbox memory for Officer inspection.
     """
     t0 = time.time()
-    session_id = request.form.get("session_id") or "default_session"
+    json_data = request.get_json(silent=True) or {}
+    session_id = request.form.get("session_id") or json_data.get("session_id") or "default_session"
     audio_file = request.files.get("audio") or request.files.get("file")
-    raw_text = request.form.get("text")
+    raw_text = request.form.get("text") or json_data.get("text")
 
     filename = "voice_recording.mp3"
     file_bytes = b""
@@ -116,6 +117,8 @@ def audio_transcribe_and_stage():
         "filename": filename,
         "transcript_kannada": mapped_evidence.get("transcript_kannada", raw_transcription),
         "transcript_english": mapped_evidence.get("transcript_english", raw_transcription),
+        "transcription_english": mapped_evidence.get("transcript_english", raw_transcription),
+        "bns_sections": entities.get("bns_sections", []),
         "entities": entities,
         "processing_time_ms": elapsed_ms,
         "status": "staged"

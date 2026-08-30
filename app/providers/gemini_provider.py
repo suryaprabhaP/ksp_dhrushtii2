@@ -12,7 +12,7 @@ log = logging.getLogger("standalone.provider.gemini")
 class GeminiProvider(BaseLLMProvider):
     name = "gemini"
     tags = ["free_reasoning", "json_schema"]
-    MODEL = "gemini-2.0-flash"
+    MODEL = "gemini-3.7-flash"
 
     def __init__(self):
         self._configured = False
@@ -56,7 +56,14 @@ class GeminiProvider(BaseLLMProvider):
             generation_config=generation_config
         )
 
-        chat = model.start_chat(history=history_contents[:-1] if len(history_contents) > 1 else [])
-        last_prompt = history_contents[-1]["parts"][0] if history_contents else "Analyze operational context."
-        response = chat.send_message(last_prompt)
-        return response.text or "", self.name
+        try:
+            if history_contents:
+                contents = history_contents
+            else:
+                contents = [{"role": "user", "parts": ["Analyze operational context."]}]
+            
+            response = model.generate_content(contents, request_options={"timeout": 5})
+            return response.text or "", self.name
+        except Exception as e:
+            log.warning(f"[GeminiProvider] generate_content failed ({e}), raising for upstream fallback.")
+            raise e

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Chatbot from './components/Chatbot';
 import AnalyticsDashboard from './analytics/AnalyticsDashboard';
 import ErrorBoundary from './components/ErrorBoundary';
+import DraggableGlobalChat from './components/DraggableGlobalChat';
+import { GlobalInvestigationContextProvider } from './context/GlobalInvestigationContext';
 import { initialDatasetState } from './analytics/services/datasetStore';
 import { globalNetworkStore } from './analytics/services/networkAnalyticsService';
 import { Shield, MapPin, Radio, BarChart2 } from 'lucide-react';
@@ -11,7 +13,7 @@ import { Shield, MapPin, Radio, BarChart2 } from 'lucide-react';
  * Supports seamless switching between Chatbot Console and Advanced Analytics Hub,
  * with shared dataset state across both interfaces.
  */
-function App() {
+function AppContent() {
   const [selectedDivision, setSelectedDivision] = useState('Bengaluru Division');
   const [activeView, setActiveView] = useState('chat'); // 'chat' | 'analytics'
   const [analyticsInitialTab, setAnalyticsInitialTab] = useState('dashboard');
@@ -101,23 +103,30 @@ function App() {
   const handleResetFilters = () => {
     setDatasetState(prev => ({
       ...prev,
-      filteredRecords: prev.rawRecords,
-      filters: {
-        division: 'All',
-        district: 'All',
-        policeStation: 'All',
-        crimeCategory: 'All',
-        status: 'All',
-        year: 'All',
-        searchKeyword: ''
-      }
+      filters: initialDatasetState.filters,
+      filteredRecords: prev.rawRecords
     }));
   };
 
   // Central Session Reset Handler (SOLID: App.jsx orchestrates data lifecycle)
   const handleSessionReset = () => {
+    globalNetworkStore.reset();
     setDatasetState(initialDatasetState);
-    globalNetworkStore.clearDataset();
+  };
+
+  // Central Session Restore Handler (SOLID: Restores full investigation context across tabs)
+  const handleRestoreSessionData = (savedDatasetState) => {
+    if (savedDatasetState && savedDatasetState.isLoaded && savedDatasetState.rawRecords?.length > 0) {
+      setDatasetState(savedDatasetState);
+      const headers = savedDatasetState.columns || Object.keys(savedDatasetState.rawRecords[0] || {});
+      globalNetworkStore.loadDataset(
+        savedDatasetState.rawRecords,
+        headers,
+        savedDatasetState.filename || 'Restored Investigation'
+      );
+    } else {
+      handleSessionReset();
+    }
   };
 
   // MOCK LOGIN PORTAL VIEW
@@ -131,109 +140,100 @@ function App() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontFamily: "'Inter', system-ui, sans-serif",
-          color: '#f8fafc',
-          padding: '20px'
+          fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
         }}>
           <div style={{
-            maxWidth: '460px',
-            width: '100%',
-            backgroundColor: '#0f172a',
-            borderRadius: '20px',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            padding: '32px',
-            boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
-            textAlign: 'center'
+            width: '380px',
+            padding: '36px 32px',
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            border: '1px solid rgba(59, 130, 246, 0.4)',
+            borderRadius: '16px',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(59, 130, 246, 0.2)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
           }}>
             <div style={{
-              width: '52px',
-              height: '52px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
+              width: '56px',
+              height: '56px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 16px auto',
-              boxShadow: '0 0 20px rgba(37, 99, 235, 0.5)'
+              marginBottom: '16px',
+              boxShadow: '0 0 20px rgba(37, 99, 235, 0.6)',
+              border: '1px solid rgba(147, 197, 253, 0.5)'
             }}>
-              <Shield size={28} color="#ffffff" />
+              <Shield size={32} color="#ffffff" />
             </div>
 
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, margin: '0 0 4px 0', color: '#ffffff' }}>
-              Karnataka State Police Portal
+            <h2 style={{
+              margin: '0 0 4px 0',
+              fontSize: '1.25rem',
+              fontWeight: 800,
+              color: '#f8fafc',
+              textAlign: 'center',
+              letterSpacing: '0.5px'
+            }}>
+              KSP SENTINEL AI
             </h2>
-            <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '24px' }}>
-              Mock Officer Authentication & Command Console
-            </div>
 
-            <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
-                  Select Jurisdiction Division
-                </label>
-                <select
-                  value={selectedDivision}
-                  onChange={(e) => setSelectedDivision(e.target.value)}
-                  style={{
-                    width: '100%',
-                    marginTop: '4px',
-                    padding: '10px 12px',
-                    backgroundColor: '#1e293b',
-                    border: '1px solid #334155',
-                    borderRadius: '8px',
-                    color: '#f8fafc',
-                    fontSize: '0.82rem',
-                    fontWeight: 700
-                  }}
-                >
-                  <option value="Bengaluru Division">Bengaluru Division</option>
-                  <option value="Mysuru Division">Mysuru Division</option>
-                  <option value="Belagavi Division">Belagavi Division</option>
-                  <option value="Kalaburagi Division">Kalaburagi Division</option>
-                  <option value="State HQ Command">State HQ Command</option>
-                </select>
-              </div>
+            <p style={{
+              margin: '0 0 24px 0',
+              fontSize: '0.75rem',
+              color: '#94a3b8',
+              textAlign: 'center'
+            }}>
+              Law Enforcement Officer Access
+            </p>
 
+            <form onSubmit={handleLoginSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
-                  Officer Badge ID
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Badge ID
                 </label>
                 <input
                   type="text"
                   value={badgeId}
                   onChange={(e) => setBadgeId(e.target.value)}
+                  placeholder="e.g. OFFICER_BGL_001"
+                  required
                   style={{
                     width: '100%',
-                    marginTop: '4px',
-                    padding: '10px 12px',
-                    backgroundColor: '#1e293b',
+                    boxSizing: 'border-box',
+                    padding: '10px 14px',
+                    backgroundColor: 'rgba(30, 41, 59, 0.7)',
                     border: '1px solid #334155',
                     borderRadius: '8px',
                     color: '#f8fafc',
-                    fontSize: '0.82rem',
-                    fontWeight: 700
+                    fontSize: '0.85rem',
+                    outline: 'none'
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
-                  Command Passcode
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Security Pin / Passcode
                 </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
                   style={{
                     width: '100%',
-                    marginTop: '4px',
-                    padding: '10px 12px',
-                    backgroundColor: '#1e293b',
+                    boxSizing: 'border-box',
+                    padding: '10px 14px',
+                    backgroundColor: 'rgba(30, 41, 59, 0.7)',
                     border: '1px solid #334155',
                     borderRadius: '8px',
                     color: '#f8fafc',
-                    fontSize: '0.82rem',
-                    fontWeight: 700
+                    fontSize: '0.85rem',
+                    outline: 'none'
                   }}
                 />
               </div>
@@ -288,15 +288,18 @@ function App() {
   if (activeView === 'analytics') {
     return (
       <ErrorBoundary>
-        <AnalyticsDashboard
-          divisionName={selectedDivision}
-          onBackToChat={() => setActiveView('chat')}
-          datasetState={datasetState}
-          initialTab={analyticsInitialTab}
-          onDatasetLoaded={handleDatasetLoaded}
-          onUpdateFilters={handleUpdateFilters}
-          onResetFilters={handleResetFilters}
-        />
+        <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <AnalyticsDashboard
+            divisionName={selectedDivision}
+            onBackToChat={() => setActiveView('chat')}
+            datasetState={datasetState}
+            initialTab={analyticsInitialTab}
+            onDatasetLoaded={handleDatasetLoaded}
+            onUpdateFilters={handleUpdateFilters}
+            onResetFilters={handleResetFilters}
+          />
+          <DraggableGlobalChat divisionName={selectedDivision} />
+        </div>
       </ErrorBoundary>
     );
   }
@@ -311,7 +314,8 @@ function App() {
         flexDirection: 'column',
         backgroundColor: '#090d16',
         fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-        color: '#f8fafc'
+        color: '#f8fafc',
+        position: 'relative'
       }}>
         {/* STANDALONE CHATBOT UI TOP BAR (WITH ANALYTICS HUB BUTTON) */}
         <header style={{
@@ -342,9 +346,9 @@ function App() {
             <div>
               <h1 style={{
                 margin: 0,
-                fontSize: '1.02rem',
-                fontWeight: 800,
-                letterSpacing: '0.04em',
+                fontSize: '0.95rem',
+                fontWeight: 900,
+                letterSpacing: '0.6px',
                 background: 'linear-gradient(90deg, #ffffff 0%, #93c5fd 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
@@ -418,17 +422,25 @@ function App() {
             divisionName={selectedDivision}
             onNavigateToAnalytics={() => { setAnalyticsInitialTab('dashboard'); setActiveView('analytics'); }}
             onNavigateToNetwork={() => { setAnalyticsInitialTab('network_graph'); setActiveView('analytics'); }}
-            onNavigateToMaps={() => { setAnalyticsInitialTab('hotspot_maps'); setActiveView('analytics'); }}
-            onNavigateToVault={() => { setAnalyticsInitialTab('vault'); setActiveView('analytics'); }}
             onDatasetIngested={handleDatasetLoaded}
             onSessionReset={handleSessionReset}
+            onRestoreSessionData={handleRestoreSessionData}
             isDatasetLoaded={datasetState.isLoaded}
             datasetState={datasetState}
           />
         </main>
+        
+        {/* DRAGGABLE GLOBAL CHAT OVERLAY */}
+        <DraggableGlobalChat divisionName={selectedDivision} />
       </div>
     </ErrorBoundary>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <GlobalInvestigationContextProvider>
+      <AppContent />
+    </GlobalInvestigationContextProvider>
+  );
+}

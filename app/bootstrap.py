@@ -10,6 +10,7 @@ from app.agents.document import DocumentAgent
 from app.agents.graph import GraphAgent
 from app.agents.federated import FederatedAgent
 from app.agents.pattern import PatternAgent
+from app.agents.spatial import SpatialTacticalAgent
 
 log = logging.getLogger("standalone.bootstrap")
 
@@ -23,7 +24,8 @@ def initialize_system():
     registry.register(GraphAgent())
     registry.register(FederatedAgent())
     registry.register(PatternAgent())
-    log.info("KSP Sentinel AI: All domain agents initialized and registered (including PatternAgent & GraphAgent).")
+    registry.register(SpatialTacticalAgent())
+    log.info("KSP Sentinel AI: All domain agents initialized and registered (including PatternAgent, GraphAgent & SpatialTacticalAgent).")
 
 
 initialize_system()

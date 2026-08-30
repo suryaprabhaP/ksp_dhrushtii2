@@ -23,12 +23,14 @@ import VisualIntelligenceStudio from './VisualIntelligenceStudio';
 import UploadDatasetModal from './UploadDatasetModal';
 import AudioForensicsPanel from './AudioForensicsPanel';
 import NetworkGraphView from '../analytics/modules/NetworkGraphView';
+import HotmapView from '../analytics/modules/HotmapView';
 import { parseCSV } from '../analytics/services/datasetStore';
 import { GraphQueryToolAgent, globalNetworkStore } from '../analytics/services/networkAnalyticsService';
 import { markdownToHtml } from '../utils/markdownParser';
 import { exportEvidencePacketPDF, exportChatExecutiveReportPDF } from '../services/pdfExportService';
 import { speakMessageText as speakMessageTextService, stopSpeaking as stopSpeakingService } from '../services/ttsService';
 import { postJson, getApiUrl } from '../services/apiClient';
+import { useGlobalInvestigation } from '../context/GlobalInvestigationContext';
 
 ChartJS.register(
   CategoryScale,
@@ -206,7 +208,8 @@ function InlineChartCard({ message, onOpenModal }) {
 const VIEW_STATES = Object.freeze({
   CHAT: 'CHAT_VIEW',
   NETWORK: 'NETWORK_VIEW',
-  AUDIO_FORENSICS: 'AUDIO_FORENSICS_VIEW'
+  AUDIO_FORENSICS: 'AUDIO_FORENSICS_VIEW',
+  GEOSPATIAL: 'GEOSPATIAL_VIEW'
 });
 
 const customMiniIcon = L.divIcon({
@@ -301,12 +304,13 @@ function Chatbot({
   onNavigateToAnalytics,
   onNavigateToNetwork,
   onNavigateToMaps,
-  onNavigateToVault,
   onDatasetIngested,
   onSessionReset,
+  onRestoreSessionData,
   isDatasetLoaded,
   datasetState = null
 }) {
+  const { spatialPayload, openInvestigation, clearSpatialPayload } = useGlobalInvestigation();
   const [messages, setMessages] = useState(() => {
     try {
       const saved = localStorage.getItem(`ksp_sentinel_chat_history_${divisionName}`);
@@ -434,6 +438,8 @@ function Chatbot({
         studioExecutiveDecision: studioExecutiveDecision || null,
         studioKpis: studioKpis || null,
         isVisualStudioOpen: isVisualStudioOpen || false,
+        datasetState: datasetState || null,
+        spatialPayload: spatialPayload || null,
         updatedAt: Date.now(),
         dateStr
       };
@@ -454,9 +460,13 @@ function Chatbot({
     });
   };
 
-  const handleNewConversation = () => {
-    if (messages.length > 1) {
+  const handleNewConversation = (skipSave = false) => {
+    const shouldSkip = typeof skipSave === 'boolean' ? skipSave : false;
+    if (!shouldSkip && messages.length > 1) {
       updateSessionStore(messages);
+    }
+    if (clearSpatialPayload) {
+      clearSpatialPayload();
     }
     setActiveMainView(VIEW_STATES.CHAT);
     const newId = `session_${Date.now()}`;
@@ -500,6 +510,20 @@ function Chatbot({
       setStudioExecutiveDecision(session.studioExecutiveDecision || null);
       setStudioKpis(session.studioKpis || null);
       setIsVisualStudioOpen(Boolean(session.isVisualStudioOpen && session.studioCharts?.length > 0));
+
+      // Restore spatial investigation context if present, or clear
+      if (session.spatialPayload && openInvestigation) {
+        openInvestigation(session.spatialPayload);
+      } else if (clearSpatialPayload) {
+        clearSpatialPayload();
+      }
+
+      // Restore dataset and network graph state across analytics module
+      if (session.datasetState && onRestoreSessionData) {
+        onRestoreSessionData(session.datasetState);
+      } else if (onSessionReset) {
+        onSessionReset();
+      }
     }
   };
 
@@ -516,17 +540,19 @@ function Chatbot({
     });
 
     if (sessionId === activeSessionId) {
-      handleNewConversation();
+      handleNewConversation(true);
     }
   };
 
   const handleClearAllSessions = () => {
     setSavedSessions([]);
-    localStorage.removeItem(`ksp_sentinel_chat_sessions_${divisionName}`);
-    handleNewConversation();
+    try {
+      localStorage.removeItem(`ksp_sentinel_chat_sessions_${divisionName}`);
+    } catch (e) {}
+    handleNewConversation(true);
   };
 
-  const handleClearHistory = handleNewConversation;
+  const handleClearHistory = () => handleNewConversation(false);
 
   // VOICE ASSISTANT STATE (KANNADA & ENGLISH SARVAM AI / WEB SPEECH)
   const [voiceLang, setVoiceLang] = useState('kn-IN');
@@ -750,7 +776,8 @@ function Chatbot({
               history: historyPayload,
               division: divisionName,
               fir_number: selectedFir,
-              session_id: activeSessionId
+              session_id: activeSessionId,
+              context_injection: spatialPayload
             })
           }).then(r => r.json()).catch(() => null);
 
@@ -896,7 +923,8 @@ function Chatbot({
           history: historyPayload,
           division: divisionName,
           fir_number: selectedFir,
-          session_id: activeSessionId
+          session_id: activeSessionId,
+          context_injection: spatialPayload
         })
       });
       const data = await response.json();
@@ -1375,7 +1403,7 @@ function Chatbot({
           </div>
         </div>
 
-        <button className="sidebar-new-chat-btn-ksp" onClick={handleNewConversation} title="Start new conversation session">
+        <button className="sidebar-new-chat-btn-ksp" onClick={() => handleNewConversation(false)} title="Start new conversation session">
           <Plus size={16} /> New Conversation
         </button>
 
@@ -1426,31 +1454,22 @@ function Chatbot({
 
           {/* 3. GEOSPATIAL HOTSPOT RADAR */}
           <button
-            onClick={() => { if (onNavigateToMaps) onNavigateToMaps(); }}
-            className="ksp-sidebar-nav-btn"
-            title="Open Geospatial Hotspot Radar"
+            onClick={() => {
+              setActiveMainView(prev => prev === VIEW_STATES.GEOSPATIAL ? VIEW_STATES.CHAT : VIEW_STATES.GEOSPATIAL);
+            }}
+            className={`ksp-sidebar-nav-btn ${activeMainView === VIEW_STATES.GEOSPATIAL ? 'active' : ''}`}
+            title="Open Geospatial Hotspot Radar & Tactical Jurisdiction Map"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <Compass size={16} className="nav-btn-icon" />
+              <Compass size={16} className="nav-btn-icon" style={{ color: '#38bdf8' }} />
               <span>Geospatial Hotspot Radar</span>
             </div>
-            <span className="nav-btn-badge">MAP ➔</span>
+            <span className="nav-btn-badge" style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8' }}>
+              {activeMainView === VIEW_STATES.GEOSPATIAL ? 'ACTIVE ✕' : 'MAP ➔'}
+            </span>
           </button>
 
-          {/* 4. DATA MART & FORENSIC VAULT */}
-          <button
-            onClick={() => { if (onNavigateToVault) onNavigateToVault(); }}
-            className="ksp-sidebar-nav-btn"
-            title="Open Data Mart & Forensic 65B Audit Vault"
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <HardDrive size={16} className="nav-btn-icon" />
-              <span>Data Mart & Forensic Vault</span>
-            </div>
-            <span className="nav-btn-badge">65B ➔</span>
-          </button>
-
-          {/* 5. VOICE FORENSICS & STT INTEL (BILINGUAL SPOTIFY LYRICS & HITL GATEWAY) */}
+          {/* 4. VOICE FORENSICS & STT INTEL (BILINGUAL SPOTIFY LYRICS & HITL GATEWAY) */}
           <button
             onClick={() => {
               setActiveMainView(prev => prev === VIEW_STATES.AUDIO_FORENSICS ? VIEW_STATES.CHAT : VIEW_STATES.AUDIO_FORENSICS);
@@ -2236,6 +2255,14 @@ function Chatbot({
                   }
                 ]);
               }}
+            />
+          </div>
+        ) : activeMainView === VIEW_STATES.GEOSPATIAL ? (
+          <div style={{ flex: 1, width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <HotmapView
+              records={datasetState?.rawRecords || []}
+              divisionName={divisionName}
+              onBackToChat={() => setActiveMainView(VIEW_STATES.CHAT)}
             />
           </div>
         ) : (

@@ -18,7 +18,7 @@ class ConversationalAgent(BaseAgent):
             label="KSP Sentinel AI",
             icon="🛡️",
             color="#1e40af",
-            description="Trigger for qualitative detective advice, investigative hypotheses, reactions, clarifications, or conversational follow-ups that do not require new charts.",
+            description="Trigger for greetings (hi, hello, namaskara), officer introductions (who are you, system capabilities), qualitative detective advice, investigative hypotheses, reactions, clarifications, or general police assistant queries.",
             requires_visual_studio=False,
             system_prompt=KSP_CONVERSATIONAL_PROMPT
         )

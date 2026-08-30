@@ -23,7 +23,9 @@ from app.config import ANALYTICS_SEED, AUDIT_LOG_PATH, GEMINI_API_KEY, GROQ_API_
 import app.bootstrap  # Registers all specialized domain agents
 from app.blueprints.calendar import calendar_bp
 from app.blueprints.forensics import forensics_bp
+from app.blueprints.investigation import investigation_bp
 from app.blueprints.mcp_social import mcp_social_bp
+from app.blueprints.spatial import spatial_bp
 from app.core.audit import AuditLogger
 from app.core.classifier import classifier
 from app.core.interfaces import ExecutionContext
@@ -44,7 +46,9 @@ CORS(app)
 # Register Blueprints (SOLID: SRP + OCP)
 app.register_blueprint(calendar_bp, url_prefix="/api/calendar")
 app.register_blueprint(forensics_bp)
+app.register_blueprint(investigation_bp)
 app.register_blueprint(mcp_social_bp)
+app.register_blueprint(spatial_bp)
 
 audit_logger = AuditLogger(AUDIT_LOG_PATH)
 
@@ -63,6 +67,7 @@ def chat():
     session_id = body.get("session_id", "default_session")
     officer_id = body.get("officer_id", "OFFICER_BGL_001")
     fir_number = body.get("fir_number")
+    context_injection = body.get("context_injection") or body.get("spatial_context")
 
     if not user_query:
         return jsonify({"success": False, "error": "Query cannot be empty"}), 400
@@ -76,7 +81,8 @@ def chat():
             query=user_query,
             recent_history=history,
             last_agent_type=last_agent_type,
-            memory_summary=memory_summary
+            memory_summary=memory_summary,
+            context_injection=context_injection
         )
         intent = classification.intent
         log.info(f"[Chat Dispatch] Session: '{session_id}' | Query: '{user_query[:50]}...' -> Intent: [{intent}] | Follow-up: {classification.is_followup}")
@@ -107,7 +113,8 @@ def chat():
             session_id=session_id,
             fir_number=fir_number,
             memory_summary=memory_summary,
-            last_agent_type=last_agent_type
+            last_agent_type=last_agent_type,
+            extra={"context_injection": context_injection} if context_injection else {}
         )
 
         response = agent.execute(ctx)
