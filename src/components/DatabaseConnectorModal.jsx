@@ -6,7 +6,10 @@ export default function DatabaseConnectorModal({ isOpen, onClose, onConnectSucce
   const [activeTab, setActiveTab] = useState('relational'); // 'relational' | 'nosql' | 'dump'
   const [dbUri, setDbUri] = useState('');
   const [dbType, setDbType] = useState('postgresql'); // 'postgresql' | 'mysql' | 'sqlite'
+  const [tableName, setTableName] = useState('cases');
   const [mongoUri, setMongoUri] = useState('');
+  const [collectionName, setCollectionName] = useState('crimes');
+  const [datasetPurpose, setDatasetPurpose] = useState('analytics');
   const [selectedFile, setSelectedFile] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [statusMsg, setStatusMsg] = useState(null);
@@ -23,15 +26,16 @@ export default function DatabaseConnectorModal({ isOpen, onClose, onConnectSucce
         const formData = new FormData();
         formData.append('file', selectedFile);
         formData.append('session_id', 'default_session');
+        formData.append('dataset_purpose', datasetPurpose);
 
-        const res = await fetch(getApiUrl('/upload'), {
+        const res = await fetch(getApiUrl('/api/upload_dataset'), {
           method: 'POST',
           body: formData
         });
         const data = await res.json();
 
         if (data.success) {
-          setStatusMsg({ type: 'success', text: `Successfully indexed '${selectedFile.name}' into Isolated Session Database!` });
+          setStatusMsg({ type: 'success', text: `Successfully indexed '${selectedFile.name}' into Session [${datasetPurpose.toUpperCase()}] slot!` });
           setTimeout(() => {
             if (onConnectSuccess) onConnectSuccess(data);
             onClose();
@@ -41,16 +45,29 @@ export default function DatabaseConnectorModal({ isOpen, onClose, onConnectSucce
         }
       } else {
         const payload = {
-          type: activeTab === 'relational' ? dbType : 'mongodb',
-          uri: activeTab === 'relational' ? dbUri : mongoUri,
+          db_type: activeTab === 'relational' ? dbType : 'mongodb',
+          connection_uri: activeTab === 'relational' ? dbUri : mongoUri,
+          table_name: activeTab === 'relational' ? tableName : collectionName,
+          dataset_purpose: datasetPurpose,
           session_id: 'default_session'
         };
 
-        setStatusMsg({ type: 'success', text: `Connected to ${activeTab === 'relational' ? dbType.toUpperCase() : 'MongoDB'} database session workspace!` });
-        setTimeout(() => {
-          if (onConnectSuccess) onConnectSuccess(payload);
-          onClose();
-        }, 1200);
+        const res = await fetch(getApiUrl('/api/connect_database'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          setStatusMsg({ type: 'success', text: data.message || `Connected to ${activeTab === 'relational' ? dbType.toUpperCase() : 'MongoDB'} database session workspace!` });
+          setTimeout(() => {
+            if (onConnectSuccess) onConnectSuccess(data);
+            onClose();
+          }, 1200);
+        } else {
+          setStatusMsg({ type: 'error', text: data.error || 'Failed to connect to remote database.' });
+        }
       }
     } catch (err) {
       setStatusMsg({ type: 'error', text: err.message || 'Connection failed.' });
@@ -193,6 +210,28 @@ export default function DatabaseConnectorModal({ isOpen, onClose, onConnectSucce
                   }}
                 />
               </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#cbd5e1', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                  Target Table Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="cases"
+                  value={tableName}
+                  onChange={(e) => setTableName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: '#f8fafc',
+                    fontSize: '0.82rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
             </div>
           )}
 
@@ -213,6 +252,28 @@ export default function DatabaseConnectorModal({ isOpen, onClose, onConnectSucce
                     border: '1px solid #334155',
                     borderRadius: '8px',
                     padding: '10px 12px',
+                    color: '#f8fafc',
+                    fontSize: '0.82rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#cbd5e1', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                  Target Collection Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="crimes"
+                  value={collectionName}
+                  onChange={(e) => setCollectionName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
                     color: '#f8fafc',
                     fontSize: '0.82rem',
                     outline: 'none'
@@ -260,6 +321,38 @@ export default function DatabaseConnectorModal({ isOpen, onClose, onConnectSucce
               </div>
             </div>
           )}
+
+          {/* Tri-Modal Slot Destination Selector */}
+          <div style={{ marginTop: '16px', borderTop: '1px solid #334155', paddingTop: '14px' }}>
+            <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+              Target Investigation Slot
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              {[
+                { id: 'analytics', label: '📊 Analytics', desc: 'crime_dataset' },
+                { id: 'network', label: '🕸️ Network', desc: 'network_dataset' },
+                { id: 'spatial', label: '🗺️ Spatial', desc: 'spatial_dataset' }
+              ].map(slot => (
+                <button
+                  type="button"
+                  key={slot.id}
+                  onClick={() => setDatasetPurpose(slot.id)}
+                  style={{
+                    background: datasetPurpose === slot.id ? '#1e3a8a' : '#0f172a',
+                    border: datasetPurpose === slot.id ? '1px solid #3b82f6' : '1px solid #334155',
+                    borderRadius: '8px',
+                    padding: '8px 6px',
+                    color: datasetPurpose === slot.id ? '#60a5fa' : '#94a3b8',
+                    cursor: 'pointer',
+                    textAlign: 'center'
+                  }}
+                >
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{slot.label}</div>
+                  <div style={{ fontSize: '0.65rem', opacity: 0.8 }}>{slot.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {statusMsg && (
             <div style={{

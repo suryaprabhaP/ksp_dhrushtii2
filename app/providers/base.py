@@ -2,7 +2,7 @@
 KSP Sentinel AI — LLM Provider Abstract Interface (SOLID: DIP)
 """
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 from app.core.interfaces import ILLMProvider
 
 
@@ -16,7 +16,7 @@ class BaseLLMProvider(ILLMProvider):
     tags: List[str] = []
 
     @abstractmethod
-    def complete(self, messages: List[Dict[str, str]], json_mode: bool = False, max_tokens: int = 1000) -> Tuple[str, str]:
+    def complete(self, messages: List[Dict[str, str]], json_mode: bool = False, max_tokens: int = 1000, timeout: Optional[float] = None) -> Tuple[str, str]:
         pass
 
     @abstractmethod

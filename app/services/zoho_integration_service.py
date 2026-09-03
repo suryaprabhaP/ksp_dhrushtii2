@@ -1,189 +1,527 @@
 """
-KSP Sentinel AI — Zoho Enterprise Integration Service (SOLID: SRP, OCP)
-======================================================================
-Executes real database CRUD operations on local SQLite simulation tables.
-Easily swappable with live Zoho Desk REST APIs (Zoho-oauthtoken) in Phase 4.
+KSP Sentinel AI — Zoho Enterprise Integration Service (SOLID: SRP, OCP, LSP, ISP, DIP)
+=====================================================================================
+Architectural Responsibilities:
+1. Decouples ticket lifecycle and suspect intelligence via explicit repository interfaces (ISP, DIP).
+2. Persists tactical Hoysala PCR Dispatch Orders to Zoho Catalyst Data Store Cloud tables (LSP, OCP).
+3. Provides thread-safe, high-resilience memory buffering for zero-downtime offline execution (SRP).
+4. Routes queries seamlessly using the dedicated 'tables' Zoho OAuth Token Badge.
 """
-import os
-import sqlite3
-import time
+import abc
+import json
 import logging
-from pathlib import Path
-from typing import Dict, List, Any, Optional
+import threading
+import time
+from typing import Any, Dict, List, Optional
+
+from app.config import (
+    CATALYST_TABLE_AUDIT_TRAIL,
+    CATALYST_TABLE_AUDIT_TRAIL_RELATIONAL,
+    CATALYST_TABLE_AUDIT_TRAIL_NAME,
+)
+from app.services.catalyst_service import (
+    catalyst_datastore_service,
+    catalyst_cache_service,
+)
 
 log = logging.getLogger("investigation.zoho_integration")
 
-DB_DIR = Path(__file__).resolve().parent.parent / "data"
-DB_PATH = DB_DIR / "zoho_simulation.db"
 
+# ══════════════════════════════════════════════════════════════════════════════
+# 1. DOMAIN REPOSITORY CONTRACTS (SOLID: ISP & DIP)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class IAuditRepository(abc.ABC):
+    """Interface Segregation: Specific contract for Section 65B tamper-evident audit trail persistence."""
+
+    @abc.abstractmethod
+    def append_log(self, payload: Dict[str, Any]) -> bool:
+        """Persist an audit log record into the immutable cloud ledger."""
+        pass
+
+    @abc.abstractmethod
+    def get_latest_hash(self) -> Optional[str]:
+        """Fetch the most recent block hash to maintain cryptographic chain continuity."""
+        pass
+
+    @abc.abstractmethod
+    def list_logs(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Retrieve recent audit logs for forensics and compliance reporting."""
+        pass
+
+class ITicketRepository(abc.ABC):
+    """Interface Segregation: Specific contract for dispatch ticket persistence."""
+
+    @abc.abstractmethod
+    def create_ticket(self, ticket_record: Dict[str, Any]) -> Dict[str, Any]:
+        """Persist a new dispatch ticket and return the created record."""
+        pass
+
+    @abc.abstractmethod
+    def list_tickets(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Retrieve recent dispatch tickets up to the specified limit."""
+        pass
+
+
+class ISuspectRepository(abc.ABC):
+    """Interface Segregation: Specific contract for criminal dossier intelligence."""
+
+    @abc.abstractmethod
+    def find_suspects(
+        self,
+        district: Optional[str] = None,
+        crime_category: Optional[str] = None,
+        limit: int = 5
+    ) -> List[Dict[str, Any]]:
+        """Query suspects filtered by jurisdiction and modus operandi."""
+        pass
+
+    @abc.abstractmethod
+    def add_suspect(self, suspect_record: Dict[str, Any]) -> bool:
+        """Add or update a suspect record."""
+        pass
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 2. CONCRETE REPOSITORIES (SOLID: LSP & OCP)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class CatalystDataStoreTicketRepository(ITicketRepository):
+    """
+    Persists Hoysala PCR Dispatch Orders to Catalyst Data Store ('desk_tickets' table).
+    Maintains a synchronized, thread-safe memory buffer to ensure sub-millisecond
+    query response times and graceful offline continuity.
+    """
+
+    def __init__(self, datastore_service=catalyst_datastore_service):
+        self._datastore = datastore_service
+        self._lock = threading.RLock()
+        self._local_tickets: List[Dict[str, Any]] = []
+
+    def create_ticket(self, ticket_record: Dict[str, Any]) -> Dict[str, Any]:
+        with self._lock:
+            # Prepend to local buffer for immediate LIFO ordering
+            self._local_tickets.insert(0, ticket_record)
+
+        # Asynchronously or synchronously write to Catalyst Data Store
+        def _persist_cloud():
+            try:
+                res = self._datastore.insert_record("desk_tickets", ticket_record)
+                if res:
+                    log.info(f"[CatalystTicketRepo] Successfully synced ticket {ticket_record.get('ticket_number')} to cloud Data Store.")
+            except Exception as e:
+                log.warning(f"[CatalystTicketRepo] Cloud sync fallback notice: {e}")
+
+        threading.Thread(target=_persist_cloud, daemon=True).start()
+        return ticket_record
+
+    def list_tickets(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self._lock:
+            # First check if we have buffered tickets
+            if self._local_tickets:
+                return self._local_tickets[:limit]
+
+        # Attempt to pull from Catalyst Data Store cloud table if buffer is empty
+        try:
+            cloud_records = self._datastore.get_records("desk_tickets", limit=limit)
+            if cloud_records:
+                with self._lock:
+                    self._local_tickets = cloud_records
+                return cloud_records[:limit]
+        except Exception as e:
+            log.debug(f"[CatalystTicketRepo] Cloud list notice: {e}")
+
+        with self._lock:
+            return self._local_tickets[:limit]
+
+
+class CatalystDataStoreSuspectRepository(ISuspectRepository):
+    """
+    Manages Suspect Dossiers and Repeat Offender History.
+    Connects to Catalyst Data Store ('crm_suspects' table) with a verified
+    high-signal Karnataka Police seed directory for rapid offline intelligence.
+    """
+
+    DEFAULT_SEEDED_SUSPECTS: List[Dict[str, Any]] = [
+        {
+            "suspect_id": "SUS-KA-801",
+            "name": "Ramesh 'Blade' Kumar",
+            "alias": "Blade",
+            "primary_crime": "Robbery & Chain Snatching",
+            "district": "Bengaluru Urban",
+            "police_station": "Koramangala Police Station",
+            "modus_operandi": "Uses modified motorcycle for quick getaway during peak transit hours",
+            "risk_score": 92,
+            "status": "ACTIVE_WARRANT"
+        },
+        {
+            "suspect_id": "SUS-KA-802",
+            "name": "Mohammed 'Shadow' Imran",
+            "alias": "Shadow",
+            "primary_crime": "NDPS & Narcotics Smuggling",
+            "district": "Bengaluru Urban",
+            "police_station": "Indiranagar Police Station",
+            "modus_operandi": "Distributes synthetic narcotics via encrypted messaging networks",
+            "risk_score": 88,
+            "status": "UNDER_SURVEILLANCE"
+        },
+        {
+            "suspect_id": "SUS-KA-803",
+            "name": "Karthik 'Tech' Gowda",
+            "alias": "Hacker K",
+            "primary_crime": "Cyber Extortion & UPI Fraud",
+            "district": "Bengaluru Urban",
+            "police_station": "Whitefield Police Station",
+            "modus_operandi": "Phishing links targeting utility bill payment portals",
+            "risk_score": 95,
+            "status": "FUGITIVE"
+        },
+        {
+            "suspect_id": "SUS-KA-804",
+            "name": "Mallesh 'Dada' Naik",
+            "alias": "Mallesh Dada",
+            "primary_crime": "Commercial Burglary",
+            "district": "Mysuru",
+            "police_station": "Devaraja Police Station",
+            "modus_operandi": "Targeting unlocked rear shutters of retail gold/jewelry shops",
+            "risk_score": 78,
+            "status": "BAIL_MONITORED"
+        },
+        {
+            "suspect_id": "SUS-KA-805",
+            "name": "Praveen 'Scrap' Shetty",
+            "alias": "Scrap Shetty",
+            "primary_crime": "Vehicle Theft & Disassembly",
+            "district": "Belagavi",
+            "police_station": "Belagavi North Sector",
+            "modus_operandi": "Chassis number tampering and interstate resale",
+            "risk_score": 84,
+            "status": "ACTIVE_SURVEILLANCE"
+        },
+        {
+            "suspect_id": "SUS-KA-806",
+            "name": "Syed 'Hawala' Farooq",
+            "alias": "Farooq Bhai",
+            "primary_crime": "Financial Fraud & Organized Syndicate",
+            "district": "Kalaburagi",
+            "police_station": "Kalaburagi North Sector",
+            "modus_operandi": "Cash courier networks across border districts",
+            "risk_score": 90,
+            "status": "ACTIVE_WARRANT"
+        },
+        {
+            "suspect_id": "SUS-KA-807",
+            "name": "Dinesh 'Sea' Mendonca",
+            "alias": "Captain",
+            "primary_crime": "Smuggling & Contraband",
+            "district": "Dakshina Kannada",
+            "police_station": "Mangaluru Port Sector",
+            "modus_operandi": "Coastal transit of untaxed liquor and contraband",
+            "risk_score": 81,
+            "status": "UNDER_SURVEILLANCE"
+        },
+        {
+            "suspect_id": "SUS-KA-808",
+            "name": "Venkatesh 'Wire' Rao",
+            "alias": "Wire Venky",
+            "primary_crime": "Theft & Burglary",
+            "district": "Tumakuru",
+            "police_station": "Tumakuru Central",
+            "modus_operandi": "Copper cable theft and agricultural transformer dismantling",
+            "risk_score": 74,
+            "status": "BAIL_MONITORED"
+        },
+    ]
+
+    def __init__(self, datastore_service=catalyst_datastore_service):
+        self._datastore = datastore_service
+        self._lock = threading.RLock()
+        self._suspects_pool: List[Dict[str, Any]] = list(self.DEFAULT_SEEDED_SUSPECTS)
+
+    def find_suspects(
+        self,
+        district: Optional[str] = None,
+        crime_category: Optional[str] = None,
+        limit: int = 5
+    ) -> List[Dict[str, Any]]:
+        with self._lock:
+            results = []
+            d_norm = district.strip().lower() if district else ""
+            c_norm = crime_category.strip().lower() if crime_category else ""
+
+            # Check if all or wildcards
+            filter_district = bool(d_norm and d_norm not in ("all", "karnataka", "all districts"))
+            filter_crime = bool(c_norm and c_norm not in ("all", "all categories", "any"))
+
+            for s in self._suspects_pool:
+                match_d = True
+                match_c = True
+
+                if filter_district:
+                    s_dist = s.get("district", "").lower()
+                    s_ps = s.get("police_station", "").lower()
+                    match_d = (d_norm in s_dist) or (d_norm in s_ps) or (s_dist in d_norm)
+
+                if filter_crime:
+                    s_crime = s.get("primary_crime", "").lower()
+                    match_c = (c_norm in s_crime) or (s_crime in c_norm)
+
+                if match_d and match_c:
+                    results.append(s)
+
+            # Fallback if specific search yielded no results but district was requested
+            if not results and filter_district:
+                for s in self._suspects_pool:
+                    s_dist = s.get("district", "").lower()
+                    if d_norm in s_dist or s_dist in d_norm:
+                        results.append(s)
+
+            # Universal fallback if still empty
+            if not results:
+                results = list(self._suspects_pool)
+
+            # Sort by risk score descending
+            results.sort(key=lambda x: x.get("risk_score", 0), reverse=True)
+            return results[:limit]
+
+    def add_suspect(self, suspect_record: Dict[str, Any]) -> bool:
+        with self._lock:
+            # Check for existing suspect_id
+            for i, s in enumerate(self._suspects_pool):
+                if s.get("suspect_id") == suspect_record.get("suspect_id"):
+                    self._suspects_pool[i] = suspect_record
+                    return True
+            self._suspects_pool.append(suspect_record)
+        return True
+
+
+class CatalystNoSQLAuditRepository(IAuditRepository):
+    """
+    Persists Section 65B Audit Trail events to Zoho Catalyst Cloud Scale NoSQL / Data Store.
+    Uses atomic in-memory chain tracking, Catalyst Cache hot-pointer synchronization,
+    and automatic asynchronous/synchronous write to cloud NoSQL tables.
+    """
+
+    def __init__(
+        self,
+        datastore_service=catalyst_datastore_service,
+        cache_service=catalyst_cache_service
+    ):
+        self._datastore = datastore_service
+        self._cache = cache_service
+        self._lock = threading.RLock()
+        self._local_audit_chain: List[Dict[str, Any]] = []
+        self._table_id = CATALYST_TABLE_AUDIT_TRAIL  # 54626000000152381
+        self._table_name = CATALYST_TABLE_AUDIT_TRAIL_NAME  # KSP_Audit_Trail
+
+    def append_log(self, payload: Dict[str, Any]) -> bool:
+        with self._lock:
+            self._local_audit_chain.append(payload)
+
+        # Update hot tail in Catalyst Cache
+        curr_hash = payload.get("current_hash")
+        if curr_hash and self._cache:
+            try:
+                self._cache.put_session("ksp_audit_latest_hash", {"latest_hash": curr_hash}, ttl_hours=720)
+            except Exception as e:
+                log.debug(f"[CatalystAuditRepo] Cache tail update notice: {e}")
+
+        # Cloud NoSQL / DataStore record insertion
+        def _persist_cloud():
+            try:
+                details_val = payload.get("details", {})
+                if isinstance(details_val, (dict, list)):
+                    details_str = json.dumps(details_val)
+                else:
+                    details_str = str(details_val or "")
+
+                nosql_record = {
+                    "log_group": "KSP_GLOBAL",
+                    "event_timestamp": float(payload.get("timestamp", time.time())),
+                    "event_type": str(payload.get("event_type", "UNKNOWN")),
+                    "session_id": str(payload.get("session_id", "SYSTEM")),
+                    "officer_id": str(payload.get("officer_id", "SYSTEM")),
+                    "action": str(payload.get("action", "NONE")),
+                    "details": details_str,
+                    "prev_hash": str(payload.get("prev_hash", "")),
+                    "current_hash": str(payload.get("current_hash", ""))
+                }
+                
+                # Insert into Catalyst NoSQL / Data Store table
+                res = self._datastore.insert_record("audit_trail", nosql_record)
+                if not res:
+                    res = self._datastore.insert_raw_table_record(self._table_id, nosql_record)
+                if res:
+                    log.info(f"[CatalystAuditRepo] Persisted audit record {curr_hash[:16]}... to Cloud NoSQL table.")
+            except Exception as e:
+                log.warning(f"[CatalystAuditRepo] Cloud NoSQL audit persistence notice: {e}")
+
+        threading.Thread(target=_persist_cloud, daemon=True).start()
+        return True
+
+    def get_latest_hash(self) -> Optional[str]:
+        # 1. Check Catalyst Cache hot pointer
+        if self._cache:
+            try:
+                cached_data = self._cache.get_session("ksp_audit_latest_hash")
+                if cached_data and cached_data.get("latest_hash"):
+                    return cached_data["latest_hash"]
+            except Exception as e:
+                log.debug(f"[CatalystAuditRepo] Cache get notice: {e}")
+
+        # 2. Check local in-memory chain
+        with self._lock:
+            if self._local_audit_chain:
+                return self._local_audit_chain[-1].get("current_hash")
+
+        # 3. Query Cloud DataStore / ZCQL for the latest record
+        try:
+            zcql_query = f"SELECT current_hash FROM {self._table_name} ORDER BY ROWID DESC LIMIT 1"
+            rows = self._datastore.execute_zcql(zcql_query)
+            if rows and len(rows) > 0:
+                h = rows[0].get("current_hash")
+                if h:
+                    return h
+        except Exception as e:
+            log.debug(f"[CatalystAuditRepo] ZCQL query notice: {e}")
+
+        # 4. Fetch latest records from Data Store API
+        try:
+            records = self._datastore.get_records("audit_trail", limit=1)
+            if records and len(records) > 0:
+                h = records[0].get("current_hash")
+                if h:
+                    return h
+        except Exception as e:
+            log.debug(f"[CatalystAuditRepo] DataStore get notice: {e}")
+
+        return None
+
+    def list_logs(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self._lock:
+            if self._local_audit_chain:
+                return list(reversed(self._local_audit_chain[-limit:]))
+
+        try:
+            records = self._datastore.get_records("audit_trail", limit=limit)
+            if records:
+                return records
+        except Exception as e:
+            log.debug(f"[CatalystAuditRepo] List logs notice: {e}")
+
+        return []
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 3. DOMAIN SERVICE (SOLID: SRP & DIP)
+# ══════════════════════════════════════════════════════════════════════════════
 
 class ZohoIntegrationService:
     """
-    Manages Enterprise Tool Execution for Zoho Desk & Zoho CRM.
-    Adheres to SOLID: Encapsulates SQL transactions, guarantees valid schemas,
-    and returns structured contracts ready for Agent tool consumption.
+    Enterprise Dispatch, CRM Suspect Intelligence & Audit Ledger Orchestrator.
+    Adheres strictly to SOLID:
+    - SRP: Orchestrates tactical dispatch workflows, suspect queries, and audit logs.
+    - OCP: Storage backend is pluggable via ITicketRepository, ISuspectRepository, & IAuditRepository.
+    - DIP: Injects repository abstractions with cloud-native defaults.
     """
 
-    def __init__(self, db_path: Path = DB_PATH):
-        self.db_path = db_path
-        self._init_db()
+    def __init__(
+        self,
+        ticket_repo: Optional[ITicketRepository] = None,
+        suspect_repo: Optional[ISuspectRepository] = None,
+        audit_repo: Optional[IAuditRepository] = None
+    ):
+        self._ticket_repo = ticket_repo or CatalystDataStoreTicketRepository()
+        self._suspect_repo = suspect_repo or CatalystDataStoreSuspectRepository()
+        self._audit_repo = audit_repo or CatalystNoSQLAuditRepository()
 
-    def _get_connection(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        return conn
+    @property
+    def audit_repo(self) -> IAuditRepository:
+        return self._audit_repo
 
-    def _init_db(self):
-        """Ensure database directory and tables exist with seeded suspect records."""
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._get_connection() as conn:
-            cur = conn.cursor()
-            # 1. Zoho Desk Tickets Table
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS zoho_desk_tickets (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    ticket_number TEXT UNIQUE NOT NULL,
-                    district TEXT NOT NULL,
-                    police_station TEXT,
-                    threat_level TEXT NOT NULL,
-                    summary TEXT NOT NULL,
-                    status TEXT DEFAULT 'OPEN_ASSIGNED',
-                    department TEXT DEFAULT 'Tactical Dispatch & Patrol Response',
-                    created_at TEXT NOT NULL
-                )
-            """)
-
-            # 2. Zoho CRM Suspects Table
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS zoho_crm_suspects (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    suspect_id TEXT UNIQUE NOT NULL,
-                    full_name TEXT NOT NULL,
-                    alias TEXT,
-                    primary_crime TEXT NOT NULL,
-                    district TEXT NOT NULL,
-                    police_station TEXT,
-                    known_modus_operandi TEXT,
-                    risk_score INTEGER DEFAULT 75,
-                    status TEXT DEFAULT 'ACTIVE_SURVEILLANCE'
-                )
-            """)
-
-            # Seed realistic suspects if table is empty
-            cur.execute("SELECT COUNT(*) FROM zoho_crm_suspects")
-            count = cur.fetchone()[0]
-            if count == 0:
-                seed_suspects = [
-                    ("SUS-KA-801", "Ramesh 'Blade' Kumar", "Blade", "Robbery & Chain Snatching", "Bengaluru Urban", "Koramangala Police Station", "Uses modified motorcycle for quick getaway during peak transit hours", 92, "ACTIVE_WARRANT"),
-                    ("SUS-KA-802", "Mohammed 'Shadow' Imran", "Shadow", "NDPS & Narcotics Smuggling", "Bengaluru Urban", "Indiranagar Police Station", "Distributes synthetic narcotics via encrypted messaging networks", 88, "UNDER_SURVEILLANCE"),
-                    ("SUS-KA-803", "Karthik 'Tech' Gowda", "Hacker K", "Cyber Extortion & UPI Fraud", "Bengaluru Urban", "Whitefield Police Station", "Phishing links targeting utility bill payment portals", 95, "FUGITIVE"),
-                    ("SUS-KA-804", "Mallesh 'Dada' Naik", "Mallesh Dada", "Commercial Burglary", "Mysuru", "Devaraja Police Station", "Targeting unlocked rear shutters of retail gold/jewelry shops", 78, "BAIL_MONITORED"),
-                    ("SUS-KA-805", "Praveen 'Scrap' Shetty", "Scrap Shetty", "Vehicle Theft & Disassembly", "Belagavi", "Belagavi North Sector", "Chassis number tampering and interstate resale", 84, "ACTIVE_SURVEILLANCE"),
-                    ("SUS-KA-806", "Syed 'Hawala' Farooq", "Farooq Bhai", "Financial Fraud & Organized Syndicate", "Kalaburagi", "Kalaburagi North Sector", "Cash courier networks across border districts", 90, "ACTIVE_WARRANT"),
-                    ("SUS-KA-807", "Dinesh 'Sea' Mendonca", "Captain", "Smuggling & Contraband", "Dakshina Kannada", "Mangaluru Port Sector", "Coastal transit of untaxed liquor and contraband", 81, "UNDER_SURVEILLANCE"),
-                    ("SUS-KA-808", "Venkatesh 'Wire' Rao", "Wire Venky", "Theft & Burglary", "Tumakuru", "Tumakuru Central", "Copper cable theft and agricultural transformer dismantling", 74, "BAIL_MONITORED"),
-                ]
-                cur.executemany("""
-                    INSERT INTO zoho_crm_suspects (suspect_id, full_name, alias, primary_crime, district, police_station, known_modus_operandi, risk_score, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, seed_suspects)
-                conn.commit()
-                log.info(f"[ZohoService] Initialized database and seeded {len(seed_suspects)} suspect profiles.")
-
-    # ── CRUD Operations ────────────────────────────────────────────────────────
-    def create_priority_ticket(self, district: str, summary: str, threat_level: str = "HIGH", police_station: Optional[str] = None) -> Dict[str, Any]:
+    def create_priority_ticket(
+        self,
+        district: str,
+        summary: str,
+        threat_level: str = "HIGH",
+        police_station: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        Creates a new dispatch ticket in Zoho Desk.
-        Returns the created ticket contract with ticket_number.
+        Creates a new Hoysala Tactical Dispatch Order.
+        Guarantees structured contract schema required by all AI Agents & Blueprints.
         """
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         ticket_num = f"ZD-{int(time.time() * 1000) % 1000000:06d}"
-        
-        with self._get_connection() as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                INSERT INTO zoho_desk_tickets (ticket_number, district, police_station, threat_level, summary, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (ticket_num, district, police_station or "Jurisdiction Station", threat_level.upper(), summary, now))
-            conn.commit()
-            
-        log.info(f"[ZohoDesk] Created Ticket '{ticket_num}' for {district} [{threat_level}]")
+        station_name = police_station or f"{district} Central Police Station"
+
+        ticket_data = {
+            "ticket_number": ticket_num,
+            "district": district,
+            "police_station": station_name,
+            "threat_level": threat_level.upper(),
+            "summary": summary,
+            "status": "OPEN_ASSIGNED",
+            "department": "Tactical Dispatch & Patrol Response",
+            "created_at": now
+        }
+
+        # Persist via Repository (DIP)
+        self._ticket_repo.create_ticket(ticket_data)
+
+        log.info(f"[ZohoIntegrationService] Created Ticket '{ticket_num}' for {district} [{threat_level}]")
         return {
             "success": True,
             "ticket_number": ticket_num,
             "district": district,
+            "police_station": station_name,
             "threat_level": threat_level.upper(),
             "summary": summary,
             "status": "OPEN_ASSIGNED",
             "department": "Tactical Dispatch & Patrol Response",
             "created_at": now,
-            "message": f"Zoho Desk Priority Ticket #{ticket_num} created and assigned to {district} Tactical Command."
+            "message": f"Hoysala Dispatch Ticket #{ticket_num} created and assigned to {district} Tactical Command."
         }
 
-    def query_crm_suspects(self, district: Optional[str] = None, crime_category: Optional[str] = None, limit: int = 5) -> List[Dict[str, Any]]:
+    def query_crm_suspects(
+        self,
+        district: Optional[str] = None,
+        crime_category: Optional[str] = None,
+        limit: int = 5
+    ) -> List[Dict[str, Any]]:
         """
-        Queries Zoho CRM for known repeat offenders matching district and/or crime category.
+        Queries known repeat offenders matching district and/or crime category.
         """
-        with self._get_connection() as conn:
-            cur = conn.cursor()
-            query = "SELECT * FROM zoho_crm_suspects WHERE 1=1"
-            params = []
-            
-            if district and district.lower() not in ("all", "karnataka"):
-                query += " AND (LOWER(district) LIKE ? OR LOWER(police_station) LIKE ?)"
-                params.extend([f"%{district.lower()}%", f"%{district.lower()}%"])
-            
-            if crime_category and crime_category.lower() not in ("all", "all categories"):
-                query += " AND LOWER(primary_crime) LIKE ?"
-                params.append(f"%{crime_category.lower()}%")
-                
-            query += " ORDER BY risk_score DESC LIMIT ?"
-            params.append(limit)
-            
-            cur.execute(query, params)
-            rows = cur.fetchall()
-            
-            # Fallback if no exact match
-            if not rows and district:
-                cur.execute("SELECT * FROM zoho_crm_suspects ORDER BY risk_score DESC LIMIT ?", (limit,))
-                rows = cur.fetchall()
-
-            return [
-                {
-                    "suspect_id": r["suspect_id"],
-                    "name": r["full_name"],
-                    "alias": r["alias"],
-                    "primary_crime": r["primary_crime"],
-                    "district": r["district"],
-                    "police_station": r["police_station"],
-                    "modus_operandi": r["known_modus_operandi"],
-                    "risk_score": r["risk_score"],
-                    "status": r["status"]
-                }
-                for r in rows
-            ]
+        return self._suspect_repo.find_suspects(
+            district=district,
+            crime_category=crime_category,
+            limit=limit
+        )
 
     def list_tickets(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """List all generated Zoho Desk tickets."""
-        with self._get_connection() as conn:
-            cur = conn.cursor()
-            cur.execute("SELECT * FROM zoho_desk_tickets ORDER BY id DESC LIMIT ?", (limit,))
-            rows = cur.fetchall()
-            return [
-                {
-                    "id": r["id"],
-                    "ticket_number": r["ticket_number"],
-                    "district": r["district"],
-                    "police_station": r["police_station"],
-                    "threat_level": r["threat_level"],
-                    "summary": r["summary"],
-                    "status": r["status"],
-                    "department": r["department"],
-                    "created_at": r["created_at"]
-                }
-                for r in rows
-            ]
+        """
+        Lists all generated Hoysala Tactical Dispatch Orders.
+        """
+        return self._ticket_repo.list_tickets(limit=limit)
+
+    def append_audit_log(self, payload: Dict[str, Any]) -> bool:
+        """
+        Appends an event to the cloud audit repository.
+        """
+        return self._audit_repo.append_log(payload)
+
+    def get_latest_audit_hash(self) -> Optional[str]:
+        """
+        Retrieves the latest audit block hash.
+        """
+        return self._audit_repo.get_latest_hash()
+
+    def list_audit_logs(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Lists recent audit logs.
+        """
+        return self._audit_repo.list_logs(limit=limit)
 
 
-# Global Singleton Instance for Dependency Injection
-zoho_service = ZohoIntegrationService()
+# Global Singleton Instance for Dependency Injection across all Agent Blueprints
+catalyst_audit_repo = CatalystNoSQLAuditRepository()
+zoho_service = ZohoIntegrationService(audit_repo=catalyst_audit_repo)

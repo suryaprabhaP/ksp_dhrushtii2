@@ -37,56 +37,31 @@ class GraphAgent(BaseAgent):
         )
 
     def execute(self, ctx: ExecutionContext) -> AgentResponse:
+        if ctx.deadline is not None:
+            ctx.check_cancellation()
+
         session_id = ctx.session_id
         user_query = ctx.query.strip()
         q_lower = user_query.lower()
 
-        # ── 1. Ingest Data from Session Store into Graph Topology ─────────────
-        if not session_id or not session_store.has_dataset(session_id):
-            explicit_graph_visual = any(w in q_lower for w in ["network graph", "graph visualization", "render graph", "draw graph", "plot network", "topology chart"])
-            if explicit_graph_visual:
-                return AgentResponse(
-                    answer="### 🕸️ Graph Intelligence Active\n\nNo operational case dataset is currently loaded in memory. Please upload a crime records CSV or syndicate link ledger to enable relational intelligence.",
-                    agent_type="graph_intelligence_agent",
-                    agent_label=self.manifest.label,
-                    agent_icon=self.manifest.icon,
-                    agent_color=self.manifest.color,
-                    provider="graph_engine",
-                    visuals_updated=False,
-                    data_available=False
-                )
-            # Chain of Responsibility: Hand off relational/evidence questions to DocumentAgent (Zoho QuickML Knowledge Base RAG)
-            return AgentResponse(
-                answer="",
-                agent_type="graph_intelligence_agent",
-                agent_label=self.manifest.label,
-                agent_icon=self.manifest.icon,
-                agent_color=self.manifest.color,
-                provider="chain_of_responsibility",
-                handoff_target="DOCUMENT"
-            )
+        # ── 1. Ingest Data from Zoho Catalyst ZCQL or Session Store into Graph Topology ──
+        if session_id and session_store.has_dataset(session_id):
+            try:
+                target_table = "network_dataset" if session_store.has_dataset(session_id, "network_dataset") else "crime_dataset"
+                cols, rows = session_store.execute_sql(session_id, f"SELECT * FROM {target_table} LIMIT 10000")
+                records = [dict(zip(cols, r)) for r in rows]
+                graph = GraphEngine.build_graph_from_records(records, cols)
+            except Exception as e:
+                log.warning(f"[GraphAgent] Failed to fetch session records: {e}, falling back to Cloud ZCQL")
+                graph = GraphEngine.build_graph_from_zcql()
+        else:
+            # Primary Cloud Native: Zoho Catalyst ZCQL Graph
+            graph = GraphEngine.build_graph_from_zcql()
 
-        # Retrieve records across all active tables in DuckDB
-        try:
-            # Query primary or network dataset
-            target_table = "network_dataset" if session_store.has_dataset(session_id, "network_dataset") else "crime_dataset"
-            cols, rows = session_store.execute_sql(session_id, f"SELECT * FROM {target_table} LIMIT 10000")
-            records = [dict(zip(cols, r)) for r in rows]
-        except Exception as e:
-            log.error(f"[GraphAgent] Failed to fetch session records: {e}")
-            return AgentResponse(
-                answer=f"### 🕸️ Graph Engine Error\n\nFailed to extract relational records from session `{session_id}`: {e}",
-                agent_type="graph_intelligence_agent",
-                agent_label=self.manifest.label,
-                agent_icon=self.manifest.icon,
-                agent_color=self.manifest.color,
-                provider="graph_engine",
-                visuals_updated=False,
-                data_available=False
-            )
+        if ctx.deadline is not None:
+            ctx.check_cancellation()
 
-        # Build In-Memory Graph Topology
-        graph = GraphEngine.build_graph_from_records(records, cols)
+        timeout_budget = ctx.get_remaining_budget() if ctx.deadline is not None else None
 
         # ── 2. Shortest-Path / Nexus Query Handler ───────────────────────────
         path_match = re.search(r'(?:connection|nexus|link|path|relation(?:ship)?)\s+(?:between|from|of)\s+([\'\"]?[\w\s\-\.\+]+[\'\"]?)\s+(?:and|to)\s+([\'\"]?[\w\s\-\.\+]+[\'\"]?)', q_lower, re.I)
@@ -130,7 +105,8 @@ class GraphAgent(BaseAgent):
                     narrative = orchestrator.generate_completion(
                         forensic_prompt,
                         system_instruction="You are a Senior Police Intelligence Analyst. Provide clear, realistic, and legally sound forensic crime briefings.",
-                        required_tags=self.manifest.required_provider_tags
+                        required_tags=self.manifest.required_provider_tags,
+                        timeout=timeout_budget
                     )
                 except Exception as e:
                     log.warning(f"[GraphAgent] Neural synthesis fallback: {e}")
@@ -194,7 +170,8 @@ A verified **{hops}-hop relational chain** connects **{p_nodes[0]['label']}** to
                 narrative = orchestrator.generate_completion(
                     forensic_prompt,
                     system_instruction="You are a Senior Police Intelligence Analyst. Provide clear, realistic, and legally sound forensic crime briefings.",
-                    required_tags=self.manifest.required_provider_tags
+                    required_tags=self.manifest.required_provider_tags,
+                    timeout=timeout_budget
                 )
             except Exception as e:
                 log.warning(f"[GraphAgent] Hubs synthesis fallback: {e}")

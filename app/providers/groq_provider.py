@@ -2,7 +2,7 @@
 KSP Sentinel AI — Groq Inference Provider (Primary)
 """
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 from app.config import GROQ_API_KEY
 from app.providers.base import BaseLLMProvider
 
@@ -26,7 +26,7 @@ class GroqProvider(BaseLLMProvider):
     def is_available(self) -> bool:
         return self._client is not None
 
-    def complete(self, messages: List[Dict[str, str]], json_mode: bool = False, max_tokens: int = 2500) -> Tuple[str, str]:
+    def complete(self, messages: List[Dict[str, str]], json_mode: bool = False, max_tokens: int = 2500, timeout: Optional[float] = None) -> Tuple[str, str]:
         if not self.is_available():
             raise RuntimeError("GroqProvider is not configured or unavailable")
 
@@ -39,6 +39,8 @@ class GroqProvider(BaseLLMProvider):
                     "max_tokens": max_tokens,
                     "temperature": 0.2 if json_mode else 0.4
                 }
+                if timeout is not None:
+                    kwargs["timeout"] = max(0.01, timeout)
                 if json_mode:
                     kwargs["response_format"] = {"type": "json_object"}
 

@@ -1,18 +1,36 @@
 """
-KSP Sentinel AI — Dynamic Dataset Analytics Engine (SOLID: SRP - Mathematical Aggregation)
+KSP Sentinel AI — Dynamic Dataset Analytics Engine (SOLID: SRP - Pure Python Aggregation)
+=========================================================================================
+Zero C-extensions, Zero pandas/numpy dependencies.
+Detects schema, data types, and semantic roles dynamically for any list of record dictionaries.
 """
-import pandas as pd
-import numpy as np
-from typing import Dict, Any, List, Tuple
+
+import re
+from collections import Counter
+from typing import Dict, Any, List, Tuple, Optional
 
 
-def calculate_dynamic_dataset_analytics(df: pd.DataFrame) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+def calculate_dynamic_dataset_analytics(data_input: Any) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """
     Universal Semantic Dataset Analytics Engine (SOLID - SRP + OCP).
-    Zero hardcoding. Detects schema, data types, and semantic roles dynamically
-    for any uploaded CSV dataset regardless of column names or record volume.
+    Zero hardcoding. Zero pandas/numpy dependency.
+    Accepts list of dictionaries (or DataFrame if duck-typed).
     """
-    if df is None or df.empty:
+    records: List[Dict[str, Any]] = []
+    if data_input is None:
+        records = []
+    elif isinstance(data_input, list):
+        records = data_input
+    elif hasattr(data_input, "to_dict"):
+        # Duck-typed DataFrame support
+        try:
+            records = data_input.to_dict(orient="records")
+        except Exception:
+            records = []
+    else:
+        records = []
+
+    if not records:
         return {
             "total_incidents": "0",
             "total_financial_loss": "₹0",
@@ -20,30 +38,52 @@ def calculate_dynamic_dataset_analytics(df: pd.DataFrame) -> Tuple[Dict[str, Any
             "high_risk_alerts": "0"
         }, []
 
-    total_records = len(df)
-    
-    # ── 1. Dynamic Semantic Role Detection ─────────────────────────────────────
-    col_names = list(df.columns)
+    total_records = len(records)
+    col_names = list(records[0].keys()) if records else []
     col_lower = {c: c.lower().replace(" ", "_").replace("-", "_") for c in col_names}
-    
+
+    def is_numeric_col(c: str) -> bool:
+        num_count = 0
+        for r in records[:50]:
+            v = r.get(c)
+            if v is not None and str(v).strip() != "":
+                try:
+                    float(str(v).replace(",", "").replace("₹", ""))
+                    num_count += 1
+                except ValueError:
+                    return False
+        return num_count > 0
+
+    def get_num_values(c: str) -> List[float]:
+        vals = []
+        for r in records:
+            v = r.get(c)
+            if v is not None:
+                try:
+                    vals.append(float(str(v).replace(",", "").replace("₹", "").strip()))
+                except (ValueError, TypeError):
+                    pass
+        return vals
+
+    # ── 1. Dynamic Semantic Role Detection ─────────────────────────────────────
     # Identify Financial / Monetary Column
     financial_keywords = ['loss', 'amount', 'fine', 'valuation', 'cost', 'damage', 'value', 'stolen', 'fraud', 'recovered']
     financial_col = None
     for c in col_names:
         cl = col_lower[c]
-        if any(k in cl for k in financial_keywords) and pd.api.types.is_numeric_dtype(df[c]):
+        if any(k in cl for k in financial_keywords) and is_numeric_col(c):
             financial_col = c
             break
     if not financial_col:
-        num_cols = [c for c in col_names if pd.api.types.is_numeric_dtype(df[c]) and not any(id_w in col_lower[c] for id_w in ['id', 'year', 'lat', 'lon', 'age', 'count', 'percentage', 'percent'])]
+        num_cols = [c for c in col_names if is_numeric_col(c) and not any(id_w in col_lower[c] for id_w in ['id', 'year', 'lat', 'lon', 'age', 'count', 'percentage', 'percent'])]
         if num_cols:
-            financial_col = max(num_cols, key=lambda c: df[c].sum() if df[c].sum() > 0 else 0)
+            financial_col = max(num_cols, key=lambda c: sum(get_num_values(c)))
 
     # Identify Duration / Resolution Time Column
     duration_col = None
     for c in col_names:
         cl = col_lower[c]
-        if re.search(r'resolution|duration|\bdays\b|\btat\b|closure|time_taken|delay', cl) and not re.search(r'station|state', cl) and pd.api.types.is_numeric_dtype(df[c]):
+        if re.search(r'resolution|duration|\bdays\b|\btat\b|closure|time_taken|delay', cl) and not re.search(r'station|state', cl) and is_numeric_col(c):
             duration_col = c
             break
 
@@ -52,11 +92,11 @@ def calculate_dynamic_dataset_analytics(df: pd.DataFrame) -> Tuple[Dict[str, Any
     category_col = None
     for c in col_names:
         cl = col_lower[c]
-        if any(k in cl for k in category_keywords) and not pd.api.types.is_numeric_dtype(df[c]):
+        if any(k in cl for k in category_keywords) and not is_numeric_col(c):
             category_col = c
             break
     if not category_col:
-        cat_candidates = [c for c in col_names if not pd.api.types.is_numeric_dtype(df[c]) and df[c].nunique() <= 30]
+        cat_candidates = [c for c in col_names if not is_numeric_col(c) and len(set(str(r.get(c)) for r in records)) <= 30]
         if cat_candidates:
             category_col = cat_candidates[0]
 
@@ -65,7 +105,7 @@ def calculate_dynamic_dataset_analytics(df: pd.DataFrame) -> Tuple[Dict[str, Any
     location_col = None
     for c in col_names:
         cl = col_lower[c]
-        if any(k in cl for k in location_keywords) and not pd.api.types.is_numeric_dtype(df[c]):
+        if any(k in cl for k in location_keywords) and not is_numeric_col(c):
             location_col = c
             break
 
@@ -79,10 +119,9 @@ def calculate_dynamic_dataset_analytics(df: pd.DataFrame) -> Tuple[Dict[str, Any
             break
 
     # ── 2. Calculate Deterministic Top 4 KPIs ──────────────────────────────────
-    # Total Financial Impact
     total_loss_str = "₹0"
     if financial_col:
-        tot = df[financial_col].sum()
+        tot = sum(get_num_values(financial_col))
         if tot >= 1e7:
             total_loss_str = f"₹{tot/1e7:.2f} Cr"
         elif tot >= 1e5:
@@ -90,28 +129,30 @@ def calculate_dynamic_dataset_analytics(df: pd.DataFrame) -> Tuple[Dict[str, Any
         else:
             total_loss_str = f"₹{tot:,.0f}"
 
-    # Average Resolution TAT / Adaptive Recovery Rate
     avg_res_str = "N/A"
     if duration_col:
-        valid_d = df[duration_col].dropna()
-        if len(valid_d) > 0:
-            avg_res_str = f"{valid_d.mean():.1f} Days"
+        d_vals = get_num_values(duration_col)
+        if d_vals:
+            avg_res_str = f"{sum(d_vals)/len(d_vals):.1f} Days"
     else:
-        # Check for recovery rate column
-        rec_col = next((c for c in col_names if any(k in col_lower[c] for k in ['recovery_percentage', 'recovery_rate', 'recovery']) and pd.api.types.is_numeric_dtype(df[c])), None)
+        rec_col = next((c for c in col_names if any(k in col_lower[c] for k in ['recovery_percentage', 'recovery_rate', 'recovery']) and is_numeric_col(c)), None)
         if rec_col:
-            valid_r = df[rec_col].dropna()
-            if len(valid_r) > 0:
-                avg_res_str = f"{valid_r.mean():.1f}% Recovery"
+            r_vals = get_num_values(rec_col)
+            if r_vals:
+                avg_res_str = f"{sum(r_vals)/len(r_vals):.1f}% Recovery"
 
-    # High Risk Alerts
     high_risk_count = 0
     if status_col:
-        hr_matches = df[status_col].astype(str).str.contains('high|critical|pending|under investigation|urgent|red', case=False, na=False)
-        high_risk_count = int(hr_matches.sum())
+        for r in records:
+            s_val = str(r.get(status_col, "")).lower()
+            if any(w in s_val for w in ['high', 'critical', 'pending', 'under investigation', 'urgent', 'red']):
+                high_risk_count += 1
     if high_risk_count == 0 and financial_col:
-        p90 = df[financial_col].quantile(0.90)
-        high_risk_count = int((df[financial_col] >= p90).sum())
+        f_vals = sorted(get_num_values(financial_col))
+        if f_vals:
+            p90_idx = int(len(f_vals) * 0.90)
+            p90 = f_vals[min(p90_idx, len(f_vals) - 1)]
+            high_risk_count = sum(1 for v in f_vals if v >= p90)
 
     kpis = {
         "total_incidents": f"{total_records:,}",
@@ -123,40 +164,40 @@ def calculate_dynamic_dataset_analytics(df: pd.DataFrame) -> Tuple[Dict[str, Any
     # ── 3. Build Dynamic Charts ──────────────────────────────────────────────
     charts = []
 
-    # Chart 1: Proportional Distribution by Category (Doughnut)
     if category_col:
-        cat_counts = df[category_col].value_counts().head(6).to_dict()
+        cat_counts = Counter(str(r.get(category_col, "Unknown")) for r in records).most_common(6)
+        cat_dict = dict(cat_counts)
         charts.append({
             "id": "category_distribution",
             "type": "doughnut",
             "chart_type": "doughnut",
             "title": f"Distribution by {category_col.replace('_', ' ').title()}",
             "subtitle": "Caseload breakdown across dominant patterns",
-            "labels": list(cat_counts.keys()),
+            "labels": list(cat_dict.keys()),
             "datasets": [{
-                "data": list(cat_counts.values()),
+                "data": list(cat_dict.values()),
                 "backgroundColor": ["#0284c7", "#f97316", "#10b981", "#a855f7", "#64748b", "#ec4899"]
             }],
-            "insight": f"Dominant pattern: '{list(cat_counts.keys())[0]}' represents {(list(cat_counts.values())[0]/total_records)*100:.1f}% of total caseload.",
+            "insight": f"Dominant pattern: '{cat_counts[0][0]}' represents {(cat_counts[0][1]/total_records)*100:.1f}% of total caseload.",
             "confidence": "98.4%"
         })
 
-    # Chart 2: Jurisdictional Caseload Ranking (Bar)
     if location_col:
-        loc_counts = df[location_col].value_counts().head(6).to_dict()
+        loc_counts = Counter(str(r.get(location_col, "Unknown")) for r in records).most_common(6)
+        loc_dict = dict(loc_counts)
         charts.append({
             "id": "location_ranking",
             "type": "bar",
             "chart_type": "bar",
             "title": f"Top Jurisdictions by Case Volume ({location_col.replace('_', ' ').title()})",
             "subtitle": "Jurisdictional distribution of reported incidents",
-            "labels": list(loc_counts.keys()),
+            "labels": list(loc_dict.keys()),
             "datasets": [{
                 "label": "Case Count",
-                "data": list(loc_counts.values()),
+                "data": list(loc_dict.values()),
                 "backgroundColor": ["#38bdf8", "#f43f5e", "#f59e0b", "#10b981", "#a855f7", "#06b6d4"]
             }],
-            "insight": f"Highest concentration: '{list(loc_counts.keys())[0]}' ({list(loc_counts.values())[0]:,} cases).",
+            "insight": f"Highest concentration: '{loc_counts[0][0]}' ({loc_counts[0][1]:,} cases).",
             "confidence": "97.8%"
         })
 

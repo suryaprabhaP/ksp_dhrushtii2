@@ -1,0 +1,46 @@
+# ==============================================================================
+# Zoho Catalyst AppSail Root Ignore Rules
+# ==============================================================================
+
+# 1. Dependency Directories
+vendor/
+.venv/
+node_modules/
+dist/
+
+# 2. Local Python Bytecode & Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+
+# 3. Documentation & Analysis Vaults
+analysis_vault/
+findings/
+graphify-out/
+cloud_doc/
+review_prompt/
+*.md
+
+# 4. Offline Training Datasets & Large CSVs
+*.csv
+*.xlsx
+*.zip
+
+# 5. Media & Synthetic Audio
+synthetic_audio/
+*.mp3
+*.wav
+
+# 6. Test Suite & Local Simulation SQLite Databases
+tests/
+scripts/
+generate_5000_geo.py
+generate_5000_stats.py
+generate_production_spatial.py
+generate_quickml_dataset.py
+*.db
+*.sqlite3
+*.log
+audit_trace.jsonl

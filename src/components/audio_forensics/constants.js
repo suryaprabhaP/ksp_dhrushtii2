@@ -1,11 +1,13 @@
 /**
  * Audio Forensics Constants & Config (SOLID: Single Source of Truth / No Hardcoding)
  */
+import { getApiUrl } from '../../services/apiClient';
+
 export const API_ENDPOINTS = {
-  TRANSCRIBE_STAGE: '/api/audio_transcribe_and_stage',
-  GET_STAGED: (sessionId) => `/api/audio_staged/${encodeURIComponent(sessionId)}`,
-  CONFIRM_INJECT: '/api/audio_confirm_inject',
-  DELETE_STAGED: (sessionId, stageId) => `/api/audio_staged/${encodeURIComponent(sessionId)}/${encodeURIComponent(stageId)}`
+  TRANSCRIBE_STAGE: getApiUrl('/api/audio_transcribe_and_stage'),
+  GET_STAGED: (sessionId) => getApiUrl(`/api/audio_staged/${encodeURIComponent(sessionId)}`),
+  CONFIRM_INJECT: getApiUrl('/api/audio_confirm_inject'),
+  DELETE_STAGED: (sessionId, stageId) => getApiUrl(`/api/audio_staged/${encodeURIComponent(sessionId)}/${encodeURIComponent(stageId)}`)
 };
 
 export const FILE_LIMITS = {

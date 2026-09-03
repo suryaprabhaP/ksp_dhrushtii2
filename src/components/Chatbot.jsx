@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, CheckCheck, Send, Upload, Bolt, Disc, CheckCircle, FileText, Cpu, Database, ChevronDown, ChevronUp, Paperclip, Download, History, Trash2, Sparkles, Mic, MicOff, Volume2, VolumeX, Languages, Radio, Compass, Lightbulb, Scale, AlertTriangle, Shield, PlusCircle, BarChart2, PieChart, TrendingUp, Plus, ChevronRight, Plug, Layers, FolderPlus, MessageSquare, FolderKanban, ShieldAlert, HardDrive, Network, RotateCw } from 'lucide-react';
+import { ShieldCheck, CheckCheck, Send, Upload, Bolt, Disc, CheckCircle, FileText, Cpu, Database, ChevronDown, ChevronUp, Paperclip, Download, History, Trash2, Sparkles, Mic, MicOff, Volume2, VolumeX, Languages, Radio, Compass, Lightbulb, Scale, AlertTriangle, Shield, PlusCircle, BarChart2, PieChart, TrendingUp, Plus, ChevronRight, Plug, Layers, FolderPlus, MessageSquare, FolderKanban, ShieldAlert, HardDrive, Network, RotateCw, Terminal, Activity, X } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -17,6 +17,9 @@ import {
 } from 'chart.js';
 import { Bar, Pie, Doughnut, Line } from 'react-chartjs-2';
 import ComplaintPortal from './ComplaintPortal';
+import ComplaintPortalContainer from './portals/EComplaint/ComplaintPortalContainer';
+import PassportPortalContainer from './portals/PassportVerification/PassportPortalContainer';
+import PoliceInitiatedPortalContainer from './portals/PoliceInitiated/PoliceInitiatedPortalContainer';
 import ChartAnalysisModal from './ChartAnalysisModal';
 import DatabaseConnectorModal from './DatabaseConnectorModal';
 import VisualIntelligenceStudio from './VisualIntelligenceStudio';
@@ -31,6 +34,7 @@ import { exportEvidencePacketPDF, exportChatExecutiveReportPDF } from '../servic
 import { speakMessageText as speakMessageTextService, stopSpeaking as stopSpeakingService } from '../services/ttsService';
 import { postJson, getApiUrl } from '../services/apiClient';
 import { useGlobalInvestigation } from '../context/GlobalInvestigationContext';
+import { DRISHTI_THEME } from '../theme/drishtiTheme';
 
 ChartJS.register(
   CategoryScale,
@@ -66,9 +70,10 @@ function InlineChartCard({ message, onOpenModal }) {
   const dataValues = rawDataset.data || [];
   const datasetLabel = rawDataset.label || 'Cases';
 
+  // Tactical Forest Green & Amber Gold Harmonious Palette (Zero light blue/cyan)
   const PALETTE = [
-    '#38bdf8', '#34d399', '#f43f5e', '#fbbf24', '#a855f7', 
-    '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+    '#132B20', '#D49B44', '#1E4332', '#E8C17C', '#2D5E46', 
+    '#C58B35', '#3E7B5E', '#B88231', '#0D1E16', '#F0D4A3'
   ];
 
   const chartDataConfig = {
@@ -76,8 +81,8 @@ function InlineChartCard({ message, onOpenModal }) {
     datasets: [{
       label: datasetLabel,
       data: dataValues,
-      backgroundColor: (chartType === 'pie' || chartType === 'doughnut') ? PALETTE.slice(0, labels.length) : 'rgba(56, 189, 248, 0.75)',
-      borderColor: '#38bdf8',
+      backgroundColor: (chartType === 'pie' || chartType === 'doughnut') ? PALETTE.slice(0, labels.length) : 'rgba(19, 43, 32, 0.85)',
+      borderColor: '#D49B44',
       borderWidth: 1.5,
       borderRadius: 4
     }]
@@ -87,12 +92,12 @@ function InlineChartCard({ message, onOpenModal }) {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { display: (chartType === 'pie' || chartType === 'doughnut'), position: 'top', labels: { color: '#e2e8f0', font: { size: 10 } } },
+      legend: { display: (chartType === 'pie' || chartType === 'doughnut'), position: 'top', labels: { color: '#132B20', font: { size: 10, weight: 'bold' } } },
       title: { display: false }
     },
     scales: (chartType === 'pie' || chartType === 'doughnut') ? {} : {
-      x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
-      y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+      x: { ticks: { color: '#5C584E', font: { size: 9, weight: '600' } }, grid: { color: 'rgba(212, 206, 191, 0.4)' } },
+      y: { ticks: { color: '#5C584E', font: { size: 9, weight: '600' } }, grid: { color: 'rgba(212, 206, 191, 0.4)' } }
     }
   };
 
@@ -101,7 +106,7 @@ function InlineChartCard({ message, onOpenModal }) {
     if (!inlineChartRef.current) return;
     const url = inlineChartRef.current.toBase64Image();
     const link = document.createElement('a');
-    link.download = `KSP_Chart_${Date.now()}.png`;
+    link.download = `DRISHTI_Chart_${Date.now()}.png`;
     link.href = url;
     link.click();
   };
@@ -109,47 +114,39 @@ function InlineChartCard({ message, onOpenModal }) {
   return (
     <div style={{
       marginTop: '10px',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-      border: '1px solid #38bdf8',
+      background: DRISHTI_THEME.colors.cardBg,
+      border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
       borderRadius: '12px',
       padding: '12px',
-      boxShadow: '0 6px 16px rgba(15, 23, 42, 0.4)'
+      boxShadow: DRISHTI_THEME.shadows.soft
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8' }}>
-          <BarChart2 size={15} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 800, color: DRISHTI_THEME.colors.forestDark }}>
+          <BarChart2 size={15} color={DRISHTI_THEME.colors.goldAccent} />
           <span>📊 Statistics Visualizer</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.3)', padding: '2px 4px', borderRadius: '6px' }}>
-          <button 
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setChartType('bar'); }}
-            style={{ padding: '2px 6px', fontSize: '0.62rem', fontWeight: 700, borderRadius: '4px', border: 'none', background: chartType === 'bar' ? '#38bdf8' : 'transparent', color: chartType === 'bar' ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}
-          >
-            Bar
-          </button>
-          <button 
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setChartType('pie'); }}
-            style={{ padding: '2px 6px', fontSize: '0.62rem', fontWeight: 700, borderRadius: '4px', border: 'none', background: chartType === 'pie' ? '#38bdf8' : 'transparent', color: chartType === 'pie' ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}
-          >
-            Pie
-          </button>
-          <button 
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setChartType('doughnut'); }}
-            style={{ padding: '2px 6px', fontSize: '0.62rem', fontWeight: 700, borderRadius: '4px', border: 'none', background: chartType === 'doughnut' ? '#38bdf8' : 'transparent', color: chartType === 'doughnut' ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}
-          >
-            Doughnut
-          </button>
-          <button 
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setChartType('line'); }}
-            style={{ padding: '2px 6px', fontSize: '0.62rem', fontWeight: 700, borderRadius: '4px', border: 'none', background: chartType === 'line' ? '#38bdf8' : 'transparent', color: chartType === 'line' ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}
-          >
-            Line
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: DRISHTI_THEME.colors.canvasBg, padding: '2px 4px', borderRadius: '6px', border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}` }}>
+          {['bar', 'pie', 'doughnut', 'line'].map((type) => (
+            <button 
+              key={type}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setChartType(type); }}
+              style={{
+                padding: '2px 8px',
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                borderRadius: '4px',
+                border: 'none',
+                background: chartType === type ? DRISHTI_THEME.colors.forestDark : 'transparent',
+                color: chartType === type ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.forestDark,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -160,7 +157,7 @@ function InlineChartCard({ message, onOpenModal }) {
         {chartType === 'line' && <Line ref={inlineChartRef} data={chartDataConfig} options={chartOptions} />}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`, paddingTop: '8px' }}>
         <button
           type="button"
           onClick={downloadPNG}
@@ -168,15 +165,18 @@ function InlineChartCard({ message, onOpenModal }) {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '4px',
-            background: 'rgba(56, 189, 248, 0.15)',
-            color: '#38bdf8',
-            border: '1px solid rgba(56, 189, 248, 0.4)',
+            background: DRISHTI_THEME.colors.cardBg,
+            color: DRISHTI_THEME.colors.forestDark,
+            border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
             borderRadius: '6px',
-            padding: '3px 8px',
+            padding: '4px 10px',
             fontSize: '0.68rem',
             fontWeight: 700,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark; e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg; e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark; }}
         >
           <Download size={12} /> Save Chart PNG
         </button>
@@ -188,15 +188,19 @@ function InlineChartCard({ message, onOpenModal }) {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '4px',
-            background: '#38bdf8',
-            color: '#0f172a',
-            border: 'none',
+            background: DRISHTI_THEME.colors.forestDark,
+            color: DRISHTI_THEME.colors.textWhite,
+            border: `1px solid ${DRISHTI_THEME.colors.borderAccent}`,
             borderRadius: '6px',
-            padding: '3px 10px',
+            padding: '4px 12px',
             fontSize: '0.68rem',
             fontWeight: 800,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            boxShadow: DRISHTI_THEME.shadows.soft,
+            transition: 'all 0.15s ease'
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestMid; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark; }}
         >
           Fullscreen & Report PDF ↗
         </button>
@@ -209,23 +213,26 @@ const VIEW_STATES = Object.freeze({
   CHAT: 'CHAT_VIEW',
   NETWORK: 'NETWORK_VIEW',
   AUDIO_FORENSICS: 'AUDIO_FORENSICS_VIEW',
-  GEOSPATIAL: 'GEOSPATIAL_VIEW'
+  GEOSPATIAL: 'GEOSPATIAL_VIEW',
+  ECOMPLAINT: 'ECOMPLAINT_VIEW',
+  PASSPORT: 'PASSPORT_VIEW',
+  POLICE_FIR: 'POLICE_FIR_VIEW'
 });
 
 const customMiniIcon = L.divIcon({
   className: 'custom-pin',
-  html: `<div style="background-color:#ef4444; width:10px; height:10px; border-radius:50%; border:2px solid white;"></div>`,
+  html: `<div style="background-color:#132B20; width:10px; height:10px; border-radius:50%; border:2px solid #D49B44;"></div>`,
   iconSize: [10, 10]
 });
 
 const DEFAULT_WELCOME_MESSAGE = {
   id: 'welcome',
   sender: 'bot',
-  text: "Hello Officer! I am <b>KSP Sentinel AI</b> — your General Police Law, FIR & Command Operations Assistant. ನಮಸ್ಕಾರ!<br/><br/>💡 <b>Direct Agent Triggers:</b><br/>• <code>\\analytics</code> — Data Metrics, SQL & Visual Charts<br/>• <code>\\document</code> — RAG Knowledge Base & SOP Summaries<br/>• <code>\\pattern</code> — Interrogation Strategy & Case Co-Pilot<br/><br/>Type any trigger in chat for instant 0ms execution, or click the specialist buttons below!",
+  text: "Hello Officer! I am <b>Drishti Command Assistant</b> — your General Police Law, FIR & Command Operations Assistant. ನಮಸ್ಕಾರ!<br/><br/>💡 <b>Direct Agent Triggers:</b><br/>• <code>\\analytics</code> — Data Metrics, SQL & Visual Charts<br/>• <code>\\document</code> — RAG Knowledge Base & SOP Summaries<br/>• <code>\\pattern</code> — Interrogation Strategy & Case Co-Pilot<br/><br/>Type any trigger in chat for instant 0ms execution, or click the specialist buttons below!",
   agent_type: "general_agent",
-  agent_label: "KSP Sentinel AI",
+  agent_label: "Drishti Command Assistant",
   agent_icon: "🛡️",
-  agent_color: "#1e40af",
+  agent_color: "#132B20",
   agent_description: "General Police Law & Command Operations"
 };
 
@@ -326,11 +333,11 @@ function Chatbot({
     return [{
       id: 'welcome',
       sender: 'bot',
-      text: `Hello Officer! I am <b>Sentinel Command Assistant</b> — your unified Karnataka State Police intelligence & command assistant. ನಮಸ್ಕಾರ!<br/><br/>Ask any question naturally, select a quick action below, or select an active FIR case workspace from the top bar.`,
+      text: `Hello Officer! I am <b>Drishti Command Assistant</b> — your unified Karnataka State Police intelligence & command assistant. ನಮಸ್ಕಾರ!<br/><br/>Ask any question naturally, select a quick action below, or select an active FIR case workspace from the top bar.`,
       agent_type: "general_agent",
-      agent_label: "Sentinel Command Assistant",
+      agent_label: "Drishti Command Assistant",
       agent_icon: "🛡️",
-      agent_color: "#1e40af",
+      agent_color: DRISHTI_THEME.colors.forestDark,
       agent_description: "Command Operations Assistant"
     }];
   });
@@ -346,6 +353,7 @@ function Chatbot({
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showDbModal, setShowDbModal] = useState(false);
   const [showUploadDatasetModal, setShowUploadDatasetModal] = useState(false);
+  const [showCommandPageModal, setShowCommandPageModal] = useState(false);
   const [activeMainView, setActiveMainView] = useState(VIEW_STATES.CHAT);
 
   const [activeSessionId, setActiveSessionId] = useState(() => {
@@ -484,11 +492,11 @@ function Chatbot({
     const welcomeMsg = [{
       id: 'welcome',
       sender: 'bot',
-      text: `Hello Officer! I am <b>KSP ${divisionName} Assistant</b> — your division intelligence & command operations assistant. ನಮಸ್ಕಾರ!<br/><br/>Select a specialist agent from the left sidebar or ask your query below in <b>Kannada (ಕನ್ನಡ)</b> or <b>English</b>.`,
+      text: `Hello Officer! I am <b>Drishti ${divisionName} Assistant</b> — your division intelligence & command operations assistant. ನಮಸ್ಕಾರ!<br/><br/>Select a specialist agent from the left sidebar or ask your query below in <b>Kannada (ಕನ್ನಡ)</b> or <b>English</b>.`,
       agent_type: "general_agent",
-      agent_label: `KSP ${divisionName} Assistant`,
+      agent_label: `Drishti ${divisionName} Assistant`,
       agent_icon: "🛡️",
-      agent_color: "#1e40af",
+      agent_color: DRISHTI_THEME.colors.forestDark,
       agent_description: "General Police Law & Command Operations"
     }];
     setMessages(welcomeMsg);
@@ -1074,12 +1082,12 @@ function Chatbot({
     setShowUploadDatasetModal(true);
   };
 
-  const handleProcessRagFile = async (file) => {
+  const handleProcessRagFile = async (file, datasetPurpose = "auto") => {
     if (!file) return;
 
     setMessages(prev => [
       ...prev.filter(m => m.type !== 'rag-upload-prompt'),
-      { id: Date.now() + '-u-file', sender: 'user', text: `Uploaded: <b>${file.name}</b> (${roundSize(file.size)})` },
+      { id: Date.now() + '-u-file', sender: 'user', text: `Uploaded: <b>${file.name}</b> (${roundSize(file.size)}) [${datasetPurpose}]` },
       { id: Date.now() + '-b-term', sender: 'bot', text: `Initializing RAG Vector Indexer for '${file.name}':`, type: 'rag-terminal' }
     ]);
 
@@ -1094,6 +1102,7 @@ function Chatbot({
     const formData = new FormData();
     formData.append('file', file);
     formData.append('session_id', activeSessionId);
+    formData.append('dataset_purpose', datasetPurpose);
 
     try {
       const response = await fetch(getApiUrl('/api/upload_dataset'), {
@@ -1394,11 +1403,23 @@ function Chatbot({
         {/* BRAND LOGO HEADER */}
         <div className="sidebar-brand-ksp">
           <div className="brand-emblem-wrap">
-            <img src="/ksp_police_logo.png" alt="KSP Logo" />
+            <img 
+              src="/ksp_police_logo.png" 
+              alt="KSP Logo" 
+              onError={(e) => {
+                if (!e.currentTarget.dataset.retried) {
+                  e.currentTarget.dataset.retried = "1";
+                  e.currentTarget.src = "./ksp_police_logo.png";
+                } else if (e.currentTarget.dataset.retried === "1") {
+                  e.currentTarget.dataset.retried = "2";
+                  e.currentTarget.src = "/police_logo.png";
+                }
+              }}
+            />
           </div>
           <div className="brand-text-wrap">
             <div className="brand-state-title">KARNATAKA STATE POLICE</div>
-            <div className="brand-main-title">KSP SENTINEL</div>
+            <div className="brand-main-title">KSP DRISHTI</div>
             <div className="brand-sub-title">CRIME INTELLIGENCE ASSISTANT</div>
           </div>
         </div>
@@ -1409,7 +1430,7 @@ function Chatbot({
 
         <div className="sidebar-section-header">COMMAND CENTER</div>
 
-        {/* DEDICATED ANALYTICS WORKSPACE LAUNCHERS */}
+        {/* DEDICATED ANALYTICS & PORTAL WORKSPACE LAUNCHERS */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {/* 1. CRIME DATA ANALYTICS */}
           <button
@@ -1469,7 +1490,7 @@ function Chatbot({
             </span>
           </button>
 
-          {/* 4. VOICE FORENSICS & STT INTEL (BILINGUAL SPOTIFY LYRICS & HITL GATEWAY) */}
+          {/* 4. VOICE FORENSICS & STT INTEL */}
           <button
             onClick={() => {
               setActiveMainView(prev => prev === VIEW_STATES.AUDIO_FORENSICS ? VIEW_STATES.CHAT : VIEW_STATES.AUDIO_FORENSICS);
@@ -1483,6 +1504,57 @@ function Chatbot({
             </div>
             <span className="nav-btn-badge" style={{ borderColor: 'rgba(168, 85, 247, 0.4)', color: '#c084fc' }}>
               {activeMainView === VIEW_STATES.AUDIO_FORENSICS ? 'ACTIVE ✕' : 'AUDIO ➔'}
+            </span>
+          </button>
+
+          {/* 5. E-COMPLAINT PORTAL */}
+          <button
+            onClick={() => {
+              setActiveMainView(prev => prev === VIEW_STATES.ECOMPLAINT ? VIEW_STATES.CHAT : VIEW_STATES.ECOMPLAINT);
+            }}
+            className={`ksp-sidebar-nav-btn ${activeMainView === VIEW_STATES.ECOMPLAINT ? 'active' : ''}`}
+            title="Open Citizen E-Complaint & Incident Registration Portal"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+              <ShieldCheck size={16} className="nav-btn-icon" style={{ color: '#34d399' }} />
+              <span>e-Complaint</span>
+            </div>
+            <span className="nav-btn-badge">
+              {activeMainView === VIEW_STATES.ECOMPLAINT ? 'ACTIVE ✕' : 'PORTAL ➔'}
+            </span>
+          </button>
+
+          {/* 6. PASSPORT VERIFICATION PORTAL */}
+          <button
+            onClick={() => {
+              setActiveMainView(prev => prev === VIEW_STATES.PASSPORT ? VIEW_STATES.CHAT : VIEW_STATES.PASSPORT);
+            }}
+            className={`ksp-sidebar-nav-btn ${activeMainView === VIEW_STATES.PASSPORT ? 'active' : ''}`}
+            title="Open Police Verification & Passport Clearance Workflow Portal"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+              <FileText size={16} className="nav-btn-icon" style={{ color: '#38bdf8' }} />
+              <span>Passport Verification</span>
+            </div>
+            <span className="nav-btn-badge">
+              {activeMainView === VIEW_STATES.PASSPORT ? 'ACTIVE ✕' : 'PORTAL ➔'}
+            </span>
+          </button>
+
+          {/* 7. POLICE COMPLAINT / SPOT SEIZURE PORTAL */}
+          <button
+            onClick={() => {
+              setActiveMainView(prev => prev === VIEW_STATES.POLICE_FIR ? VIEW_STATES.CHAT : VIEW_STATES.POLICE_FIR);
+            }}
+            className={`ksp-sidebar-nav-btn ${activeMainView === VIEW_STATES.POLICE_FIR ? 'active' : ''}`}
+            title="Open Police Initiated Spot FIR & Seizure Reporting Portal"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+              <ShieldAlert size={16} className="nav-btn-icon" style={{ color: '#f59e0b' }} />
+              <span>Police Complaint</span>
+            </div>
+            <span className="nav-btn-badge">
+              {activeMainView === VIEW_STATES.POLICE_FIR ? 'ACTIVE ✕' : 'PORTAL ➔'}
             </span>
           </button>
         </div>
@@ -1570,44 +1642,51 @@ function Chatbot({
         </div>
       </div>
 
-      {/* MAIN CHAT CANVAS (Light White Theme like 2nd image) */}
-      <div className="chat-main-canvas">
+      {/* MAIN CHAT CANVAS (DRISHTI Warm Parchment Theme) */}
+      <div className="chat-main-canvas" style={{ background: DRISHTI_THEME.colors.canvasBg }}>
         {activeMainView === VIEW_STATES.CHAT ? (
-          <div id="view-chat">
-            {/* Top KSP Official Header Toolbar */}
-            <div className="chat-guardrail" style={{ justifyContent: 'space-between', padding: '10px 20px', gap: '8px', flexWrap: 'wrap', background: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
+          <div id="view-chat" style={{ background: DRISHTI_THEME.colors.canvasBg }}>
+            {/* Top Drishti Official Header Toolbar */}
+            <div className="chat-guardrail" style={{
+              justifyContent: 'space-between',
+              padding: '10px 20px',
+              gap: '8px',
+              flexWrap: 'wrap',
+              background: DRISHTI_THEME.colors.subHeaderBg,
+              borderBottom: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`
+            }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <img src="/ksp_police_logo.png" alt="KSP Logo" style={{ width: 20, height: 20 }} />
-              <span style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '0.88rem' }}>
-                Sentinel Command Assistant — {divisionName || 'State HQ'}
+              <span style={{ fontWeight: 800, color: DRISHTI_THEME.colors.forestDark, fontSize: '0.88rem' }}>
+                Drishti Command Assistant — {divisionName || 'State HQ'}
               </span>
 
               {/* ACTIVE FIR CASE WORKSPACE SELECTOR */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
-                background: '#f8fafc', border: '1px solid #cbd5e1',
+                background: DRISHTI_THEME.colors.cardBg, border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
                 borderRadius: '8px', padding: '2px 8px', marginLeft: '6px'
               }}>
-                <FolderKanban size={13} style={{ color: '#2563eb' }} />
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e3a8a' }}>Active FIR Context:</span>
+                <FolderKanban size={13} style={{ color: DRISHTI_THEME.colors.forestDark }} />
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: DRISHTI_THEME.colors.forestDark }}>Active FIR Context:</span>
                 <select
                   value={selectedFir}
                   onChange={(e) => setSelectedFir(e.target.value)}
                   style={{
-                    fontSize: '0.68rem', fontWeight: 700, background: 'white',
-                    border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 6px',
-                    color: selectedFir ? '#1d4ed8' : '#64748b', cursor: 'pointer'
+                    fontSize: '0.68rem', fontWeight: 700, background: DRISHTI_THEME.colors.cardBg,
+                    border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`, borderRadius: '6px', padding: '2px 6px',
+                    color: selectedFir ? DRISHTI_THEME.colors.forestDark : DRISHTI_THEME.colors.textSecondary, cursor: 'pointer'
                   }}
                 >
                   <option value="">-- All Stations / General Context --</option>
-                  <optgroup label="🔵 Bengaluru Division Stations">
+                  <optgroup label="🟢 Bengaluru Division Stations">
                     <option value="FIR-187/2026-d91c">FIR-187/2026-d91c (Cheating - Malleswaram PS)</option>
                     <option value="FIR-623/2025-a466">FIR-623/2025-a466 (Robbery - Malleswaram PS)</option>
                     <option value="FIR-392/2026-e99d">FIR-392/2026-e99d (Theft - Tumakuru Town PS)</option>
                     <option value="FIR-502/2025-a39c">FIR-502/2025-a39c (Cheating - Tumakuru Town PS)</option>
                     <option value="FIR-918/2025-1e99">FIR-918/2025-1e99 (Robbery - Koramangala PS)</option>
                   </optgroup>
-                  <optgroup label="🟣 Mysuru Division Stations">
+                  <optgroup label="🟡 Mysuru Division Stations">
                     <option value="FIR-936/2025-f20d">FIR-936/2025-f20d (Cyber Crime - Kuvempunagar PS)</option>
                     <option value="FIR-883/2025-9372">FIR-883/2025-9372 (Theft - Saraswathipuram PS)</option>
                     <option value="FIR-632/2025-ed77">FIR-632/2025-ed77 (Theft - Kuvempunagar PS)</option>
@@ -1624,7 +1703,15 @@ function Chatbot({
                   </optgroup>
                 </select>
                 {selectedFir && (
-                  <span style={{ fontSize: '0.6rem', background: '#dbeafe', color: '#1e40af', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                  <span style={{
+                    fontSize: '0.6rem',
+                    background: DRISHTI_THEME.colors.goldTint,
+                    color: DRISHTI_THEME.colors.goldDark,
+                    border: `1px solid ${DRISHTI_THEME.colors.borderAccent}`,
+                    padding: '1px 5px',
+                    borderRadius: '4px',
+                    fontWeight: 800
+                  }}>
                     ACTIVE CASE
                   </span>
                 )}
@@ -1639,15 +1726,28 @@ function Chatbot({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: voiceLang === 'kn-IN' ? '#059669' : '#ffffff',
-                  color: voiceLang === 'kn-IN' ? 'white' : '#1e3a8a',
-                  border: '1px solid #cbd5e1',
+                  background: voiceLang === 'kn-IN' ? DRISHTI_THEME.colors.forestDark : DRISHTI_THEME.colors.cardBg,
+                  color: voiceLang === 'kn-IN' ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.forestDark,
+                  border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
                   borderRadius: '6px',
                   padding: '4px 10px',
                   fontSize: '0.7rem',
                   fontWeight: 800,
                   cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                  boxShadow: DRISHTI_THEME.shadows.soft,
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (voiceLang !== 'kn-IN') {
+                    e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
+                    e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (voiceLang !== 'kn-IN') {
+                    e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
+                    e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark;
+                  }
                 }}
                 title="Toggle Language (Kannada kn-IN / English en-IN)"
               >
@@ -1661,14 +1761,27 @@ function Chatbot({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: autoSpeak ? '#7c3aed' : '#f1f5f9',
-                  color: autoSpeak ? 'white' : '#475569',
-                  border: '1px solid #cbd5e1',
+                  background: autoSpeak ? DRISHTI_THEME.colors.forestDark : DRISHTI_THEME.colors.cardBg,
+                  color: autoSpeak ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.textSecondary,
+                  border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
                   borderRadius: '6px',
                   padding: '4px 9px',
                   fontSize: '0.7rem',
                   fontWeight: 700,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (!autoSpeak) {
+                    e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
+                    e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!autoSpeak) {
+                    e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
+                    e.currentTarget.style.color = DRISHTI_THEME.colors.textSecondary;
+                  }
                 }}
                 title="Toggle Auto Read-Aloud for Bot Responses"
               >
@@ -1682,20 +1795,32 @@ function Chatbot({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '5px',
-                  background: isVisualStudioOpen ? 'linear-gradient(135deg, #0284c7, #1d4ed8)' : '#f8fafc',
-                  color: isVisualStudioOpen ? '#ffffff' : '#0f172a',
-                  border: isVisualStudioOpen ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid #cbd5e1',
+                  background: isVisualStudioOpen ? DRISHTI_THEME.colors.forestDark : DRISHTI_THEME.colors.cardBg,
+                  color: isVisualStudioOpen ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.forestDark,
+                  border: isVisualStudioOpen ? `1px solid ${DRISHTI_THEME.colors.borderAccent}` : `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
                   borderRadius: '6px',
                   padding: '4px 10px',
                   fontSize: '0.7rem',
                   fontWeight: 800,
                   cursor: 'pointer',
-                  boxShadow: isVisualStudioOpen ? '0 2px 8px rgba(2, 132, 199, 0.3)' : 'none',
+                  boxShadow: isVisualStudioOpen ? DRISHTI_THEME.shadows.soft : 'none',
                   transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isVisualStudioOpen) {
+                    e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
+                    e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isVisualStudioOpen) {
+                    e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
+                    e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark;
+                  }
                 }}
                 title="Toggle Side-by-Side Visual Intelligence Studio"
               >
-                <BarChart2 size={13} style={{ color: isVisualStudioOpen ? '#38bdf8' : '#0284c7' }} />
+                <BarChart2 size={13} style={{ color: isVisualStudioOpen ? DRISHTI_THEME.colors.goldAccent : DRISHTI_THEME.colors.forestDark }} />
                 <span>{isVisualStudioOpen ? '📊 Hide Studio' : '📊 Visual Studio'}</span>
               </button>
 
@@ -1706,16 +1831,19 @@ function Chatbot({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
+                  background: DRISHTI_THEME.colors.forestDark,
+                  color: DRISHTI_THEME.colors.textWhite,
+                  border: `1px solid ${DRISHTI_THEME.colors.borderAccent}`,
                   borderRadius: '6px',
                   padding: '4px 10px',
                   fontSize: '0.7rem',
                   fontWeight: 800,
                   cursor: 'pointer',
-                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)'
+                  boxShadow: DRISHTI_THEME.shadows.soft,
+                  transition: 'all 0.15s ease'
                 }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestMid; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark; }}
                 title="Download Executive Chat Summary as PDF"
               >
                 <Download size={12} /> PDF Summary
@@ -1730,7 +1858,7 @@ function Chatbot({
             overflow: 'hidden',
             width: '100%',
             height: 'calc(100% - 48px)',
-            backgroundColor: '#ffffff'
+            backgroundColor: DRISHTI_THEME.colors.canvasBg
           }}>
             {/* LEFT SPLIT-PANE: DYNAMIC VISUAL INTELLIGENCE STUDIO */}
             {isVisualStudioOpen && (
@@ -1760,29 +1888,29 @@ function Chatbot({
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              backgroundColor: '#ffffff'
+              backgroundColor: DRISHTI_THEME.colors.canvasBg
             }}>
               {/* VOICE LISTENING STATUS BADGE */}
               {isListening && (
-                <div style={{ background: 'linear-gradient(90deg, #ef4444, #dc2626)', color: 'white', padding: '6px 12px', fontSize: '0.72rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between', animation: 'pulse 1.5s infinite' }}>
+                <div style={{ background: DRISHTI_THEME.colors.danger, color: 'white', padding: '6px 12px', fontSize: '0.72rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between', animation: 'pulse 1.5s infinite' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Radio size={14} className="animate-spin" /> {voiceStatusText || '🎙️ Listening to Voice Command...'}
                   </span>
-                  <button onClick={toggleVoiceListen} style={{ background: 'white', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '2px 8px', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer' }}>
+                  <button onClick={toggleVoiceListen} style={{ background: 'white', color: DRISHTI_THEME.colors.danger, border: 'none', borderRadius: '6px', padding: '2px 8px', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer' }}>
                     Stop Mic
                   </button>
                 </div>
               )}
 
           {/* CHAT FEED */}
-          <div className="chat-feed">
-            {/* KSP OFFICIAL WELCOME BANNER (MATCHING USER SCREENSHOT 2) */}
+          <div className="chat-feed" style={{ background: DRISHTI_THEME.colors.canvasBg }}>
+            {/* DRISHTI OFFICIAL WELCOME BANNER */}
             {messages.length <= 1 && (
               <div style={{ textAlign: 'left', padding: '14px 6px 18px 6px', animation: 'bubble-slide-up 0.4s ease-out' }}>
-                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '10px', lineHeight: 1.25 }}>
-                  <ShieldCheck size={26} style={{ color: '#2563eb' }} /> Sentinel Command Assistant,
+                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: DRISHTI_THEME.colors.forestDark, display: 'flex', alignItems: 'center', gap: '10px', lineHeight: 1.25 }}>
+                  <ShieldCheck size={26} style={{ color: DRISHTI_THEME.colors.forestDark }} /> Drishti Command Assistant
                 </div>
-                <div style={{ fontSize: '1.05rem', color: '#475569', fontWeight: 600, marginTop: '4px' }}>
+                <div style={{ fontSize: '1.05rem', color: DRISHTI_THEME.colors.textSecondary, fontWeight: 600, marginTop: '4px' }}>
                   Karnataka State Police Command Intelligence platform active for {divisionName || 'State HQ'}.
                 </div>
               </div>
@@ -1790,7 +1918,7 @@ function Chatbot({
 
             {messages.map((m) => (
               <div key={m.id} className={`chat-bubble ${m.sender}`}>
-                {/* UNIFIED ASSISTANT BADGE — clean identity without technical jargon */}
+                {/* UNIFIED ASSISTANT BADGE */}
                 {m.sender === 'bot' && (
                   <div style={{ marginBottom: '10px' }}>
                     <div style={{
@@ -1799,16 +1927,16 @@ function Chatbot({
                     }}>
                       <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '7px',
-                        background: 'rgba(37,99,235,0.08)',
-                        border: '1.5px solid #2563eb',
+                        background: DRISHTI_THEME.colors.forestTint,
+                        border: `1.5px solid ${DRISHTI_THEME.colors.forestDark}`,
                         borderRadius: '20px',
                         padding: '5px 14px 5px 10px',
                         fontSize: '0.88rem',
                         fontWeight: 800,
-                        color: '#1e3a8a',
+                        color: DRISHTI_THEME.colors.forestDark,
                       }}>
                         <span style={{ fontSize: '1rem' }}>{m.agent_icon || '🛡️'}</span>
-                        {m.agent_label || 'Sentinel Command Assistant'}
+                        {m.agent_label || 'Drishti Command Assistant'}
                       </div>
                     </div>
                   </div>
@@ -1817,17 +1945,17 @@ function Chatbot({
                 <div dangerouslySetInnerHTML={{ __html: markdownToHtml(m.text) }} />
 
                 {m.sender === 'bot' && m.prompt_suggestions && m.prompt_suggestions.length > 0 && (
-                  <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', letterSpacing: '0.3px' }}>💡 CLICK TO GENERATE SAMPLE REPORT:</div>
+                  <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: DRISHTI_THEME.colors.forestDark, letterSpacing: '0.3px' }}>💡 CLICK TO GENERATE SAMPLE REPORT:</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {m.prompt_suggestions.map((suggestionText, idx) => (
                         <button
                           key={idx}
                           onClick={() => handleSend(suggestionText)}
                           style={{
-                            background: '#eff6ff',
-                            color: '#1d4ed8',
-                            border: '1.5px solid #bfdbfe',
+                            background: DRISHTI_THEME.colors.cardBg,
+                            color: DRISHTI_THEME.colors.forestDark,
+                            border: `1.5px solid ${DRISHTI_THEME.colors.borderAccent}`,
                             borderRadius: '16px',
                             padding: '6px 14px',
                             fontSize: '0.86rem',
@@ -1835,10 +1963,10 @@ function Chatbot({
                             cursor: 'pointer',
                             textAlign: 'left',
                             transition: 'all 0.15s ease',
-                            boxShadow: '0 1px 3px rgba(37,99,235,0.08)'
+                            boxShadow: DRISHTI_THEME.shadows.soft
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.color = '#ffffff'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.color = '#1d4ed8'; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark; e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg; e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark; }}
                         >
                           ✨ {suggestionText}
                         </button>
@@ -1855,14 +1983,27 @@ function Chatbot({
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
-                        background: isSpeaking ? '#ef4444' : '#f1f5f9',
-                        color: isSpeaking ? 'white' : '#2563eb',
-                        border: '1px solid #cbd5e1',
+                        background: isSpeaking ? DRISHTI_THEME.colors.danger : DRISHTI_THEME.colors.cardBg,
+                        color: isSpeaking ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.forestDark,
+                        border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
                         borderRadius: '8px',
                         padding: '5px 12px',
                         fontSize: '0.85rem',
                         fontWeight: 800,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSpeaking) {
+                          e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
+                          e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSpeaking) {
+                          e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
+                          e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark;
+                        }
                       }}
                       title="Read Aloud via Voice Synthesis"
                     >
@@ -1877,19 +2018,19 @@ function Chatbot({
                 )}
 
                 {m.rag_used && m.rag_sources && m.rag_sources.length > 0 && (
-                  <div className="rag-citation-box" style={{ marginTop: '8px', borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '6px' }}>
+                  <div className="rag-citation-box" style={{ marginTop: '8px', borderTop: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`, paddingTop: '6px' }}>
                     <div 
                       onClick={() => toggleSourceExpand(m.id)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontSize: '0.68rem', color: 'var(--primary)', fontWeight: 700 }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontSize: '0.68rem', color: DRISHTI_THEME.colors.forestDark, fontWeight: 700 }}
                     >
                       <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Database size={11} /> Source: {m.rag_sources[0].doc_name} ({intScore(m.rag_sources[0].similarity_score)}% Match)
+                        <Database size={11} color={DRISHTI_THEME.colors.goldAccent} /> Source: {m.rag_sources[0].doc_name} ({intScore(m.rag_sources[0].similarity_score)}% Match)
                       </span>
                       {expandedSources[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                     </div>
 
                     {expandedSources[m.id] && (
-                      <div style={{ marginTop: '6px', fontSize: '0.65rem', background: 'rgba(37,99,235,0.06)', padding: '6px 8px', borderRadius: '6px', color: 'var(--text-secondary)' }}>
+                      <div style={{ marginTop: '6px', fontSize: '0.65rem', background: DRISHTI_THEME.colors.forestTint, padding: '6px 8px', borderRadius: '6px', color: DRISHTI_THEME.colors.textSecondary, border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}` }}>
                         <div><b>Document Type:</b> {m.rag_sources[0].doc_type}</div>
                         <div style={{ marginTop: '3px', fontStyle: 'italic' }}>"{m.rag_sources[0].passage}"</div>
                       </div>
@@ -1914,7 +2055,7 @@ function Chatbot({
                 )}
 
                 {m.type === 'minimap' && (
-                  <div className="minimap-container" style={{ marginTop: '8px', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--surface-border)' }}>
+                  <div className="minimap-container" style={{ marginTop: '8px', height: '140px', borderRadius: '8px', overflow: 'hidden', border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}` }}>
                     <MapContainer 
                       center={[miniCoords.lat, miniCoords.lng]} 
                       zoom={13} 
@@ -1934,7 +2075,7 @@ function Chatbot({
 
                 {m.type === 'rag-upload-prompt' && (
                   <div className="upload-simulator">
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    <div style={{ fontSize: '0.75rem', color: DRISHTI_THEME.colors.textSecondary }}>
                       Select PDF knowledge file or CSV dataset to index into RAG vector store
                     </div>
                     <div className="upload-actions">
@@ -1954,7 +2095,7 @@ function Chatbot({
 
                 {m.type === 'upload' && (
                   <div className="upload-simulator">
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    <div style={{ fontSize: '0.75rem', color: DRISHTI_THEME.colors.textSecondary }}>
                       Upload scam evidence (phishing SMS, QR code, fraudulent receipt)
                     </div>
                     <div className="upload-actions">
@@ -1977,7 +2118,7 @@ function Chatbot({
                 {m.type === 'pdf-download' && (
                   <div className="pdf-download-card">
                     <div className="pdf-info">
-                      <FileText size={20} />
+                      <FileText size={20} color={DRISHTI_THEME.colors.forestDark} />
                       <div>
                         <div className="pdf-title">
                           Evidence_Packet_{(m.metadata?.ip_address || '127_0_0_1').replace(/\./g, '_')}.pdf
@@ -1993,20 +2134,20 @@ function Chatbot({
 
                 <div className="message-status">
                   <span>Read</span>
-                  <CheckCheck size={10} style={{ color: 'var(--success)' }} />
+                  <CheckCheck size={10} style={{ color: DRISHTI_THEME.colors.forestDark }} />
                 </div>
               </div>
             ))}
 
             {/* SUPERVISOR ROUTING TYPING INDICATOR */}
             {typing && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px 12px', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', width: 'fit-content', animation: 'bubble-slide-up 0.2s ease-out' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px 12px', background: DRISHTI_THEME.colors.cardBg, borderRadius: '16px', border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`, width: 'fit-content', animation: 'bubble-slide-up 0.2s ease-out' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ShieldCheck size={16} style={{ color: '#2563eb' }} className="animate-spin" />
-                  <span style={{ fontSize: '0.74rem', color: '#1e3a8a', fontWeight: 800 }}>Supervisor Agent routing your query...</span>
+                  <ShieldCheck size={16} style={{ color: DRISHTI_THEME.colors.forestDark }} className="animate-spin" />
+                  <span style={{ fontSize: '0.74rem', color: DRISHTI_THEME.colors.forestDark, fontWeight: 800 }}>Supervisor Agent routing your query...</span>
                 </div>
                 <div style={{ display: 'flex', gap: '4px', paddingLeft: '4px' }}>
-                  {[{icon:'📊',label:'Analytics',color:'#2563eb'},{icon:'📄',label:'Document',color:'#059669'},{icon:'🔍',label:'Pattern',color:'#d97706'},{icon:'🕵️',label:'Intelligence',color:'#7c3aed'},{icon:'🛡️',label:'General',color:'#1e40af'}].map((a,i) => (
+                  {[{icon:'📊',label:'Analytics',color:DRISHTI_THEME.colors.forestDark},{icon:'📄',label:'Document',color:DRISHTI_THEME.colors.forestMid},{icon:'🔍',label:'Pattern',color:DRISHTI_THEME.colors.goldAccent},{icon:'🕵️',label:'Intelligence',color:DRISHTI_THEME.colors.forestLight},{icon:'🛡️',label:'General',color:DRISHTI_THEME.colors.forestDark}].map((a,i) => (
                     <div key={i} style={{ fontSize: '0.52rem', display: 'flex', alignItems: 'center', gap: '2px', color: a.color, fontWeight: 700, opacity: 0.6 + (i % 2) * 0.4, animation: `pulse ${1 + i * 0.2}s infinite` }}>
                       <span>{a.icon}</span>{a.label}
                     </div>
@@ -2017,17 +2158,17 @@ function Chatbot({
             <div ref={feedEndRef} />
           </div>
 
-          {/* KSP INPUT AREA */}
-          <div className="chat-input-area" style={{ padding: '12px 32px 20px 32px', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+          {/* DRISHTI INPUT AREA */}
+          <div className="chat-input-area" style={{ padding: '12px 32px 20px 32px', background: DRISHTI_THEME.colors.canvasBg, borderTop: `1px solid ${DRISHTI_THEME.colors.borderSubtle}` }}>
             <div className="ksp-input-container" style={{
               display: 'flex',
               alignItems: 'center',
               width: '100%',
-              background: '#ffffff',
+              background: DRISHTI_THEME.colors.inputBg,
               borderRadius: '20px',
               padding: '10px 16px',
-              border: '1.5px solid #cbd5e1',
-              boxShadow: '0 6px 24px rgba(15,23,42,0.08)',
+              border: `1.5px solid ${DRISHTI_THEME.colors.borderSubtle}`,
+              boxShadow: DRISHTI_THEME.shadows.card,
               transition: 'all 0.2s',
               maxWidth: '100%',
               margin: '0'
@@ -2037,9 +2178,9 @@ function Chatbot({
             type="button"
             onClick={toggleVoiceListen}
             style={{
-              background: isListening ? '#ef4444' : '#f1f5f9',
-              color: isListening ? 'white' : '#2563eb',
-              border: 'none',
+              background: isListening ? DRISHTI_THEME.colors.danger : DRISHTI_THEME.colors.cardBg,
+              color: isListening ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.forestDark,
+              border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
               borderRadius: '10px',
               width: '36px',
               height: '36px',
@@ -2050,20 +2191,32 @@ function Chatbot({
               marginRight: '8px',
               transition: 'all 0.2s'
             }}
+            onMouseEnter={(e) => {
+              if (!isListening) {
+                e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
+                e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isListening) {
+                e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
+                e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark;
+              }
+            }}
             title={isListening ? 'Stop Listening' : `Speak in ${voiceLang === 'kn-IN' ? 'Kannada (ಕನ್ನಡ)' : 'English'}`}
           >
             {isListening ? <MicOff size={18} /> : <Mic size={18} />}
           </button>
 
-          {/* + OPTIONS MENU BUTTON (MATCHING USER SCREENSHOT) */}
+          {/* + OPTIONS MENU BUTTON */}
           <div style={{ position: 'relative', display: 'inline-block', marginRight: '8px' }}>
             <button
               type="button"
               onClick={() => setShowPlusMenu(!showPlusMenu)}
               style={{
-                background: showPlusMenu ? '#2563eb' : '#f1f5f9',
-                color: showPlusMenu ? 'white' : '#475569',
-                border: '1px solid #cbd5e1',
+                background: showPlusMenu ? DRISHTI_THEME.colors.forestDark : DRISHTI_THEME.colors.cardBg,
+                color: showPlusMenu ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.forestDark,
+                border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
                 borderRadius: '10px',
                 width: '36px',
                 height: '36px',
@@ -2072,6 +2225,18 @@ function Chatbot({
                 justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                if (!showPlusMenu) {
+                  e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
+                  e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showPlusMenu) {
+                  e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
+                  e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark;
+                }
               }}
               title="Add Files, Connectors, Databases & Skills"
             >
@@ -2086,14 +2251,14 @@ function Chatbot({
                   bottom: '44px',
                   left: '0',
                   width: '260px',
-                  background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-                  border: '1px solid #334155',
+                  background: DRISHTI_THEME.colors.cardBg,
+                  border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
                   borderRadius: '14px',
-                  boxShadow: '0 20px 35px rgba(0, 0, 0, 0.4)',
+                  boxShadow: DRISHTI_THEME.shadows.elevated,
                   padding: '8px',
                   zIndex: 9999,
                   animation: 'bubble-slide-up 0.15s ease-out',
-                  color: '#f8fafc'
+                  color: DRISHTI_THEME.colors.forestDark
                 }}
               >
                 {/* Option 1: Add files or photos */}
@@ -2111,17 +2276,19 @@ function Chatbot({
                     borderRadius: '8px',
                     fontSize: '0.88rem',
                     fontWeight: 600,
-                    color: '#f1f5f9',
+                    color: DRISHTI_THEME.colors.forestDark,
                     cursor: 'pointer',
                     transition: 'background 0.15s'
                   }}
                   className="popup-menu-item"
+                  onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestTint; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Paperclip size={16} style={{ color: '#38bdf8' }} />
+                    <Paperclip size={16} style={{ color: DRISHTI_THEME.colors.forestDark }} />
                     <span>Add files or photos</span>
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: '#64748b', background: '#334155', padding: '2px 6px', borderRadius: '4px' }}>Ctrl+U</span>
+                  <span style={{ fontSize: '0.7rem', color: DRISHTI_THEME.colors.textSecondary, background: DRISHTI_THEME.colors.canvasBg, border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`, padding: '2px 6px', borderRadius: '4px' }}>Ctrl+U</span>
                 </div>
 
                 {/* Option 2: Add Database Connector (Relational / NoSQL) */}
@@ -2135,17 +2302,19 @@ function Chatbot({
                     borderRadius: '8px',
                     fontSize: '0.88rem',
                     fontWeight: 600,
-                    color: '#f1f5f9',
+                    color: DRISHTI_THEME.colors.forestDark,
                     cursor: 'pointer',
                     transition: 'background 0.15s'
                   }}
                   className="popup-menu-item"
+                  onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestTint; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Database size={16} style={{ color: '#a855f7' }} />
+                    <Database size={16} style={{ color: DRISHTI_THEME.colors.goldAccent }} />
                     <span>Add connector (SQL/NoSQL)</span>
                   </div>
-                  <ChevronRight size={15} style={{ color: '#64748b' }} />
+                  <ChevronRight size={15} style={{ color: DRISHTI_THEME.colors.textMuted }} />
                 </div>
 
                 {/* Option 3: Add Knowledge Document */}
@@ -2159,17 +2328,19 @@ function Chatbot({
                     borderRadius: '8px',
                     fontSize: '0.88rem',
                     fontWeight: 600,
-                    color: '#f1f5f9',
+                    color: DRISHTI_THEME.colors.forestDark,
                     cursor: 'pointer',
                     transition: 'background 0.15s'
                   }}
                   className="popup-menu-item"
+                  onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestTint; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FolderPlus size={16} style={{ color: '#34d399' }} />
+                    <FolderPlus size={16} style={{ color: DRISHTI_THEME.colors.forestMid }} />
                     <span>Add to RAG project</span>
                   </div>
-                  <ChevronRight size={15} style={{ color: '#64748b' }} />
+                  <ChevronRight size={15} style={{ color: DRISHTI_THEME.colors.textMuted }} />
                 </div>
               </div>
             )}
@@ -2192,7 +2363,7 @@ function Chatbot({
           {/* INPUT FIELD */}
           <input 
             type="text" 
-            placeholder={voiceLang === 'kn-IN' ? "ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಕೇಳಿ... (Ask in Kannada or English)" : "Ask KSP Command AI or query crime analytics..."}
+            placeholder={voiceLang === 'kn-IN' ? "ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಕೇಳಿ... (Ask in Kannada or English)" : "Ask Drishti Command AI or query crime analytics..."}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
@@ -2204,7 +2375,7 @@ function Chatbot({
               fontWeight: 500,
               padding: '6px 10px',
               background: 'transparent',
-              color: '#0f172a'
+              color: DRISHTI_THEME.colors.forestDark
             }}
           />
 
@@ -2213,9 +2384,9 @@ function Chatbot({
             className="chat-send-btn" 
             onClick={() => handleSend()}
             style={{
-              background: '#2563eb',
-              border: 'none',
-              color: 'white',
+              background: DRISHTI_THEME.colors.forestDark,
+              border: `1px solid ${DRISHTI_THEME.colors.borderAccent}`,
+              color: DRISHTI_THEME.colors.textWhite,
               borderRadius: '12px',
               width: '38px',
               height: '38px',
@@ -2223,9 +2394,11 @@ function Chatbot({
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: '0 2px 10px rgba(37,99,235,0.35)',
+              boxShadow: DRISHTI_THEME.shadows.soft,
               transition: 'all 0.2s'
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestMid; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark; }}
           >
             <Send size={18} />
           </button>
@@ -2265,7 +2438,7 @@ function Chatbot({
               onBackToChat={() => setActiveMainView(VIEW_STATES.CHAT)}
             />
           </div>
-        ) : (
+        ) : activeMainView === VIEW_STATES.NETWORK ? (
           <div style={{ flex: 1, width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <NetworkGraphView
               datasetState={datasetState}
@@ -2273,7 +2446,19 @@ function Chatbot({
               onDatasetLoaded={onDatasetIngested}
             />
           </div>
-        )}
+        ) : activeMainView === VIEW_STATES.ECOMPLAINT ? (
+          <div style={{ flex: 1, width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <ComplaintPortalContainer onBackToDashboard={() => setActiveMainView(VIEW_STATES.CHAT)} />
+          </div>
+        ) : activeMainView === VIEW_STATES.PASSPORT ? (
+          <div style={{ flex: 1, width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <PassportPortalContainer onBackToDashboard={() => setActiveMainView(VIEW_STATES.CHAT)} />
+          </div>
+        ) : activeMainView === VIEW_STATES.POLICE_FIR ? (
+          <div style={{ flex: 1, width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <PoliceInitiatedPortalContainer onBackToDashboard={() => setActiveMainView(VIEW_STATES.CHAT)} />
+          </div>
+        ) : null}
 
       {showComplaintPortal && (
         <ComplaintPortal onClose={() => setShowComplaintPortal(false)} />
@@ -2315,11 +2500,328 @@ function Chatbot({
         isOpen={showUploadDatasetModal}
         onClose={() => setShowUploadDatasetModal(false)}
         onDatasetIngested={onDatasetIngested}
-        onProcessFile={async (file) => {
-          await handleProcessRagFile(file);
+        onProcessFile={async (file, datasetPurpose) => {
+          await handleProcessRagFile(file, datasetPurpose);
           setIsVisualStudioOpen(true);
         }}
       />
+
+      {/* DUMMY COMMAND PAGE MODAL (TACTICAL COMMAND & DISPATCH HUB) */}
+      {showCommandPageModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(9, 13, 22, 0.82)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setShowCommandPageModal(false)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '840px',
+              background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
+              border: '1px solid rgba(59, 130, 246, 0.5)',
+              borderRadius: '16px',
+              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(59, 130, 246, 0.2)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              animation: 'modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 22px',
+              background: 'rgba(15, 23, 42, 0.95)',
+              borderBottom: '1px solid rgba(59, 130, 246, 0.3)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 0 15px rgba(59, 130, 246, 0.5)'
+                }}>
+                  <Terminal size={20} style={{ color: '#ffffff' }} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.5px' }}>
+                      KSP Sentinel Command Page
+                    </h3>
+                    <span style={{
+                      fontSize: '0.62rem',
+                      fontWeight: 800,
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: 'rgba(34, 197, 94, 0.2)',
+                      color: '#4ade80',
+                      border: '1px solid rgba(34, 197, 94, 0.4)'
+                    }}>
+                      LIVE HQ CHANNEL
+                    </span>
+                  </div>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#94a3b8' }}>
+                    State Headquarters Tactical Operations, Emergency Dispatch & Division Matrix
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCommandPageModal(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '8px',
+                  color: '#94a3b8',
+                  padding: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)';
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#94a3b8';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                }}
+                title="Close Command Page"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '75vh', overflowY: 'auto' }}>
+              {/* Tactical Status Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.65)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                  borderRadius: '10px',
+                  padding: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#93c5fd', textTransform: 'uppercase' }}>🚨 Emergency Hotline 112</span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e' }}></span>
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>42 Active Calls</div>
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Avg response latency: <strong>4.8 mins</strong> across Bengaluru Urban</div>
+                </div>
+
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.65)',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  borderRadius: '10px',
+                  padding: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase' }}>🚓 Patrol Fleet (Hoysala)</span>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#38bdf8' }}>CH-04 ONLINE</span>
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>128 PCR Units</div>
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Telemetry: <strong>100% Locked</strong> · GPS Polling Active</div>
+                </div>
+
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.65)',
+                  border: '1px solid rgba(201, 169, 110, 0.3)',
+                  borderRadius: '10px',
+                  padding: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#c9a96e', textTransform: 'uppercase' }}>🛡️ Threat Matrix Level</span>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.2)', padding: '1px 6px', borderRadius: '4px' }}>ELEVATED</span>
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>DEFCON 3</div>
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Jurisdiction: <strong>{divisionName || 'Karnataka State Sector'}</strong></div>
+                </div>
+              </div>
+
+              {/* Tactical Action Grid */}
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.5)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '12px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#e2e8f0', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                  ⚡ Quick Command Actions & Dispatch Controls
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+                  <button
+                    onClick={() => {
+                      alert("📢 State Red Alert Broadcast: Priority communication relayed to all Station Duty Officers.");
+                      setShowCommandPageModal(false);
+                    }}
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      borderRadius: '8px',
+                      padding: '10px 14px',
+                      color: '#fca5a5',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.15s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'}
+                  >
+                    <AlertTriangle size={16} style={{ color: '#ef4444' }} />
+                    <span>Broadcast State Alert</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      alert("🚓 Hoysala Patrol Dispatched: Sector 4 PCR units redirected to target hotspot coordinates.");
+                      setShowCommandPageModal(false);
+                    }}
+                    style={{
+                      background: 'rgba(59, 130, 246, 0.15)',
+                      border: '1px solid rgba(59, 130, 246, 0.4)',
+                      borderRadius: '8px',
+                      padding: '10px 14px',
+                      color: '#93c5fd',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.15s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)'}
+                  >
+                    <Radio size={16} style={{ color: '#3b82f6' }} />
+                    <span>Deploy Rapid Patrol</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      alert("🔄 Zoho CRM Sync: Repeat offender dossiers synchronized with state registry.");
+                      setShowCommandPageModal(false);
+                    }}
+                    style={{
+                      background: 'rgba(168, 85, 247, 0.15)',
+                      border: '1px solid rgba(168, 85, 247, 0.4)',
+                      borderRadius: '8px',
+                      padding: '10px 14px',
+                      color: '#d8b4fe',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.15s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(168, 85, 247, 0.3)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(168, 85, 247, 0.15)'}
+                  >
+                    <Database size={16} style={{ color: '#a855f7' }} />
+                    <span>Sync Zoho CRM Dossiers</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      alert("📄 Section 65B Certified Tactical Briefing generated and queued for export.");
+                      setShowCommandPageModal(false);
+                    }}
+                    style={{
+                      background: 'rgba(34, 197, 94, 0.15)',
+                      border: '1px solid rgba(34, 197, 94, 0.4)',
+                      borderRadius: '8px',
+                      padding: '10px 14px',
+                      color: '#86efac',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.15s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.3)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)'}
+                  >
+                    <FileText size={16} style={{ color: '#22c55e' }} />
+                    <span>Export Section 65B Log</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '12px 22px',
+              background: 'rgba(15, 23, 42, 0.95)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                🛡️ Karnataka State Police Unified Command System · Authorized Personnel Only
+              </span>
+              <button
+                onClick={() => setShowCommandPageModal(false)}
+                style={{
+                  background: DRISHTI_THEME.colors.forestDark,
+                  border: `1px solid ${DRISHTI_THEME.colors.borderAccent}`,
+                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  color: '#ffffff',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestMid; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark; }}
+              >
+                Close Command Hub
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import json
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.providers.gemini_provider import GeminiProvider
+from app.providers.zoho_provider import ZohoQuickMLProvider
 
 SUPERVISOR_PROMPT = """You are the Triage Supervisor for the KSP Sentinel AI system.
 Your job is ONLY to read the user's query and the active context, and route the query to the correct Worker Agent.
@@ -56,9 +56,9 @@ def run_feasibility_test():
     success_count = 0
     
     try:
-        provider = GeminiProvider()
+        provider = ZohoQuickMLProvider()
     except Exception as e:
-        print(f"[FAIL] Could not initialize GeminiProvider: {e}")
+        print(f"[FAIL] Could not initialize ZohoQuickMLProvider: {e}")
         return
 
     for i, test in enumerate(test_cases):

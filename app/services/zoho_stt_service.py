@@ -14,49 +14,23 @@ from typing import Dict, Any, Optional
 from app.config import (
     CATALYST_ORG_ID,
     ZIA_AUDIO_ENDPOINT,
-    ZOHO_ACCESS_TOKEN,
-    ZOHO_CLIENT_ID,
-    ZOHO_CLIENT_SECRET,
-    ZOHO_REFRESH_TOKEN,
 )
+from app.services.zoho_token_manager import zoho_token_manager
 
 log = logging.getLogger("standalone.service.zoho_stt")
 
 
 class ZohoSTTService:
     def __init__(self):
-        self.access_token = ZOHO_ACCESS_TOKEN
-        self.refresh_token = ZOHO_REFRESH_TOKEN
-        self.client_id = ZOHO_CLIENT_ID
-        self.client_secret = ZOHO_CLIENT_SECRET
         self.org_id = CATALYST_ORG_ID
         self.endpoint_url = ZIA_AUDIO_ENDPOINT
 
-    def refresh_access_token(self) -> Optional[str]:
-        """Auto-refreshes OAuth access token using permanent refresh token."""
-        if not (self.refresh_token and self.client_id and self.client_secret):
-            log.warning("[ZohoSTTService] Missing credentials to refresh token")
-            return None
+    @property
+    def access_token(self) -> Optional[str]:
+        return zoho_token_manager.get_valid_token(purpose="zia")
 
-        try:
-            url = "https://accounts.zoho.in/oauth/v2/token"
-            data = {
-                "refresh_token": self.refresh_token,
-                "client_id": self.client_id,
-                "client_secret": self.client_secret,
-                "grant_type": "refresh_token"
-            }
-            res = requests.post(url, data=data, timeout=10)
-            if res.status_code == 200:
-                new_token = res.json().get("access_token")
-                if new_token:
-                    self.access_token = new_token
-                    log.info("[ZohoSTTService] Zoho OAuth access token auto-refreshed successfully")
-                    return new_token
-            log.error(f"[ZohoSTTService] Token refresh failed ({res.status_code}): {res.text}")
-        except Exception as e:
-            log.error(f"[ZohoSTTService] Token refresh exception: {e}")
-        return None
+    def refresh_access_token(self) -> Optional[str]:
+        return zoho_token_manager.get_valid_token(purpose="zia", force_refresh=True)
 
     def transcribe_audio(self, file_bytes: bytes, filename: str, language: str = "en") -> Dict[str, Any]:
         """

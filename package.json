@@ -4,10 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "start:backend": "python server.py",
+    "test:backend": "python scripts/test_live_api_responses.py",
+    "deploy:client": "catalyst deploy --only client --non-interactive",
+    "deploy:appsail": "catalyst deploy --only appsail --non-interactive"
   },
   "dependencies": {
     "chart.js": "^4.5.1",

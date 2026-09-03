@@ -1,0 +1,18 @@
+{
+  "project_name": "KSPCrimeIntelligencePlatform",
+  "project_id": "54626000000013049",
+  "org_id": "60077159195",
+  "appsail": [
+    {
+      "name": "ksp-backend",
+      "source": "backend",
+      "stack": "python_3_11",
+      "build": ".",
+      "build_path": ".",
+      "command": "python3 -u server.py"
+    }
+  ],
+  "client": {
+    "source": "frontend/dist"
+  }
+}

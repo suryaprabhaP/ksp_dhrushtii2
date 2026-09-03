@@ -7,28 +7,110 @@ from dotenv import load_dotenv
 
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent.parent
-ENV_PATH = BASE_DIR / ".env.standalone"
+ENV_PATH = BASE_DIR / ".env"
 
 if ENV_PATH.exists():
     load_dotenv(ENV_PATH)
 else:
     load_dotenv()
 
+PORT                  = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT", os.getenv("PORT", 9000)))
 GROQ_API_KEY          = os.getenv("GROQ_API_KEY", "")
 GEMINI_API_KEY        = os.getenv("GEMINI_API_KEY", "")
 ZOHO_ACCESS_TOKEN     = os.getenv("ZOHO_ACCESS_TOKEN", "")
 ZOHO_REFRESH_TOKEN    = os.getenv("ZOHO_REFRESH_TOKEN", "")
-ZOHO_CLIENT_ID        = os.getenv("client_id", "")
-ZOHO_CLIENT_SECRET    = os.getenv("client_secret", "")
+
+# ── Multi-Token Routing Configuration (Dedicated Purpose-Based Tokens) ──
+ZOHO_REFRESH_TOKEN_PROJECTS = os.getenv("ZOHO_REFRESH_TOKEN_PROJECTS", "")
+ZOHO_ACCESS_TOKEN_PROJECTS  = os.getenv("ZOHO_ACCESS_TOKEN_PROJECTS", "")
+
+ZOHO_REFRESH_TOKEN_TABLES   = os.getenv("ZOHO_REFRESH_TOKEN_TABLES", os.getenv("ZOHO_DATASTORE_REFRESH_TOKEN", ""))
+ZOHO_ACCESS_TOKEN_TABLES    = os.getenv("ZOHO_ACCESS_TOKEN_TABLES", "")
+
+ZOHO_REFRESH_TOKEN_CACHE    = os.getenv("ZOHO_REFRESH_TOKEN_CACHE", os.getenv("ZOHO_CACHE_REFRESH_TOKEN", ""))
+ZOHO_ACCESS_TOKEN_CACHE     = os.getenv("ZOHO_ACCESS_TOKEN_CACHE", "")
+
+ZOHO_REFRESH_TOKEN_QUICKML  = os.getenv("ZOHO_REFRESH_TOKEN_QUICKML", os.getenv("ZOHO_QUICKML_REFRESH_TOKEN", ""))
+ZOHO_ACCESS_TOKEN_QUICKML   = os.getenv("ZOHO_ACCESS_TOKEN_QUICKML", os.getenv("ZOHO_ACCESS_TOKEN_QUICKML_READ", ""))
+
+ZOHO_REFRESH_TOKEN_ZIA      = os.getenv("ZOHO_REFRESH_TOKEN_ZIA", os.getenv("ZOHO_ZIA_REFRESH_TOKEN", ""))
+ZOHO_ACCESS_TOKEN_ZIA       = os.getenv("ZOHO_ACCESS_TOKEN_ZIA", "")
+
+ZOHO_REFRESH_TOKEN_ANALYTICS = os.getenv("ZOHO_ANALYTICS_REFRESH_TOKEN", os.getenv("ZOHO_REFRESH_TOKEN_ANALYTICS", ""))
+ZOHO_ACCESS_TOKEN_ANALYTICS  = os.getenv("ZOHO_ACCESS_TOKEN_ANALYTICS", "")
+ZOHO_ANALYTICS_WORKSPACE_ID  = os.getenv("ZOHO_ANALYTICS_WORKSPACE_ID", "563936000000003028")
+ZOHO_ANALYTICS_ORG_ID        = os.getenv("ZOHO_ANALYTICS_ORG_ID", "60085982953")
+ZOHO_ANALYTICS_DEFAULT_VIEW_ID = os.getenv("ZOHO_ANALYTICS_DEFAULT_VIEW_ID", "563936000000003002")
+ZOHO_ANALYTICS_API_BASE      = os.getenv("ZOHO_ANALYTICS_API_BASE", "https://analyticsapi.zoho.in/restapi/v2")
+
+# Legacy aliases for backward compatibility
+ZOHO_QUICKML_REFRESH_TOKEN   = ZOHO_REFRESH_TOKEN_QUICKML
+ZOHO_DATASTORE_REFRESH_TOKEN = ZOHO_REFRESH_TOKEN_TABLES
+ZOHO_CACHE_REFRESH_TOKEN     = ZOHO_REFRESH_TOKEN_CACHE
+ZOHO_ZIA_REFRESH_TOKEN       = ZOHO_REFRESH_TOKEN_ZIA
+ZOHO_FILESTORE_REFRESH_TOKEN = os.getenv("ZOHO_FILESTORE_REFRESH_TOKEN", "")
+
+ZOHO_CLIENT_ID        = os.getenv("client_id", os.getenv("ZOHO_CLIENT_ID", os.getenv("KSP_CLIENT_ID", "")))
+ZOHO_CLIENT_SECRET    = os.getenv("client_secret", os.getenv("ZOHO_CLIENT_SECRET", os.getenv("KSP_CLIENT_SECRET", "")))
 ZOHO_API_DOMAIN       = os.getenv("ZOHO_API_DOMAIN", "https://www.zohoapis.in")
-CATALYST_PROJECT_ID   = os.getenv("CATALYST_PROJECT_ID", "54626000000013049")
-CATALYST_ORG_ID       = os.getenv("CATALYST_ORG_ID", "60077159195")
-ZIA_AUDIO_ENDPOINT    = os.getenv("ZIA_AUDIO_ENDPOINT", "https://api.catalyst.zoho.in/quickml/api/v1/models/zia/audio/transcribe")
+CATALYST_PROJECT_ID   = os.getenv("KSP_PROJECT_ID", os.getenv("CATALYST_PROJECT_ID", "54626000000013049"))
+CATALYST_ORG_ID       = os.getenv("KSP_ORG_ID", os.getenv("CATALYST_ORG_ID", "60077159195"))
+CATALYST_CACHE_SEGMENT_ID = os.getenv("KSP_CACHE_SEGMENT_ID", os.getenv("CATALYST_CACHE_SEGMENT_ID", "54626000000136060"))
+CATALYST_FILESTORE_FOLDER_ID = os.getenv("KSP_FILESTORE_FOLDER_ID", os.getenv("CATALYST_FILESTORE_FOLDER_ID", "54626000000149001"))
+CATALYST_TABLE_SESSION_MEMORY = os.getenv("KSP_TABLE_SESSION_MEMORY", os.getenv("CATALYST_TABLE_SESSION_MEMORY", "SessionMemory"))
+CATALYST_TABLE_ECOMPLAINTS = os.getenv("KSP_TABLE_ECOMPLAINTS", os.getenv("CATALYST_TABLE_ECOMPLAINTS", "54626000000093817"))
+CATALYST_TABLE_PASSPORTS = os.getenv("KSP_TABLE_PASSPORTS", os.getenv("CATALYST_TABLE_PASSPORTS", "54626000000093001"))
+CATALYST_TABLE_POLICEFIRS = os.getenv("KSP_TABLE_POLICEFIRS", os.getenv("CATALYST_TABLE_POLICEFIRS", "54626000000109574"))
+CATALYST_TABLE_DESK_TICKETS = os.getenv("KSP_TABLE_DESK_TICKETS", os.getenv("CATALYST_TABLE_DESK_TICKETS", "DeskTickets"))
+CATALYST_TABLE_CRM_SUSPECTS = os.getenv("KSP_TABLE_CRM_SUSPECTS", os.getenv("CATALYST_TABLE_CRM_SUSPECTS", "CRMSuspects"))
+CATALYST_TABLE_AUDIT_TRAIL = os.getenv("CATALYST_TABLE_AUDIT_TRAIL", "54626000000152381")
+CATALYST_TABLE_AUDIT_TRAIL_RELATIONAL = os.getenv("CATALYST_TABLE_AUDIT_TRAIL_RELATIONAL", "54626000000152001")
+CATALYST_TABLE_AUDIT_TRAIL_NAME = os.getenv("CATALYST_TABLE_AUDIT_TRAIL_NAME", "KSP_Audit_Trail")
+CATALYST_TABLE_SESSION_EVIDENCE = os.getenv("CATALYST_TABLE_SESSION_EVIDENCE", "54626000000153001")
+CATALYST_TABLE_SESSION_EVIDENCE_NAME = os.getenv("CATALYST_TABLE_SESSION_EVIDENCE_NAME", "KSP_Session_Evidence")
+CATALYST_API_BASE     = os.getenv("KSP_CATALYST_API_BASE", os.getenv("CATALYST_API_BASE", "https://api.catalyst.zoho.in"))
+ZIA_AUDIO_ENDPOINT    = os.getenv("KSP_ZIA_AUDIO_ENDPOINT", os.getenv("ZIA_AUDIO_ENDPOINT", "https://api.catalyst.zoho.in/quickml/api/v1/models/zia/audio/transcribe"))
+ZIA_TTS_ENDPOINT      = os.getenv("KSP_ZIA_TTS_ENDPOINT", os.getenv("ZIA_TTS_ENDPOINT", "https://api.catalyst.zoho.in/quickml/api/v1/models/zia/tts/synthesize"))
+# Syndicate Affinity Pipeline
+CATALYST_QUICKML_ENDPOINT          = os.getenv("KSP_QUICKML_ENDPOINT", os.getenv("CATALYST_QUICKML_ENDPOINT", "https://api.catalyst.zoho.in/quickml/v1/project/54626000000013049/endpoints/predict?explainModel=true"))
+CATALYST_QUICKML_ENDPOINT_KEY      = os.getenv("KSP_QUICKML_ENDPOINT_KEY", os.getenv("CATALYST_QUICKML_ENDPOINT_KEY", ""))
+CATALYST_QUICKML_AFFINITY_ENDPOINT = CATALYST_QUICKML_ENDPOINT
+CATALYST_QUICKML_AFFINITY_KEY      = CATALYST_QUICKML_ENDPOINT_KEY
+
+# Crime Statistics (Caseload Regression) Pipeline
+CATALYST_QUICKML_CRIMESTATS_ENDPOINT = os.getenv("KSP_QUICKML_CRIMESTATS_ENDPOINT", os.getenv("CATALYST_QUICKML_CRIMESTATS_ENDPOINT", "https://api.catalyst.zoho.in/quickml/v1/project/54626000000013049/endpoints/predict?explainModel=true"))
+CATALYST_QUICKML_CRIMESTATS_KEY      = os.getenv("KSP_QUICKML_CRIMESTATS_KEY", os.getenv("CATALYST_QUICKML_CRIMESTATS_KEY", CATALYST_QUICKML_ENDPOINT_KEY))
+
+# Threat Assessment (AutoML Classification) Pipeline
+CATALYST_QUICKML_THREAT_ENDPOINT     = os.getenv("KSP_QUICKML_THREAT_ENDPOINT", os.getenv("CATALYST_QUICKML_THREAT_ENDPOINT", "https://api.catalyst.zoho.in/quickml/v1/project/54626000000013049/endpoints/predict?explainModel=true"))
+CATALYST_QUICKML_THREAT_KEY          = os.getenv("KSP_QUICKML_THREAT_KEY", os.getenv("CATALYST_QUICKML_THREAT_KEY", CATALYST_QUICKML_ENDPOINT_KEY))
+
+# Geospatial Hotspot (DBSCAN Clustering) Pipeline
+CATALYST_QUICKML_GEOSPATIAL_ENDPOINT = os.getenv("KSP_QUICKML_GEOSPATIAL_ENDPOINT", os.getenv("CATALYST_QUICKML_GEOSPATIAL_ENDPOINT", "https://api.catalyst.zoho.in/quickml/v1/project/54626000000013049/endpoints/predict"))
+CATALYST_QUICKML_GEOSPATIAL_KEY      = os.getenv("KSP_QUICKML_GEOSPATIAL_KEY", os.getenv("CATALYST_QUICKML_GEOSPATIAL_KEY", CATALYST_QUICKML_ENDPOINT_KEY))
+
+CATALYST_QUICKML_ORG               = os.getenv("CATALYST_QUICKML_ORG", "60077159195")
+CATALYST_QUICKML_ENV               = os.getenv("CATALYST_QUICKML_ENV", "Development")
+
+CATALYST_GLM_MODEL        = os.getenv("CATALYST_GLM_MODEL", "crm-di-glm47b_30b_it")
+CATALYST_GLM_ENDPOINT     = os.getenv("CATALYST_GLM_ENDPOINT", f"https://api.catalyst.zoho.in/quickml/v1/project/{CATALYST_PROJECT_ID}/glm/chat")
+CATALYST_VLM_MODEL        = os.getenv("CATALYST_VLM_MODEL", "VL-Qwen3.6-35B-A3B")
+CATALYST_VLM_ENDPOINT     = os.getenv("CATALYST_VLM_ENDPOINT", f"https://api.catalyst.zoho.in/quickml/v1/project/{CATALYST_PROJECT_ID}/vlm/chat")
+
+# Retraining Pipeline IDs
+QUICKML_GEOSPATIAL_PIPELINE_ID = os.getenv("QUICKML_GEOSPATIAL_PIPELINE_ID", "3407000000006386")
+QUICKML_AFFINITY_PIPELINE_ID   = os.getenv("QUICKML_AFFINITY_PIPELINE_ID", "3407000000006308")
+QUICKML_THREAT_PIPELINE_ID     = os.getenv("QUICKML_THREAT_PIPELINE_ID", "3407000000006080")
+QUICKML_CRIMESTATS_PIPELINE_ID = os.getenv("QUICKML_CRIMESTATS_PIPELINE_ID", "3407000000006031")
+
+# Webhook Auth
+KSP_ADMIN_KEY = os.getenv("KSP_ADMIN_KEY", "KSP-SECURE-WEBHOOK-KEY")
 ENABLE_MEMORY_COMPRESSION = os.getenv("ENABLE_MEMORY_COMPRESSION", "true").lower() in ("true", "1", "yes")
 MEMORY_WINDOW_SIZE        = int(os.getenv("MEMORY_WINDOW_SIZE", "10"))
 MEMORY_COMPRESS_THRESHOLD = int(os.getenv("MEMORY_COMPRESS_THRESHOLD", "10"))
 CLASSIFIER_MODEL          = os.getenv("CLASSIFIER_MODEL", "qwen/qwen3.8-27b")
-PORT                  = int(os.getenv("PORT", 5000))
+FEDERATED_MAX_WORKERS     = int(os.getenv("FEDERATED_MAX_WORKERS", "10"))
+PORT                  = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT", os.getenv("PORT", 9000)))
 AUDIT_LOG_PATH        = BASE_DIR / "audit_trace.jsonl"
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -109,6 +191,27 @@ GUIDELINES:
 - Clearly cite relevant statutory sections (BNS, BNSS, IPC, CrPC, IT Act) where applicable.
 - Use clear numbered steps for operational procedures so it is immediately actionable for officers on duty.
 - Conclude with a practical operational recommendation or next step for the investigating officer."""
+
+KSP_LEGAL_KNOWLEDGE_PROMPT = """You are KSP Sentinel AI — the Lead Legal Knowledge & Statutory Base Advisor for Karnataka State Police.
+You operate as the primary purpose-driven guardian of Karnataka police statutory procedures, BNS, BNSS, BSA 2023, IPC, CrPC, IT Act, and KSP Departmental Circulars.
+
+STRICT PURPOSE & SCOPE BOUNDARY:
+- You are exclusively dedicated to law enforcement, criminal jurisprudence, investigation procedures, and statutory compliance.
+- If the user asks general or off-topic questions (e.g. vacation planning, casual chit-chat, entertainment), strictly decline and reinforce your role: "I am KSP Sentinel AI, dedicated exclusively to Karnataka State Police operations, crime analytics, and statutory legal guidance. How may I assist your investigation?"
+
+LEGAL REASONING PROTOCOL:
+1. Provide precise statutory mappings (e.g., Section 303(2) BNS with historical IPC Section 379 equivalence).
+2. Outline exact procedural steps mandated by BNSS/BSA (e.g., mandatory videography under Sec 105 BNSS, electronic evidence certificate under Sec 63/65B BSA).
+3. Deliver authoritative, structured, and humanized operational directives for investigating officers."""
+
+KSP_EVIDENCE_ANALYSIS_PROMPT = """You are KSP Sentinel AI — the Senior Evidence & Case Document Forensics Specialist for Karnataka State Police.
+You specialize in deep forensic analysis of session-isolated case documents, First Information Reports (FIRs), witness depositions, bank audit sheets, and technical seizure reports.
+
+EVIDENTIARY PROTOCOL:
+1. STRICT GROUNDING: Answer strictly and faithfully using the provided document excerpts from the active session.
+2. CITATION MANDATE: Explicitly cite the document name, page number, and paragraph for every factual claim.
+3. INCONSISTENCY DETECTION: Highlight any chronological discrepancies, financial mismatches, or alibi contradictions found within the evidence.
+4. SECTION 65B COMPLIANCE: Note whether digital evidence meets chain-of-custody and certification requirements under Bharatiya Sakshya Adhiniyam (BSA)."""
 
 KSP_FEDERATED_PROMPT = """You are KSP Sentinel AI, the Senior Intelligence Coordinator for the Karnataka State Police.
 You have been provided with factual reports from multiple investigative sub-agents. 
@@ -226,6 +329,36 @@ Output ONLY a valid JSON object matching this schema:
   "investigative_summary": "1-2 sentence executive summary."
 }
 Only output valid JSON."""
+
+KSP_VISION_FORENSICS_PROMPT = """You are KSP Sentinel AI, a Lead Police Forensic Vision & CCTV Intelligence Specialist for the Karnataka State Police.
+Analyze the provided crime scene, CCTV, vehicle, or suspect evidence imagery with forensic rigor.
+
+YOUR RESPONSIBILITIES:
+1. SCENE RECONSTRUCTION: Describe observable physical entities, lighting, points of forced entry, weapon presence, or damage.
+2. SUSPECT & VEHICLE ATTRIBUTES: Extract physical appearance, clothing, build, gait/stance, vehicle make/model/color, registration plate characters, or identifying hallmarks.
+3. FORENSIC CLUES: Highlight high-signal artifacts (footprints, tool marks, discarded contraband, digital devices).
+4. TACTICAL INVESTIGATIVE DIRECTIVES: Provide 3 prioritized field actions (e.g. CCTV timeline expansion, ANPR checkpoint alert, physical evidence preservation under Sec 105 BNSS).
+
+Respond in a clear, authoritative, humanized intelligence format with markdown headings."""
+
+KSP_VISION_OCR_PROMPT = """You are KSP Sentinel AI, a Document Forensics & Bilingual OCR Extraction Specialist for Karnataka State Police.
+Read and parse the provided physical/scanned FIR copies, petitions, identity cards (Aadhaar, DL, PAN), or forensic documents.
+
+EXTRACTION OBJECTIVES:
+1. Detect and transcribe all English and Kannada (ಕನ್ನಡ) text accurately.
+2. Extract key forensic entities into clean JSON format:
+   - "document_type": "FIR" | "Identity" | "Petition" | "Vehicle Document" | "Other"
+   - "fir_number": string or null
+   - "police_station": string or null
+   - "complainant_or_victim": string or null
+   - "accused_or_suspects": list of strings
+   - "bns_ipc_sections": list of strings
+   - "date_and_time_of_offense": string or null
+   - "financial_loss_or_property": string or null
+   - "incident_summary": concise 2-sentence summary
+   - "raw_transcription": extracted raw text
+
+Output strictly valid JSON."""
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CONTRACT STUB DATA (For Phase 1 UI-Ready Endpoints)

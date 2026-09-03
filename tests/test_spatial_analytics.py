@@ -37,12 +37,12 @@ class TestSpatialAnalyticsPhase2(unittest.TestCase):
             {"case_id": "BLR-5", "crime_type": "Robbery", "latitude": 12.9705, "longitude": 77.5935, "Police_Station": "Cubbon Park", "Status": "Closed"},
             {"case_id": "BLR-6", "crime_type": "Theft", "latitude": 12.9715, "longitude": 77.5948, "Police_Station": "Cubbon Park", "Status": "Open"},
             
-            # Mysuru Cluster
-            {"case_id": "MYS-1", "crime_type": "Vehicle Theft", "latitude": 12.2958, "longitude": 76.6394, "Police_Station": "Lashkar", "Status": "Open"},
-            {"case_id": "MYS-2", "crime_type": "Vehicle Theft", "latitude": 12.2960, "longitude": 76.6398, "Police_Station": "Lashkar", "Status": "Open"},
-            {"case_id": "MYS-3", "crime_type": "Burglary", "latitude": 12.2950, "longitude": 76.6390, "Police_Station": "Devaraja", "Status": "Open"},
-            {"case_id": "MYS-4", "crime_type": "Vehicle Theft", "latitude": 12.2965, "longitude": 76.6400, "Police_Station": "Lashkar", "Status": "Closed"},
-            {"case_id": "MYS-5", "crime_type": "Burglary", "latitude": 12.2955, "longitude": 76.6392, "Police_Station": "Lashkar", "Status": "Open"},
+            # Koramangala Tech Corridor Cluster
+            {"case_id": "MYS-1", "crime_type": "Vehicle Theft", "latitude": 12.9352, "longitude": 77.6245, "Police_Station": "Koramangala PS", "Status": "Open"},
+            {"case_id": "MYS-2", "crime_type": "Vehicle Theft", "latitude": 12.9355, "longitude": 77.6248, "Police_Station": "Koramangala PS", "Status": "Open"},
+            {"case_id": "MYS-3", "crime_type": "Burglary", "latitude": 12.9350, "longitude": 77.6242, "Police_Station": "Koramangala PS", "Status": "Open"},
+            {"case_id": "MYS-4", "crime_type": "Vehicle Theft", "latitude": 12.9358, "longitude": 77.6250, "Police_Station": "Koramangala PS", "Status": "Closed"},
+            {"case_id": "MYS-5", "crime_type": "Burglary", "latitude": 12.9353, "longitude": 77.6246, "Police_Station": "Koramangala PS", "Status": "Open"},
             
             # Noise Point (Far away in Bidar)
             {"case_id": "BDR-1", "crime_type": "Extortion", "latitude": 17.9100, "longitude": 77.5100, "Police_Station": "Bidar Town", "Status": "Open"}

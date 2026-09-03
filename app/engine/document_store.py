@@ -1,63 +1,64 @@
 """
-KSP Sentinel AI — DuckDB Document Storage & Search Engine (SOLID: DIP + SRP)
+KSP Sentinel AI — SQLite Document Storage & Search Engine (SOLID: DIP + SRP)
 Thread-safe, session-isolated document store for PDFs, FIRs, and SOP circulars.
 """
 import io
 import json
 import logging
 import re
+import sqlite3
 import threading
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-import duckdb
 
 from app.core.interfaces import DocumentChunk, IDocumentRepository
 
 log = logging.getLogger("standalone.document_store")
 
 
-class DuckDBDocumentStore(IDocumentRepository):
+class SQLiteDocumentStore(IDocumentRepository):
     """
     SRP: Handles session-isolated document parsing, chunking, indexing, and lexical retrieval.
     DIP: Concrete implementation of IDocumentRepository.
     Thread-safe via threading.RLock().
     """
     def __init__(self):
-        self.sessions: Dict[str, dict] = {}  # session_id -> { "con": duckdb_con, "docs": {} }
+        self.sessions: Dict[str, dict] = {}  # session_id -> { "con": sqlite_con, "docs": {} }
         self._lock = threading.RLock()
 
-    def _get_connection(self, session_id: str):
+    def _get_connection(self, session_id: str) -> sqlite3.Connection:
         with self._lock:
             if session_id not in self.sessions:
-                con = duckdb.connect(database=":memory:")
+                con = sqlite3.connect(":memory:", check_same_thread=False)
+                con.isolation_level = None  # Autocommit mode matching in-memory semantics
                 # Initialize schema
                 con.execute("""
                     CREATE TABLE IF NOT EXISTS doc_chunks (
-                        chunk_id VARCHAR PRIMARY KEY,
-                        doc_name VARCHAR,
+                        chunk_id TEXT PRIMARY KEY,
+                        doc_name TEXT,
                         chunk_index INTEGER,
-                        content VARCHAR
+                        content TEXT
                     )
                 """)
                 con.execute("""
                     CREATE TABLE IF NOT EXISTS doc_registry (
-                        doc_name VARCHAR PRIMARY KEY,
+                        doc_name TEXT PRIMARY KEY,
                         chunk_count INTEGER,
-                        file_size_kb DOUBLE,
-                        ingested_at VARCHAR
+                        file_size_kb REAL,
+                        ingested_at TEXT
                     )
                 """)
                 con.execute("""
                     CREATE TABLE IF NOT EXISTS staged_transcripts (
-                        stage_id VARCHAR PRIMARY KEY,
-                        session_id VARCHAR,
-                        filename VARCHAR,
-                        transcript_kn VARCHAR,
-                        transcript_en VARCHAR,
-                        entities VARCHAR,
-                        created_at VARCHAR,
-                        status VARCHAR
+                        stage_id TEXT PRIMARY KEY,
+                        session_id TEXT,
+                        filename TEXT,
+                        transcript_kn TEXT,
+                        transcript_en TEXT,
+                        entities TEXT,
+                        created_at TEXT,
+                        status TEXT
                     )
                 """)
                 self.sessions[session_id] = {
@@ -154,7 +155,7 @@ class DuckDBDocumentStore(IDocumentRepository):
 
     def ingest_document(self, session_id: str, filename: str, file_bytes: bytes) -> Dict[str, Any]:
         """
-        Ingests a document, extracts text, generates chunks, and inserts them into DuckDB.
+        Ingests a document, extracts text, generates chunks, and inserts them into SQLite.
         """
         con = self._get_connection(session_id)
         raw_text = self._extract_text(filename, file_bytes)
@@ -380,7 +381,7 @@ class DuckDBDocumentStore(IDocumentRepository):
                 [session_id, stage_id]
             )
 
-        # Ingest into official DuckDB Document Store
+        # Ingest into official SQLite Document Store
         ingest_res = self.ingest_document(
             session_id=session_id,
             filename=doc_name,
@@ -418,5 +419,9 @@ class DuckDBDocumentStore(IDocumentRepository):
                 del self.sessions[session_id]
 
 
-# Global singleton instance
-document_store = DuckDBDocumentStore()
+# ── Primary Cloud-Scale Document Store & Legacy Aliases ────────────────────────
+from app.engine.catalyst_document_store import CatalystCloudDocumentStore, catalyst_document_store
+
+DuckDBDocumentStore = CatalystCloudDocumentStore
+document_store = catalyst_document_store
+

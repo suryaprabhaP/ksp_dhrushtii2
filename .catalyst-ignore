@@ -1,0 +1,35 @@
+# ==============================================================================
+# Zoho Catalyst Root Package Ignore Rules (.catalyst-ignore)
+# ==============================================================================
+
+vendor/
+.venv/
+node_modules/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+analysis_vault/
+findings/
+graphify-out/
+cloud_doc/
+review_prompt/
+*.md
+*.csv
+*.xlsx
+*.zip
+synthetic_audio/
+*.mp3
+*.wav
+tests/
+scripts/
+generate_5000_geo.py
+generate_5000_stats.py
+generate_production_spatial.py
+generate_quickml_dataset.py
+*.db
+*.sqlite3
+*.log
+audit_trace.jsonl

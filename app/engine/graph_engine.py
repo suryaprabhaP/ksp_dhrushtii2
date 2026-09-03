@@ -1,7 +1,12 @@
 """
-KSP Sentinel AI — In-Memory Graph Intelligence Engine (SOLID - SRP)
-Provides canonical node identity unification, bipartite pivot construction,
-O(V+E) BFS shortest-path resolution, and degree centrality ranking.
+KSP Sentinel AI — Cloud ZCQL & In-Memory Graph Intelligence Engine (SOLID: SRP, OCP, DIP)
+========================================================================================
+Architectural Capabilities:
+1. Native Zoho Catalyst ZCQL Cloud Ingestion (Phase 1 Migration).
+2. Canonical Node Identity Unification & Deduplication.
+3. Bipartite Multi-Entity Clique & Star Topological Assembly.
+4. O(V+E) Bidirectional BFS Shortest-Path Nexus Resolution.
+5. Degree Centrality & Syndicate Hub Identification.
 """
 from collections import deque
 import logging
@@ -9,6 +14,7 @@ import re
 from typing import Dict, List, Optional, Set, Tuple, Any
 
 log = logging.getLogger("standalone.graph_engine")
+
 
 class CanonicalNodeType:
     CASE = "CASE"
@@ -19,6 +25,7 @@ class CanonicalNodeType:
     LOCATION = "LOCATION"
     CYBER = "CYBER"
     ENTITY = "ENTITY"
+
 
 ENTITY_COLOR_PALETTE = {
     CanonicalNodeType.PERSON: "#f43f5e",     # Crimson Rose (Suspects & Co-Accused)
@@ -34,11 +41,11 @@ ENTITY_COLOR_PALETTE = {
 
 class GraphEngine:
     """
-    Universal Bipartite Graph Engine.
+    Universal Bipartite Graph Intelligence Engine.
     Guarantees:
     1. Single Canonical Node instantiation per entity/case identity (Zero Duplication).
     2. Linear O(K) edges per case instead of O(K^2) pairwise hairballs.
-    3. Multi-mode schema adaptation (Edge-Lists, CDRs, and Multi-Entity Incident Tables).
+    3. Multi-mode schema adaptation (Cloud ZCQL, Edge-Lists, CDRs, and Incident Tables).
     """
 
     @staticmethod
@@ -88,7 +95,7 @@ class GraphEngine:
         Ingests records into canonical nodes and bipartite edges with zero duplicate nodes.
         """
         if not records or not headers:
-            return {"nodes": [], "edges": [], "god_nodes": [], "node_count": 0, "edge_count": 0}
+            return {"nodes": [], "edges": [], "god_nodes": [], "node_count": 0, "edge_count": 0, "adjacency": {}}
 
         nodes_map: Dict[str, Dict[str, Any]] = {}
         adjacency: Dict[str, List[Dict[str, Any]]] = {}
@@ -182,11 +189,10 @@ class GraphEngine:
             log.info("[GraphEngine] Ingesting in Entity-Centric Co-Occurrence Mode")
             case_col = next((h for h in headers if any(t in h.lower() for t in ["fir_number", "fir_no", "case_id", "crime_id", "incident_id"])), None)
             
-            # Exclude numerical metrics, dates, and cryptographic signatures from becoming nodes
+            # Exclude numerical metrics, dates, and non-relational metadata from becoming standalone nodes
             excluded_patterns = re.compile(r'date|year|month|day|status|amount|loss|recovered|percentage|days|count|age|lat|lng|latitude|longitude|description|narrative|signature|sha256', re.I)
             entity_columns = [h for h in headers if h != case_col and not excluded_patterns.search(h)]
 
-            # Aggregate edge weights across cases
             for row_idx, row in enumerate(records):
                 case_id = str(row.get(case_col) if case_col else f"CASE-{row_idx+1}").strip()
                 loss_val = row.get("Loss_Amount_INR", row.get("loss", 0))
@@ -203,7 +209,7 @@ class GraphEngine:
                     node = get_or_create_node(clean_val, clean_val, e_type, e_label, e_color, base_meta)
                     extracted_nodes.append(node)
 
-                # Connect co-occurring entities within the case (Clique / Star)
+                # Connect co-occurring entities within the case
                 for i in range(len(extracted_nodes)):
                     for j in range(i + 1, len(extracted_nodes)):
                         n_a = extracted_nodes[i]
@@ -224,8 +230,61 @@ class GraphEngine:
             "adjacency": adjacency,
             "god_nodes": god_nodes,
             "node_count": len(nodes_list),
-            "edge_count": len(edges_list)
+            "edge_count": len(edges_list),
+            "source": "catalyst_zcql"
         }
+
+    @classmethod
+    def build_graph_from_zcql(
+        cls,
+        repository: Optional[Any] = None,
+        query: Optional[str] = None,
+        limit: int = 200
+    ) -> Dict[str, Any]:
+        """
+        DIP: Ingests relational graph topology directly via Zoho Catalyst ZCQL Repository.
+        """
+        from app.services.zcql_graph_repository import catalyst_zcql_graph_repository
+        repo = repository or catalyst_zcql_graph_repository
+
+        if query:
+            records, headers = repo.execute_custom_zcql(query)
+        else:
+            records, headers = repo.fetch_global_network(limit=limit)
+
+        graph = cls.build_graph_from_records(records, headers)
+        graph["source"] = "catalyst_zcql"
+        graph["total_records"] = len(records)
+        graph["columns"] = headers
+        return graph
+
+    @classmethod
+    def get_suspect_subgraph(cls, suspect_id: str, repository: Optional[Any] = None) -> Dict[str, Any]:
+        """
+        Extracts suspect-centric subgraph via ZCQL query.
+        """
+        from app.services.zcql_graph_repository import catalyst_zcql_graph_repository
+        repo = repository or catalyst_zcql_graph_repository
+
+        records, headers = repo.fetch_suspect_network(suspect_id)
+        graph = cls.build_graph_from_records(records, headers)
+        graph["suspect_id"] = suspect_id
+        graph["source"] = "catalyst_zcql_suspect"
+        return graph
+
+    @classmethod
+    def get_case_subgraph(cls, case_id: str, repository: Optional[Any] = None) -> Dict[str, Any]:
+        """
+        Extracts case-centric subgraph via ZCQL query.
+        """
+        from app.services.zcql_graph_repository import catalyst_zcql_graph_repository
+        repo = repository or catalyst_zcql_graph_repository
+
+        records, headers = repo.fetch_case_network(case_id)
+        graph = cls.build_graph_from_records(records, headers)
+        graph["case_id"] = case_id
+        graph["source"] = "catalyst_zcql_case"
+        return graph
 
     @classmethod
     def find_shortest_path(cls, graph: Dict[str, Any], start_query: str, target_query: str) -> Dict[str, Any]:
@@ -312,5 +371,126 @@ class GraphEngine:
             "associated_stations": node["metadata"].get("associatedStations", [])
         }
 
+    @classmethod
+    def fuse_ai_affinities(
+        cls,
+        graph: Dict[str, Any],
+        suspects_features: Optional[List[Dict[str, Any]]] = None
+    ) -> Dict[str, Any]:
+        """
+        Phase 2A: QuickML Behavioral Syndicate Affinity Fusion (SOLID: SRP + DIP).
+        1. Queries QuickML Affinity Service for each suspect entity.
+        2. Annotates nodes with predicted cluster and explainability metadata.
+        3. Dynamically injects AI Virtual Edges (dashed lines) between suspects in the same syndicate.
+        4. Guarantees 3-tier trust hierarchy: FACTUAL (evidence), AI-SUPPORTED (>=90%), AI-SUGGESTED (<90%).
+        """
+        from app.services.quickml_service import quickml_affinity_service
+
+        nodes = graph.get("nodes", [])
+        edges = graph.get("edges", [])
+        adjacency = graph.get("adjacency", {})
+
+        # 1. Tag existing factual edges
+        for edge in edges:
+            if "trustTier" not in edge:
+                edge["trustTier"] = "FACTUAL"
+                edge["isAiPredicted"] = False
+
+        # 2. Extract Suspect/Person nodes
+        suspect_nodes = [n for n in nodes if n.get("type") == CanonicalNodeType.PERSON]
+        if not suspect_nodes:
+            log.info("[GraphEngine] No suspect nodes found for AI affinity fusion.")
+            return graph
+
+        features_by_id = {}
+        if suspects_features:
+            for s in suspects_features:
+                sid = s.get("suspect_id") or s.get("id") or s.get("name")
+                if sid:
+                    features_by_id[str(sid).lower()] = s
+
+        # 3. Classify each suspect via QuickML
+        clusters_map: Dict[str, List[Dict[str, Any]]] = {}
+        for snode in suspect_nodes:
+            raw_id = snode.get("rawId", "").lower()
+            label = snode.get("label", "").lower()
+
+            matched_feat = features_by_id.get(raw_id) or features_by_id.get(label) or {
+                "suspect_id": snode.get("rawId"),
+                "suspect_name": snode.get("label"),
+                "primary_crime_category": snode.get("metadata", {}).get("crimeCategory", "Vehicle Theft"),
+                "modus_operandi": snode.get("metadata", {}).get("modusOperandi", "Keyless Jammer Repeater"),
+                "operating_district": snode.get("metadata", {}).get("policeStation", "Bengaluru"),
+                "threat_risk_score": 75.0
+            }
+
+            pred = quickml_affinity_service.predict_suspect_affinity(matched_feat)
+            cluster_name = pred.predicted_cluster
+            
+            snode["metadata"]["aiAffinity"] = {
+                "predictedCluster": cluster_name,
+                "confidence": pred.confidence,
+                "status": pred.status,
+                "source": pred.source,
+                "explanation": pred.explanation
+            }
+
+            if cluster_name not in clusters_map:
+                clusters_map[cluster_name] = []
+            clusters_map[cluster_name].append(snode)
+
+        # 4. Generate AI Virtual Edges between suspects in the same cluster
+        existing_pairs = set()
+        for e in edges:
+            existing_pairs.add((e["source"], e["target"]))
+            existing_pairs.add((e["target"], e["source"]))
+
+        ai_virtual_edges = []
+        for cluster_name, member_nodes in clusters_map.items():
+            if len(member_nodes) < 2:
+                continue
+            for i in range(len(member_nodes)):
+                for j in range(i + 1, len(member_nodes)):
+                    n_a = member_nodes[i]
+                    n_b = member_nodes[j]
+                    pair_key = (n_a["id"], n_b["id"])
+
+                    if pair_key not in existing_pairs:
+                        existing_pairs.add(pair_key)
+                        existing_pairs.add((n_b["id"], n_a["id"]))
+
+                        confidence = min(
+                            n_a["metadata"]["aiAffinity"]["confidence"],
+                            n_b["metadata"]["aiAffinity"]["confidence"]
+                        )
+                        trust_tier = "AI-SUPPORTED" if confidence >= 0.90 else "AI-SUGGESTED"
+
+                        virtual_edge = {
+                            "source": n_a["id"],
+                            "target": n_b["id"],
+                            "relation": "AI_PREDICTED_AFFINITY",
+                            "weight": round(confidence, 2),
+                            "isAiPredicted": True,
+                            "confidence": round(confidence, 2),
+                            "syndicateCluster": cluster_name,
+                            "trustTier": trust_tier,
+                            "style": "dashed",
+                            "color": "#a855f7"  # Distinct Purple AI Edge
+                        }
+                        edges.append(virtual_edge)
+                        ai_virtual_edges.append(virtual_edge)
+
+                        if n_a["id"] in adjacency:
+                            adjacency[n_a["id"]].append({"target": n_b["id"], "relation": "AI_PREDICTED_AFFINITY", "isAi": True})
+                        if n_b["id"] in adjacency:
+                            adjacency[n_b["id"]].append({"target": n_a["id"], "relation": "AI_PREDICTED_AFFINITY", "isAi": True})
+
+        graph["ai_predictions_count"] = len(ai_virtual_edges)
+        graph["syndicate_clusters"] = list(clusters_map.keys())
+        graph["edge_count"] = len(edges)
+        log.info(f"[GraphEngine] AI Affinity Fusion Complete: {len(ai_virtual_edges)} virtual edges added across {len(clusters_map)} clusters.")
+        return graph
+
     # Alias for method compatibility
     trace_shortest_path = find_shortest_path
+

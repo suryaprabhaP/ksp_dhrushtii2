@@ -11,7 +11,7 @@ import time
 from flask import Blueprint, jsonify, request
 
 from app.engine.document_store import document_store
-from app.services.zoho_stt_service import zoho_stt_service
+from app.services.cloud_stt_service import cloud_stt_service
 from app.services.forensic_legal_mapper import forensic_legal_mapper
 
 log = logging.getLogger("standalone.forensics")
@@ -64,16 +64,16 @@ def audio_transcribe_and_stage():
                 "error": f"Audio file is too large ({round(len(file_bytes)/1024/1024, 2)} MB). Max limit is 15 MB."
             }), 400
 
-        # Delegate STT strictly to ZohoSTTService (SRP)
-        stt_result = zoho_stt_service.transcribe_audio(file_bytes, filename)
-        if stt_result.get("success"):
+        # Delegate STT strictly to Unified Cloud STT Service (SRP / DIP)
+        stt_result = cloud_stt_service.transcribe_audio(file_bytes, filename)
+        if stt_result.get("success") and stt_result.get("text"):
             raw_transcription = stt_result.get("text", "")
             stt_proc_ms = stt_result.get("processing_time_ms", 0)
-            stt_provider = stt_result.get("provider", "zoho_zia_speech")
+            stt_provider = stt_result.get("provider", "cloud_stt")
         else:
-            log.warning(f"[AudioStage] Zoho STT issue: {stt_result.get('error')}")
+            log.warning(f"[AudioStage] Cloud STT issue: {stt_result.get('error')}")
             raw_transcription = request.form.get("fallback_text") or "Audio statement received. Processing speech evidence."
-            stt_provider = "zoho_zia_speech (auto-recovered)"
+            stt_provider = f"{stt_result.get('provider', 'cloud_stt')} (fallback)"
 
     elif raw_text:
         filename = "text_statement.txt"

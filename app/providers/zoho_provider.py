@@ -7,6 +7,8 @@ import os
 import requests
 from typing import Dict, List, Optional, Tuple
 from app.config import (
+    CATALYST_GLM_ENDPOINT,
+    CATALYST_GLM_MODEL,
     CATALYST_ORG_ID,
     CATALYST_PROJECT_ID,
     ZOHO_ACCESS_TOKEN,
@@ -15,6 +17,8 @@ from app.config import (
     ZOHO_REFRESH_TOKEN,
 )
 from app.providers.base import BaseLLMProvider
+
+from app.services.zoho_token_manager import zoho_token_manager
 
 log = logging.getLogger("standalone.provider.zoho")
 
@@ -47,62 +51,28 @@ ZOHO_KNOWLEDGE_DOCS = get_knowledge_doc_ids()
 
 class ZohoQuickMLProvider(BaseLLMProvider):
     name = "zoho_quickml"
-    tags = ["rag_document"]
+    tags = ["free_reasoning", "rag_document", "fast_reasoning", "long_context", "agent_workflow"]
 
     def __init__(self):
-        self.access_token = ZOHO_ACCESS_TOKEN
-        self.refresh_token = ZOHO_REFRESH_TOKEN
-        self.client_id = ZOHO_CLIENT_ID
-        self.client_secret = ZOHO_CLIENT_SECRET
         self.project_id = CATALYST_PROJECT_ID
         self.org_id = CATALYST_ORG_ID
-        self.endpoint_url = f"https://console.catalyst.zoho.in/quickml/v1/project/{self.project_id}/rag/answer"
+        # Official Zoho Catalyst QuickML GLM 4.7 Foundation Model Endpoint
+        self.endpoint_url = CATALYST_GLM_ENDPOINT
+        self.primary_model = CATALYST_GLM_MODEL
+
+    @property
+    def access_token(self) -> Optional[str]:
+        return zoho_token_manager.get_valid_token(purpose="quickml")
 
     def is_available(self) -> bool:
-        return bool((self.access_token or self.refresh_token) and self.project_id)
+        return bool(self.access_token and self.project_id)
 
     def refresh_access_token(self) -> Optional[str]:
-        """Auto-refreshes OAuth access token using permanent refresh token."""
-        if not (self.refresh_token and self.client_id and self.client_secret):
-            log.warning("[ZohoQuickMLProvider] Missing credentials to refresh token")
-            return None
+        return zoho_token_manager.get_valid_token(purpose="quickml", force_refresh=True)
 
-        try:
-            url = "https://accounts.zoho.in/oauth/v2/token"
-            data = {
-                "refresh_token": self.refresh_token,
-                "client_id": self.client_id,
-                "client_secret": self.client_secret,
-                "grant_type": "refresh_token"
-            }
-            res = requests.post(url, data=data, timeout=10)
-            if res.status_code == 200:
-                new_token = res.json().get("access_token")
-                if new_token:
-                    self.access_token = new_token
-                    log.info("[ZohoQuickMLProvider] OAuth access token auto-refreshed successfully")
-                    return new_token
-            log.error(f"[ZohoQuickMLProvider] Token refresh failed ({res.status_code}): {res.text}")
-        except Exception as e:
-            log.error(f"[ZohoQuickMLProvider] Token refresh exception: {e}")
-        return None
-
-    def complete(self, messages: List[Dict[str, str]], json_mode: bool = False, max_tokens: int = 2500) -> Tuple[str, str]:
+    def complete(self, messages: List[Dict[str, str]], json_mode: bool = False, max_tokens: int = 2500, timeout: Optional[float] = None) -> Tuple[str, str]:
         if not self.is_available():
             raise RuntimeError("ZohoQuickMLProvider is not configured or unavailable")
-
-        # Extract user query and optional system context
-        user_query = ""
-        system_context = ""
-        for m in messages:
-            if m.get("role") == "user":
-                user_query = m.get("content", "")
-            elif m.get("role") == "system":
-                system_context = m.get("content", "")
-
-        query_payload = user_query
-        if system_context and not json_mode:
-            query_payload = f"{user_query}\n\n[System Directive: {system_context[:200]}]"
 
         headers = {
             "Authorization": f"Zoho-oauthtoken {self.access_token}",
@@ -110,17 +80,34 @@ class ZohoQuickMLProvider(BaseLLMProvider):
             "Content-Type": "application/json"
         }
 
+        # Format messages according to the official Catalyst GLM OpenAI-compatible contract
+        formatted_messages = []
+        for m in messages:
+            role = m.get("role", "user")
+            content = m.get("content", "")
+            formatted_messages.append({"role": role, "content": content})
+
         body = {
-            "query": query_payload,
-            "documents": ZOHO_KNOWLEDGE_DOCS
+            "model": self.primary_model,
+            "messages": formatted_messages,
+            "max_tokens": min(max_tokens, 1500),
+            "temperature": 0.2 if json_mode else 0.4,
+            "stream": False,
+            "chat_template_kwargs": {
+                "enable_thinking": False
+            }
         }
 
-        # Attempt call with token auto-refresh retry on 401
+        req_timeout = max(0.01, timeout) if timeout is not None else 25.0
+
+        # Attempt call with token auto-refresh retry strictly on 401 Unauthorized
         for attempt in range(2):
             try:
-                res = requests.post(self.endpoint_url, headers=headers, json=body, timeout=25)
+                log.info(f"[ZohoQuickMLProvider] Dispatching request to Catalyst GLM 4.7 ({self.primary_model}) timeout={req_timeout}s...")
+                res = requests.post(self.endpoint_url, headers=headers, json=body, timeout=req_timeout)
+                
                 if res.status_code == 401 and attempt == 0:
-                    log.info("[ZohoQuickMLProvider] 401 Unauthorized received. Refreshing token...")
+                    log.info("[ZohoQuickMLProvider] 401 Unauthorized received. Refreshing OAuth token...")
                     new_token = self.refresh_access_token()
                     if new_token:
                         headers["Authorization"] = f"Zoho-oauthtoken {new_token}"
@@ -128,28 +115,26 @@ class ZohoQuickMLProvider(BaseLLMProvider):
 
                 if res.status_code == 200:
                     data = res.json()
+                    # 1. Parse standard OpenAI-like choices format
+                    if "choices" in data and data["choices"]:
+                        choice_msg = data["choices"][0].get("message", {})
+                        content = choice_msg.get("content") or choice_msg.get("reasoning") or ""
+                        if content:
+                            return content, self.name
+                            
+                    # 2. Parse direct response field format
                     response_text = data.get("response", "")
                     if response_text:
-                        lower_resp = response_text.strip().lower()
-                        # If Zoho QuickML cloud KB cannot find the info in its 51 documents,
-                        # fail over so downstream LLM providers (Groq/Gemini) synthesize in-prompt evidence chunks.
-                        scope_limit_indicators = (
-                            "cannot find the relevant information", "unable to find",
-                            "outside the scope", "cannot provide", "does not contain",
-                            "no information", "not mentioned in", "not found in the document",
-                            "based on the provided context", "insufficient information",
-                            "no specific solution", "no specific countermeasures"
-                        )
-                        if any(ind in lower_resp for ind in scope_limit_indicators):
-                            log.info("[ZohoQuickMLProvider] Query outside cloud KB scope. Cascading to next provider...")
-                            raise RuntimeError(f"Zoho QuickML KB scope limit: {response_text}")
                         return response_text, self.name
 
                 raise RuntimeError(f"Zoho QuickML returned status {res.status_code}: {res.text[:200]}")
 
+            except (requests.Timeout, requests.exceptions.ReadTimeout) as e:
+                log.warning(f"[ZohoQuickMLProvider] Read timeout ({req_timeout}s) exceeded: {e}")
+                raise e
             except Exception as e:
                 if attempt == 1:
                     raise e
                 log.warning(f"[ZohoQuickMLProvider] Attempt {attempt+1} failed: {e}")
 
-        raise RuntimeError("Zoho QuickML completion failed after retry")
+        raise RuntimeError("Zoho QuickML GLM 4.7 completion failed after retry")

@@ -1,0 +1,28 @@
+version: 1
+jobs:
+  run-unit-tests:
+    steps:
+      - apt-get update && apt-get install -y python3-pip python3-venv
+      - pip3 install -r requirements.txt
+      - python3 -m unittest discover tests
+  compile-frontend:
+    steps:
+      - npm install
+      - npm run build
+  compile-backend:
+    steps:
+      - pip3 install -r requirements.txt
+  deploy-catalyst-cloud:
+    steps:
+      - catalyst deploy --only client,appsail:ksp-backend
+stages:
+  - name: test-stage
+    jobs:
+      - run-unit-tests
+  - name: build-stage
+    jobs:
+      - compile-backend
+      - compile-frontend
+  - name: deploy-stage
+    jobs:
+      - deploy-catalyst-cloud

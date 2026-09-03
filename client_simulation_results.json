@@ -1,0 +1,284 @@
+[
+  {
+    "title": "1. Crime Analytics & Caseload Forecaster",
+    "description": "Officer requesting situational crime pattern and trend forecasts.",
+    "method": "POST",
+    "endpoint": "/chat",
+    "payload": {
+      "query": "Show me the cyber crime and financial fraud pattern in Bengaluru East division for 2026.",
+      "division": "Bengaluru East",
+      "session_id": "officer_client_sim_001"
+    },
+    "status_code": 200,
+    "elapsed_ms": 18144.75,
+    "response": {
+      "agent_color": "#10b981",
+      "agent_icon": "\ud83d\udcc4",
+      "agent_label": "Document & Legal Agent",
+      "agent_type": "document_agent",
+      "answer": "**OFFICER INQUIRY: Cyber Crime & Financial Fraud Trends (Bengaluru East Division - 2026)**\n\n**STATUS:** Operational Intelligence Report (Projected)\n**DIVISION:** Bengaluru East (BBMP East)\n**YEAR:** 2026\n\nAs an AI assistant, I do not have access to real-time police databases or future data for the year 2026. However, based on the established cybercrime patterns in Bengaluru East over the last 24 months and current technological trends, I can provide the **projected operational profile** for the upcoming year.\n\nThe Bengaluru East division typically sees a higher volume of cases compared to other zones due to its high density of IT parks (like Whitefield, Marathahalli, and Kadugodi) and mixed residential areas.\n\n### **Projected Cyber Crime & Financial Fraud Pattern (2026)**\n\n#### **1. Primary Modus Operandi (MO)**\n*   **AI-Driven Impersonation (Deepfakes):** We expect a significant rise in voice cloning and video deepfakes used for \"Grandparent Scams\" and \"Executive Officer\" frauds.\n*   **Investment Fraud (Pig Butchering):** Malicious investment apps and crypto schemes targeting working professionals.\n*   **Job/Internship Fraud:** Fake recruitment agencies targeting fresh graduates in the IT sector.\n\n#### **2. Top Fraud Categories in Bengaluru East**\nBased on historical data from the Bengaluru East Police Commissionerate:\n\n| Fraud Type | Estimated Volume (2026 Projection) | Target Demographic | Key Red Flags |\n| :--- | :--- | :--- | :--- |\n| **Online Investment Fraud** | 45% | Working professionals, IT employees | \"Guaranteed returns,\" fake trading platforms, pressure to invest quickly. |\n| **Online Job/Internship Fraud** | 20% | Fresh graduates, students | \"Data entry\" jobs requiring upfront fees, fake offer letters. |\n| **Loan/EMI Fraud** | 15% | Middle-class families, SME owners | Fake loan apps, threatening calls for recovery. |\n| **Credit Card/Net Banking** | 10% | General public | Phishing links, OTP interception, unauthorized transactions. |\n| **Other (Dating, Gaming)** | 10% | Youth, teenagers | \"Sugar Daddy\" scams, in-game item trading frauds. |\n\n---\n\n### **Statutory & Procedural Framework for 2026**\n\nWhen investigating these cases, you must adhere to the **Bharatiya Nyaya Sanhita (BNS)** and the **Bharatiya Nagarik Suraksha Sanhita (BNSS)**, which have replaced the IPC and CrPC respectively.\n\n#### **A. Legal Provisions for Prosecution**\n\n1.  **Section 66C of the Information Technology Act, 2000 (Amended):**\n    *   **Provision:** Identity theft using another's password.\n    *   **Application:** Used when fraudsters use stolen credentials to access bank accounts or corporate emails.\n\n2.  **Section 66D of the IT Act:**\n    *   **Provision:** Cheating by personation by using computer resource.\n    *   **Application:** The core section for most online frauds where the victim is tricked into transferring money.\n\n3.  **Section 66F of the IT Act:**\n    *   **Provision:** Cheat by personation by using computer resource.\n    *   **Application:** Specifically used for \"Cyber Terrorism\" or large-scale organized fraud.\n\n4.  **Section 420 of the BNS (Cheating):**\n   ",
+      "charts": [],
+      "data_available": true,
+      "executive_decision": null,
+      "handoff_target": null,
+      "provider": "zoho_quickml",
+      "success": true,
+      "suggested_actions": [
+        "Upload Case PDF / FIR Document",
+        "Check Section 65B BSA Requirements",
+        "Review Standard Operating Procedure"
+      ],
+      "visuals_updated": false
+    }
+  },
+  {
+    "title": "2. Geospatial Hotspot & Perimeter Patrol",
+    "description": "Officer requesting tactical perimeter patrol recommendations for active hotspots.",
+    "method": "POST",
+    "endpoint": "/chat",
+    "payload": {
+      "query": "Where are the critical burglary and theft hotspots in Indiranagar and Whitefield?",
+      "division": "Bengaluru East",
+      "session_id": "officer_client_sim_001",
+      "spatial_context": {
+        "latitude": 12.9784,
+        "longitude": 77.6408,
+        "area": "Indiranagar"
+      }
+    },
+    "status_code": 200,
+    "elapsed_ms": 494.37,
+    "response": {
+      "agent_color": "#38bdf8",
+      "agent_icon": "\ud83d\udccd",
+      "agent_label": "Tactical Spatial Agent",
+      "agent_type": "spatial_tactical_agent",
+      "answer": "### \ud83d\udccd Tactical Response Briefing: **Bengaluru East**\n**Operational Sector Threat:** `ELEVATED` | **Coordinates:** `[12.9716, 77.5946]`\n\n#### \ud83c\udf10 Zoho QuickML DBSCAN Hotspot Identification\n- **Identified Sector Cluster:** `2`\n- **Hotspot Status:** `ACTIVE DENSE CLUSTER`\n- **Algorithm Confidence:** `95.0%` (SUCCESS_CLOUD_INFERENCE)\n- **Coordinates Evaluated:** Lat `12.9716`, Lon `77.5946`\n\nSituational analysis for **Bengaluru East** confirms elevated crime clustering. Intelligence advises establishing synchronized patrol perimeters along major transit corridors.\n#### \ud83d\ude94 Tactical Action Plan:\n1. **Sector Interception Grid:** Deploy 2 highway patrol interceptors and mobile beat personnel.\n2. **Section 102 BNSS Audit:** Issue notices for suspected asset transactions linked to repeat offenders.\n3. **CCTV & ANPR Integration:** Cross-reference automated number plate records against identified suspect vehicles.\n\n> \ud83d\udee1\ufe0f **Enterprise Tool Executions:**\n> \u2022 **\ud83c\udf10 QuickML DBSCAN: 2 (catalyst_quickml_cloud)**",
+      "charts": [],
+      "data_available": true,
+      "executive_decision": null,
+      "handoff_target": null,
+      "provider": "tactical_orchestrator",
+      "success": true,
+      "suggested_actions": [
+        "Check Zoho CRM for repeat suspects",
+        "Log a priority dispatch ticket in Zoho Desk",
+        "Formulate Section 102 BNSS checkpoint grid"
+      ],
+      "visuals_updated": false
+    }
+  },
+  {
+    "title": "3. QuickML Geospatial DBSCAN Hotspot Prediction",
+    "description": "Direct inference request to QuickML DBSCAN model for Bangalore Central coordinates.",
+    "method": "POST",
+    "endpoint": "/api/quickml/predict_hotspot",
+    "payload": {
+      "latitude": 12.9716,
+      "longitude": 77.5946,
+      "severity_weight": 85
+    },
+    "status_code": 200,
+    "elapsed_ms": 391.49,
+    "response": {
+      "cluster_id": "2",
+      "confidence": 0.95,
+      "explanation": null,
+      "features_used": {
+        "latitude": 12.9716,
+        "longitude": 77.5946,
+        "severity_weight": 85
+      },
+      "is_hotspot": true,
+      "source": "catalyst_quickml_cloud",
+      "status": "SUCCESS_CLOUD_INFERENCE",
+      "success": true
+    }
+  },
+  {
+    "title": "4. QuickML Tactical Threat Classification",
+    "description": "Direct inference request to QuickML Threat AutoML model for high-value extortion.",
+    "method": "POST",
+    "endpoint": "/api/quickml/predict_threat",
+    "payload": {
+      "case_id": "KSP-FIR-2026-088",
+      "crime_type": "Armed Commercial Extortion",
+      "financial_loss_inr": 8500000.0,
+      "latitude": 12.9352,
+      "longitude": 77.6244,
+      "police_station": "Koramangala PS"
+    },
+    "status_code": 200,
+    "elapsed_ms": 476.56,
+    "response": {
+      "explanation": {
+        "baseValue": -1,
+        "data": [
+          [
+            "incident_date",
+            0.37219859233908575,
+            0.47842509847985565
+          ],
+          [
+            "nearest_city_6",
+            0.0,
+            0.5215749015201443
+          ]
+        ]
+      },
+      "features_used": {
+        "case_id": "KSP-FIR-2026-088",
+        "case_status": "Under Investigation",
+        "crime_type": "Armed Commercial Extortion",
+        "financial_loss_inr": 8500000.0,
+        "incident_date": "2025-04-18",
+        "latitude": 12.9352,
+        "longitude": 77.6244,
+        "nearest_city": "Bengaluru",
+        "police_station": "Koramangala PS"
+      },
+      "likelihood_score": 0.95,
+      "source": "catalyst_quickml_cloud",
+      "status": "SUCCESS_CLOUD_INFERENCE",
+      "success": true,
+      "threat_level": "Critical"
+    }
+  },
+  {
+    "title": "5. QuickML Syndicate Affinity Clustering",
+    "description": "Direct inference request to QuickML Affinity Clustering model for organized cyber syndicate.",
+    "method": "POST",
+    "endpoint": "/api/quickml/predict_affinity",
+    "payload": {
+      "suspect_name": "Girish 'Tech' Murthy",
+      "primary_crime_category": "Cyber Financial Fraud",
+      "operating_district": "Bengaluru East",
+      "modus_operandi": "Phishing APK Banking Malware",
+      "threat_risk_score": 88.0,
+      "prior_convictions_count": 3
+    },
+    "status_code": 200,
+    "elapsed_ms": 480.18,
+    "response": {
+      "confidence": 0.92,
+      "explanation": {
+        "baseValue": 0,
+        "data": [
+          [
+            "PCA_0",
+            3.037084950766904,
+            0.49734404076207894
+          ],
+          [
+            "PCA_1",
+            1.7531104318765955,
+            0.013963378560510801
+          ],
+          [
+            "PCA_2",
+            0.13460798639093427,
+            0.004168062813433599
+          ],
+          [
+            "PCA_3",
+            -0.4552747000179605,
+            0.2156853840641427
+          ],
+          [
+            "PCA_4",
+            -0.9089144246492992,
+            0.2690302769975102
+          ],
+          [
+            "PCA_5",
+            0.20486726188376,
+            -0.00019114319767618026
+          ]
+        ]
+      },
+      "features_used": {
+        "modus_operandi": "Phishing APK Banking Malware",
+        "operating_district": "Bengaluru East",
+        "primary_crime_category": "Cyber Financial Fraud",
+        "primary_tool_or_weapon": "OBD Port Programmer",
+        "prior_convictions_count": 3,
+        "suspect_id": "UNKNOWN",
+        "suspect_name": "Girish 'Tech' Murthy",
+        "target_demographic": "Commercial Vehicles",
+        "threat_risk_score": 88.0,
+        "time_window": "Late Night (02:00 - 05:00)"
+      },
+      "predicted_cluster": "Cluster_2_CyberFraud",
+      "source": "catalyst_quickml_cloud",
+      "status": "SUCCESS_CLOUD_INFERENCE",
+      "success": true
+    }
+  },
+  {
+    "title": "6. Statutory Advisory under Bharatiya Nagarik Suraksha Sanhita",
+    "description": "Investigating Officer seeking procedural guidance for instant bank asset freezing.",
+    "method": "POST",
+    "endpoint": "/chat",
+    "payload": {
+      "query": "What is the mandatory procedure under Section 102 BNSS for freezing fraudulent mule bank accounts within 2 hours of complaint?",
+      "session_id": "officer_client_sim_001"
+    },
+    "status_code": 200,
+    "elapsed_ms": 15499.99,
+    "response": {
+      "agent_color": "#10b981",
+      "agent_icon": "\ud83d\udcc4",
+      "agent_label": "Document & Legal Agent",
+      "agent_type": "document_agent",
+      "answer": "**OFFICER INQUIRY: Immediate Asset Freezing (Section 102 BNSS)**\n\n**STATUS:** Critical Operational Procedure\n**TIME CONSTRAINT:** 2 Hours from FIR Registration\n\nUnder the **Bharatiya Nagarik Suraksha Sanhita (BNSS), 2023**, Section 102 provides the legal basis for the attachment of property in cases of economic offenses. While the law does not explicitly mandate a \"2-hour\" hard stop, operational exigency in financial fraud cases requires immediate action to prevent the dissipation of evidence (Section 102(1)).\n\nHere is the **mandatory procedural protocol** for the investigating officer (IO) to ensure compliance and asset preservation:\n\n### **Mandatory Procedure (Operational SOP)**\n\n#### **Phase 1: Immediate Post-Complaint Actions (0\u201330 Minutes)**\n\n1.  **Register FIR (Section 154 BNSS):**\n    *   Register the complaint immediately under relevant sections (e.g., BNS 420, 467, 468, 471 for cheating/forgery).\n    *   **Crucial:** Ensure the FIR explicitly mentions the **\"dissipation of evidence\"** or **\"risk of disappearance of property.\"**\n\n2.  **Secure the \"Mule\" Account Details:**\n    *   Obtain the **Account Number**, **IFSC Code**, **Bank Name**, and **Branch Address** from the complainant.\n    *   **DO NOT** rely solely on the complainant\u2019s knowledge. Ask for the **Transaction Receipt** or **Bank Statement** to verify the details.\n\n3.  **Immediate Bank Intimation (Section 102(1) & 102(2)):**\n    *   Call the designated **Nodal Officer** of the bank branch involved.\n    *   **Requirement:** Submit a written request (or email/fax as per bank protocol) to the Branch Manager requesting a **\"freeze on transactions\"** and a **\"freeze on withdrawals\"** pending police verification.\n    *   **Note:** While the bank may not legally block the account immediately without a court order, this creates a \"paper trail\" of your proactive steps.\n\n#### **Phase 2: Obtaining the Attachment Order (30\u201390 Minutes)**\n\n4.  **Apply for Provisional Attachment (Section 102(1)):**\n    *   File an application before the **Competent Court** (Magistrate of First Class) having jurisdiction over the area.\n    *   **Application Content:** State that the accused is likely to dispose of the property to avoid prosecution.\n    *   **Supporting Documents:** FIR copy, copy of complaint, details of the bank account/property, and evidence of fraud.\n\n5.  **Request for \"Ex-Parte\" or Urgent Hearing:**\n    *   Under **Section 357(3) BNSS**, the Magistrate has the power to pass interim orders.\n    *   Request the Magistrate to issue an order of **Attachment** immediately, citing the urgency of the financial fraud.\n\n#### **Phase 3: Court Order Execution (90\u2013120 Minutes)**\n\n6.  **Receive Attachment Order:**\n    *   The Magistrate will issue an order directing the **Banking Company** to attach the specific property (money in the account).\n\n7.  **Formal Submission to Bank (The \"Freeze\"):**\n    *   Submit the **Court Order** to the **Nodal Officer** of the bank branch.\n    *   The bank is legally obligated to **freeze the account** and **prevent further transactions** under the court order.\n\n---\n\n### **Legal Framework & Key Sections**\n\n",
+      "charts": [],
+      "data_available": true,
+      "executive_decision": null,
+      "handoff_target": null,
+      "provider": "zoho_quickml",
+      "success": true,
+      "suggested_actions": [
+        "Upload Case PDF / FIR Document",
+        "Check Section 65B BSA Requirements",
+        "Review Standard Operating Procedure"
+      ],
+      "visuals_updated": false
+    }
+  },
+  {
+    "title": "7. Citizen e-Complaint Registration (CRUD Create)",
+    "description": "Citizen portal complaint intake saved directly to Zoho Catalyst DataStore.",
+    "method": "POST",
+    "endpoint": "/api/complaints",
+    "payload": {
+      "complainant_name": "Smt. Shailaja Hegde",
+      "contact_phone": "+91 98450 12345",
+      "incident_type": "UPI Phishing Extortion",
+      "incident_location": "HSR Layout Sector 2, Bengaluru",
+      "loss_amount_inr": 350000,
+      "narrative": "Received a deceptive APK link on WhatsApp claiming electricity bill pending. \u20b93.5L debited to unknown UPI handle."
+    },
+    "status_code": 201,
+    "elapsed_ms": 615.12,
+    "response": {
+      "acknowledgement_number": "KSP-COMP-1788254563884",
+      "cloud_synced": false,
+      "created_at": "2026-09-01T09:22:43Z",
+      "status": "PENDING_VERIFICATION",
+      "success": true
+    }
+  },
+  {
+    "title": "8. Schema Drift Automated Retraining Webhook",
+    "description": "Administrative webhook triggered upon quarterly FIR dataset update.",
+    "method": "POST",
+    "endpoint": "/api/admin/trigger_retraining",
+    "payload": {},
+    "status_code": 202,
+    "elapsed_ms": 16.1,
+    "response": {
+      "message": "QuickML retraining jobs dispatched asynchronously",
+      "success": true
+    }
+  }
+]

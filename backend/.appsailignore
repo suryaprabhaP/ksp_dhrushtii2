@@ -1,0 +1,42 @@
+# ==============================================================================
+# Zoho Catalyst AppSail Package Ignore Rules for backend/
+# Reduces deployment bundle from 201.5MB to ~1.05MB (99.5% reduction)
+# ==============================================================================
+
+# 1. Dependency Directories (Installed in cloud via requirements.txt)
+vendor/
+.venv/
+node_modules/
+
+# 2. Local Python Bytecode & Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 3. Documentation & Analysis Vaults
+analysis_vault/
+findings/
+graphify-out/
+*.md
+
+# 4. Offline Training Datasets & Large CSVs
+*.csv
+*.xlsx
+
+# 5. Media & Synthetic Audio
+synthetic_audio/
+*.mp3
+*.wav
+
+# 6. Test Suite & Local Simulation SQLite Databases
+tests/
+scripts/
+generate_5000_geo.py
+generate_5000_stats.py
+generate_production_spatial.py
+generate_quickml_dataset.py
+*.db
+*.sqlite3
+*.log
+audit_trace.jsonl

@@ -1,9 +1,9 @@
 /**
- * KSP Sentinel AI — Investigation API Client (SOLID: SRP)
+ * KSP Sentinel AI — Investigation API Client (SOLID: SRP + DIP)
  * Encapsulates HTTP communication for Phase 3 AI Agent Handoff & Session Memory.
+ * Uses centralized getApiUrl for seamless local & AppSail cloud execution.
  */
-
-const BASE_URL = 'http://127.0.0.1:5000/api/investigation';
+import { getApiUrl } from '../../services/apiClient';
 
 export const InvestigationClient = {
   /**
@@ -13,7 +13,7 @@ export const InvestigationClient = {
    */
   async initInvestigation(payload) {
     try {
-      const response = await fetch(`${BASE_URL}/init`, {
+      const response = await fetch(getApiUrl('/api/investigation/init'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -40,7 +40,7 @@ export const InvestigationClient = {
    */
   async sendMessage(sessionId, message) {
     try {
-      const response = await fetch(`${BASE_URL}/chat`, {
+      const response = await fetch(getApiUrl('/api/investigation/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, message })
@@ -65,7 +65,7 @@ export const InvestigationClient = {
    */
   async getSession(sessionId) {
     try {
-      const response = await fetch(`${BASE_URL}/session/${sessionId}`);
+      const response = await fetch(getApiUrl(`/api/investigation/session/${sessionId}`));
       return await response.json();
     } catch (error) {
       console.error('[InvestigationClient] Failed to get session:', error);
@@ -78,7 +78,7 @@ export const InvestigationClient = {
    */
   async getTickets() {
     try {
-      const response = await fetch(`${BASE_URL}/tickets`);
+      const response = await fetch(getApiUrl('/api/investigation/tickets'));
       return await response.json();
     } catch (error) {
       console.error('[InvestigationClient] Failed to get tickets:', error);
@@ -91,8 +91,8 @@ export const InvestigationClient = {
    */
   async getSuspects(district) {
     try {
-      const url = district ? `${BASE_URL}/suspects?district=${encodeURIComponent(district)}` : `${BASE_URL}/suspects`;
-      const response = await fetch(url);
+      const path = district ? `/api/investigation/suspects?district=${encodeURIComponent(district)}` : '/api/investigation/suspects';
+      const response = await fetch(getApiUrl(path));
       return await response.json();
     } catch (error) {
       console.error('[InvestigationClient] Failed to get suspects:', error);

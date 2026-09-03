@@ -9,6 +9,7 @@ import { parseCSV } from '../analytics/services/datasetStore';
 export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested, onProcessFile }) {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [datasetPurpose, setDatasetPurpose] = useState('auto');
   const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
@@ -52,7 +53,7 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
         }
       }
       if (onProcessFile) {
-        await onProcessFile(file);
+        await onProcessFile(file, datasetPurpose);
       }
       onClose();
     } catch (err) {
@@ -80,7 +81,7 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
         });
       }
       if (onProcessFile) {
-        await onProcessFile(demoFile);
+        await onProcessFile(demoFile, datasetPurpose);
       }
       onClose();
     } catch (err) {
@@ -108,7 +109,7 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
         });
       }
       if (onProcessFile) {
-        await onProcessFile(demoFile);
+        await onProcessFile(demoFile, datasetPurpose);
       }
       onClose();
     } catch (err) {
@@ -287,6 +288,35 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
             >
               {isLoading ? 'Loading...' : 'Load 2.5K ➔'}
             </button>
+          </div>
+        </div>
+
+        {/* PURPOSE SELECTION (TRI-MODAL ROUTING) */}
+        <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>Dataset Purpose (Domain Slot)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {[
+              { id: 'auto', label: '🤖 Auto-Detect', desc: 'Let AI route automatically' },
+              { id: 'analytics', label: '📊 Crime Analytics', desc: 'Replaces Statistical Ledger' },
+              { id: 'network', label: '🕸️ Network Graph', desc: 'Replaces Entity Graph' },
+              { id: 'spatial', label: '🗺️ Geospatial Map', desc: 'Replaces Map Coordinates' }
+            ].map(opt => (
+              <div 
+                key={opt.id}
+                onClick={() => setDatasetPurpose(opt.id)}
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: `1px solid ${datasetPurpose === opt.id ? '#3b82f6' : 'rgba(148, 163, 184, 0.2)'}`,
+                  backgroundColor: datasetPurpose === opt.id ? 'rgba(59, 130, 246, 0.15)' : 'rgba(30, 41, 59, 0.4)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: datasetPurpose === opt.id ? '#60a5fa' : '#cbd5e1' }}>{opt.label}</div>
+                <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px' }}>{opt.desc}</div>
+              </div>
+            ))}
           </div>
         </div>
 

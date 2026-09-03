@@ -20,13 +20,14 @@ venv.bak/
 pip-log.txt
 pip-delete-this-directory.txt
 
-# 2. Build Outputs & Bundles
+# 2. Build Outputs, Bundles & Symlinks/Junctions
 dist/
 dist-ssr/
 build/
 *.local
 .vite/
 .output/
+backend/app
 
 # 3. Environment Variables & Credentials (STRICT EXCLUSION)
 .env
@@ -119,3 +120,13 @@ Thumbs.db
 .vscode/
 *.sublime-workspace
 *.sublime-project
+# Environment Files
+.env
+.env.*
+
+# Deployment Bundles & Local Session DBs
+*.zip
+data_store/
+backend/packages/
+zoho_analytics_credentials.json
+

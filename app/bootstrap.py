@@ -7,8 +7,10 @@ from app.agents.analytical import AnalyticalAgent
 from app.agents.conversational import ConversationalAgent
 from app.agents.data_query import DataQueryAgent
 from app.agents.document import DocumentAgent
+from app.agents.evidence import EvidenceAnalysisAgent
 from app.agents.graph import GraphAgent
 from app.agents.federated import FederatedAgent
+from app.agents.legal import LegalKnowledgeAgent
 from app.agents.pattern import PatternAgent
 from app.agents.spatial import SpatialTacticalAgent
 
@@ -21,11 +23,14 @@ def initialize_system():
     registry.register(ConversationalAgent())
     registry.register(DataQueryAgent())
     registry.register(DocumentAgent())
+    registry.register(EvidenceAnalysisAgent())
+    registry.register(LegalKnowledgeAgent())
     registry.register(GraphAgent())
     registry.register(FederatedAgent())
     registry.register(PatternAgent())
     registry.register(SpatialTacticalAgent())
-    log.info("KSP Sentinel AI: All domain agents initialized and registered (including PatternAgent, GraphAgent & SpatialTacticalAgent).")
+    log.info("KSP Sentinel AI: All domain agents initialized and registered (including LegalKnowledgeAgent & EvidenceAnalysisAgent).")
 
 
 initialize_system()
+

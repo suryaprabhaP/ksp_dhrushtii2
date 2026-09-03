@@ -8,6 +8,17 @@ import SpatialRightDeck from '../components/spatial/SpatialRightDeck';
 import SpatialViewportControls from '../components/spatial/SpatialViewportControls';
 import { useGlobalInvestigation } from '../../context/GlobalInvestigationContext';
 import { InvestigationClient } from '../services/InvestigationClient';
+import { getApiUrl } from '../../services/apiClient';
+import karnatakaDistrictBoundary from '../../assets/geo/Karnataka_District_Boundary.json';
+
+function isValidGeoJSON(data) {
+  return Boolean(
+    data &&
+    typeof data === 'object' &&
+    ((data.type === 'FeatureCollection' && Array.isArray(data.features)) ||
+     (data.type === 'Feature' && data.geometry))
+  );
+}
 
 // Default Color Mapping with Dynamic Fallback Generator (SOLID: Anti-Hardcoding)
 const CATEGORY_COLOR_PALETTE = {
@@ -94,7 +105,7 @@ export default function HotmapView({
   const [showDistricts, setShowDistricts] = useState(true);
   const [showDistrictLabels, setShowDistrictLabels] = useState(true);
   const [boundaryGeoData, setBoundaryGeoData] = useState(null);
-  const [districtGeoData, setDistrictGeoData] = useState(null);
+  const [districtGeoData, setDistrictGeoData] = useState(karnatakaDistrictBoundary);
 
   // ── Multi-Entity Ingestion State ───────────────────────────────────────────
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
@@ -105,13 +116,13 @@ export default function HotmapView({
   // Fetch all active user-uploaded spatial layers from Python backend
   const fetchActiveLayers = useCallback(async () => {
     try {
-      const res = await fetch('/api/spatial/active_layers');
+      const res = await fetch(getApiUrl('/api/spatial/active_layers'));
       const data = await res.json();
       if (data.success) {
         setUploadedPoints(data.points || []);
         setCustomBoundaries(data.custom_boundaries || []);
       }
-      const dsRes = await fetch('/api/spatial/datasets');
+      const dsRes = await fetch(getApiUrl('/api/spatial/datasets'));
       const dsData = await dsRes.json();
       if (dsData.success) {
         setActiveDatasetsCount(dsData.datasets?.length || 1);
@@ -276,28 +287,24 @@ export default function HotmapView({
   // ── Load State & District Boundary GeoJSON from Public GIS ─────────────────
   useEffect(() => {
     let isMounted = true;
+    const rawBase = import.meta.env?.BASE_URL || './';
+    const baseUrl = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
 
-    fetch('/gis/karnataka_state_optimized.geojson')
-      .then(res => {
-        if (!res.ok) throw new Error('Optimized geojson not found');
-        return res.json();
-      })
-      .catch(() => fetch('/gis/karnataka_state.geojson').then(r => r.json()))
+    fetch(`${baseUrl}gis/karnataka_state_optimized.geojson`)
+      .then(res => res.ok ? res.json() : null)
+      .catch(() => fetch(`${baseUrl}gis/karnataka_state.geojson`).then(r => r.ok ? r.json() : null))
       .then(data => {
-        if (isMounted) setBoundaryGeoData(data);
+        if (isMounted && isValidGeoJSON(data)) setBoundaryGeoData(data);
       })
       .catch(err => {
         console.warn('Could not load official state GeoJSON boundary:', err);
       });
 
-    fetch('/gis/karnataka_districts_optimized.geojson')
-      .then(res => {
-        if (!res.ok) throw new Error('Optimized district geojson not found');
-        return res.json();
-      })
-      .catch(() => fetch('/gis/karnataka_districts.geojson').then(r => r.json()))
+    fetch(`${baseUrl}gis/karnataka_districts_optimized.geojson`)
+      .then(res => res.ok ? res.json() : null)
+      .catch(() => fetch(`${baseUrl}gis/karnataka_districts.geojson`).then(r => r.ok ? r.json() : null))
       .then(data => {
-        if (isMounted) setDistrictGeoData(data);
+        if (isMounted && isValidGeoJSON(data)) setDistrictGeoData(data);
       })
       .catch(err => {
         console.warn('Could not load official district GeoJSON boundary:', err);
@@ -395,28 +402,32 @@ export default function HotmapView({
       geoJsonLayerRef.current = null;
     }
 
-    if (showStateBoundary && boundaryGeoData) {
-      const layer = L.geoJSON(boundaryGeoData, {
-        style: {
-          color: activeTileType === 'DARK' ? '#38bdf8' : '#1d4ed8',
-          weight: 2.2,
-          opacity: 0.85,
-          fillColor: activeTileType === 'DARK' ? '#0369a1' : '#60a5fa',
-          fillOpacity: activeTileType === 'DARK' ? 0.05 : 0.03,
-          dashArray: '4, 4'
-        },
-        onEachFeature: (feature, l) => {
-          const name = feature.properties?.name || 'Karnataka Jurisdiction';
-          l.bindTooltip(`<b>🏛️ ${name} State Police Boundary</b>`, {
-            permanent: false,
-            direction: 'center',
-            className: 'ksp-gis-boundary-tooltip'
-          });
-        }
-      }).addTo(map);
+    if (showStateBoundary && isValidGeoJSON(boundaryGeoData)) {
+      try {
+        const layer = L.geoJSON(boundaryGeoData, {
+          style: {
+            color: activeTileType === 'DARK' ? '#38bdf8' : '#1d4ed8',
+            weight: 2.2,
+            opacity: 0.85,
+            fillColor: activeTileType === 'DARK' ? '#0369a1' : '#60a5fa',
+            fillOpacity: activeTileType === 'DARK' ? 0.05 : 0.03,
+            dashArray: '4, 4'
+          },
+          onEachFeature: (feature, l) => {
+            const name = feature.properties?.name || 'Karnataka Jurisdiction';
+            l.bindTooltip(`<b>🏛️ ${name} State Police Boundary</b>`, {
+              permanent: false,
+              direction: 'center',
+              className: 'ksp-gis-boundary-tooltip'
+            });
+          }
+        }).addTo(map);
 
-      layer.bringToBack();
-      geoJsonLayerRef.current = layer;
+        layer.bringToBack();
+        geoJsonLayerRef.current = layer;
+      } catch (err) {
+        console.warn('Could not render state boundary GeoJSON:', err);
+      }
     }
   }, [showStateBoundary, boundaryGeoData, activeTileType]);
 
@@ -434,10 +445,11 @@ export default function HotmapView({
       districtLabelsLayerRef.current = null;
     }
 
-    if (showDistricts && districtGeoData) {
-      const labelsGroup = L.layerGroup();
+    if (showDistricts && isValidGeoJSON(districtGeoData)) {
+      try {
+        const labelsGroup = L.layerGroup();
 
-      const layer = L.geoJSON(districtGeoData, {
+        const layer = L.geoJSON(districtGeoData, {
         style: (feature) => {
           const dName = feature?.properties?.district_name || feature?.properties?.name || '';
           const isSelected = (selectedDivision && selectedDivision !== 'ALL' && selectedDivision.toLowerCase().includes(dName.toLowerCase())) || 
@@ -533,8 +545,11 @@ export default function HotmapView({
         labelsGroup.addTo(map);
         districtLabelsLayerRef.current = labelsGroup;
       }
+    } catch (err) {
+      console.warn('Could not render district GeoJSON:', err);
     }
-  }, [showDistricts, showDistrictLabels, districtGeoData, activeTileType, selectedDivision, searchQuery, selectedDistrictName, districtIncidentStats]);
+  }
+}, [showDistricts, showDistrictLabels, districtGeoData, activeTileType, selectedDivision, searchQuery, selectedDistrictName, districtIncidentStats]);
 
   // ── Render Custom Vector Boundary Layers ───────────────────────────────────
   useEffect(() => {
@@ -550,26 +565,30 @@ export default function HotmapView({
       const layerGroup = L.layerGroup();
 
       customBoundaries.forEach((boundary) => {
-        if (!boundary.geojson) return;
-        const bLayer = L.geoJSON(boundary.geojson, {
-          style: {
-            color: '#f59e0b',
-            weight: 2,
-            opacity: 0.9,
-            fillColor: '#fbbf24',
-            fillOpacity: 0.12,
-            dashArray: '6, 6'
-          },
-          onEachFeature: (feature, l) => {
-            const name = feature.properties?.name || boundary.name || 'Custom Spatial Boundary';
-            l.bindTooltip(`<b>🚩 Custom Overlay: ${name}</b>`, {
-              permanent: false,
-              direction: 'center',
-              className: 'ksp-gis-boundary-tooltip'
-            });
-          }
-        });
-        layerGroup.addLayer(bLayer);
+        if (!isValidGeoJSON(boundary?.geojson)) return;
+        try {
+          const bLayer = L.geoJSON(boundary.geojson, {
+            style: {
+              color: '#f59e0b',
+              weight: 2,
+              opacity: 0.9,
+              fillColor: '#fbbf24',
+              fillOpacity: 0.12,
+              dashArray: '6, 6'
+            },
+            onEachFeature: (feature, l) => {
+              const name = feature.properties?.name || boundary.name || 'Custom Spatial Boundary';
+              l.bindTooltip(`<b>🚩 Custom Overlay: ${name}</b>`, {
+                permanent: false,
+                direction: 'center',
+                className: 'ksp-gis-boundary-tooltip'
+              });
+            }
+          });
+          layerGroup.addLayer(bLayer);
+        } catch (err) {
+          console.warn('Error rendering custom boundary:', err);
+        }
       });
 
       layerGroup.addTo(map);
@@ -584,7 +603,7 @@ export default function HotmapView({
       return;
     }
     try {
-      const res = await fetch('/api/spatial/clusters', {
+      const res = await fetch(getApiUrl('/api/spatial/clusters'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -597,7 +616,7 @@ export default function HotmapView({
         })
       });
       const data = await res.json();
-      if (data.success && data.geojson) {
+      if (data.success && isValidGeoJSON(data.geojson)) {
         setHotspotsData(data.geojson);
       }
     } catch (err) {
@@ -612,7 +631,7 @@ export default function HotmapView({
       return;
     }
     try {
-      const res = await fetch('/api/spatial/heatmap', {
+      const res = await fetch(getApiUrl('/api/spatial/heatmap'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -771,75 +790,79 @@ export default function HotmapView({
       hotspotsLayerRef.current = null;
     }
 
-    if (viewMode !== 'HOTSPOTS' || !hotspotsData || !hotspotsData.features || hotspotsData.features.length === 0) {
+    if (viewMode !== 'HOTSPOTS' || !isValidGeoJSON(hotspotsData) || !hotspotsData.features || hotspotsData.features.length === 0) {
       return;
     }
 
-    const hotspotsGroup = L.layerGroup();
+    try {
+      const hotspotsGroup = L.layerGroup();
 
-    const geoLayer = L.geoJSON(hotspotsData, {
-      style: (feature) => {
-        const threatColor = feature.properties?.threat_color || '#ef4444';
-        const isSelected = selectedHotspot?.cluster_id === feature.properties?.cluster_id;
-        return {
-          color: isSelected ? '#ffffff' : threatColor,
-          weight: isSelected ? 3.5 : 2.5,
-          opacity: 0.95,
-          fillColor: threatColor,
-          fillOpacity: isSelected ? 0.45 : 0.28,
-          dashArray: '5, 5'
-        };
-      },
-      onEachFeature: (feature, layer) => {
-        const props = feature.properties || {};
-        const centroid = props.centroid || [12.97, 77.59];
+      const geoLayer = L.geoJSON(hotspotsData, {
+        style: (feature) => {
+          const threatColor = feature.properties?.threat_color || '#ef4444';
+          const isSelected = selectedHotspot?.cluster_id === feature.properties?.cluster_id;
+          return {
+            color: isSelected ? '#ffffff' : threatColor,
+            weight: isSelected ? 3.5 : 2.5,
+            opacity: 0.95,
+            fillColor: threatColor,
+            fillOpacity: isSelected ? 0.45 : 0.28,
+            dashArray: '5, 5'
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const props = feature.properties || {};
+          const centroid = props.centroid || [12.97, 77.59];
 
-        layer.on('click', (e) => {
-          L.DomEvent.stopPropagation(e);
-          setSelectedHotspot(props);
-          setActiveDeckTab('DOSSIER');
-          setIsDeckCollapsed(false);
-          const bounds = layer.getBounds();
-          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
-        });
+          layer.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            setSelectedHotspot(props);
+            setActiveDeckTab('DOSSIER');
+            setIsDeckCollapsed(false);
+            const bounds = layer.getBounds();
+            map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
+          });
 
-        const threatClass = (props.threat_level || 'HIGH').toLowerCase();
-        const badgeHtml = `
-          <div class="ksp-hotspot-label-card ${threatClass}" title="Click to inspect Hotspot intelligence">
-            <span class="hotspot-pulse-dot" style="background: ${props.threat_color};"></span>
-            <span class="hotspot-tag">#${props.rank} ${props.primary_crime}</span>
-            <span class="hotspot-count-pill">${props.incident_count} Cases</span>
-          </div>
-        `;
+          const threatClass = (props.threat_level || 'HIGH').toLowerCase();
+          const badgeHtml = `
+            <div class="ksp-hotspot-label-card ${threatClass}" title="Click to inspect Hotspot intelligence">
+              <span class="hotspot-pulse-dot" style="background: ${props.threat_color};"></span>
+              <span class="hotspot-tag">#${props.rank} ${props.primary_crime}</span>
+              <span class="hotspot-count-pill">${props.incident_count} Cases</span>
+            </div>
+          `;
 
-        const badgeIcon = L.divIcon({
-          html: badgeHtml,
-          className: 'ksp-hotspot-label-container',
-          iconSize: [140, 24],
-          iconAnchor: [70, 12]
-        });
+          const badgeIcon = L.divIcon({
+            html: badgeHtml,
+            className: 'ksp-hotspot-label-container',
+            iconSize: [140, 24],
+            iconAnchor: [70, 12]
+          });
 
-        const badgeMarker = L.marker([centroid[0], centroid[1]], {
-          icon: badgeIcon,
-          interactive: true
-        });
+          const badgeMarker = L.marker([centroid[0], centroid[1]], {
+            icon: badgeIcon,
+            interactive: true
+          });
 
-        badgeMarker.on('click', (e) => {
-          L.DomEvent.stopPropagation(e);
-          setSelectedHotspot(props);
-          setActiveDeckTab('DOSSIER');
-          setIsDeckCollapsed(false);
-          const bounds = layer.getBounds();
-          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
-        });
+          badgeMarker.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            setSelectedHotspot(props);
+            setActiveDeckTab('DOSSIER');
+            setIsDeckCollapsed(false);
+            const bounds = layer.getBounds();
+            map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
+          });
 
-        hotspotsGroup.addLayer(badgeMarker);
-      }
-    });
+          hotspotsGroup.addLayer(badgeMarker);
+        }
+      });
 
-    hotspotsGroup.addLayer(geoLayer);
-    hotspotsGroup.addTo(map);
-    hotspotsLayerRef.current = hotspotsGroup;
+      hotspotsGroup.addLayer(geoLayer);
+      hotspotsGroup.addTo(map);
+      hotspotsLayerRef.current = hotspotsGroup;
+    } catch (err) {
+      console.warn('Error rendering hotspots layer:', err);
+    }
   }, [hotspotsData, viewMode, selectedHotspot]);
 
   // ── Zoom to Plotted Bounds ──────────────────────────────────────────────────

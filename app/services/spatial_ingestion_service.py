@@ -16,8 +16,10 @@ SOLID Architecture:
 """
 
 import io
+import csv
 import json
 import logging
+import math
 import os
 import re
 import time
@@ -25,8 +27,6 @@ import uuid
 import zipfile
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional, Tuple, Any
-
-import pandas as pd
 
 log = logging.getLogger("spatial.ingestion")
 
@@ -130,21 +130,55 @@ class SpatialIngestionService:
         """
         ENTITY B: Ingest CSV / Excel / TSV files containing point coordinates.
         Preserves all extra tabular columns for drilldown analysis charts.
+        Pure Python implementation (Zero pandas dependency).
         """
         filename_lower = filename.lower()
-        if filename_lower.endswith(".csv") or filename_lower.endswith(".tsv"):
+        raw_rows: List[Dict[str, Any]] = []
+        columns: List[str] = []
+
+        if filename_lower.endswith((".csv", ".tsv", ".txt")):
             delimiter = "\t" if filename_lower.endswith(".tsv") else ","
-            df = pd.read_csv(io.BytesIO(file_bytes), sep=delimiter)
-        elif filename_lower.endswith(".xlsx") or filename_lower.endswith(".xls"):
-            df = pd.read_excel(io.BytesIO(file_bytes))
+            try:
+                text_content = file_bytes.decode("utf-8-sig", errors="replace")
+            except Exception:
+                text_content = file_bytes.decode("latin-1", errors="replace")
+            reader = csv.DictReader(io.StringIO(text_content), delimiter=delimiter)
+            columns = reader.fieldnames or []
+            for row in reader:
+                raw_rows.append(dict(row))
+
+        elif filename_lower.endswith((".xlsx", ".xls")):
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
+            sheet = wb.active
+            rows_iter = sheet.iter_rows(values_only=True)
+            header_row = next(rows_iter, None)
+            if header_row:
+                columns = [str(h) if h is not None else f"col_{i}" for i, h in enumerate(header_row)]
+                for r in rows_iter:
+                    row_dict = {}
+                    for i, val in enumerate(r):
+                        col_key = columns[i] if i < len(columns) else f"col_{i}"
+                        row_dict[col_key] = val
+                    raw_rows.append(row_dict)
+
         elif filename_lower.endswith(".json"):
             data_json = json.loads(file_bytes.decode("utf-8", errors="replace"))
-            df = pd.DataFrame(data_json if isinstance(data_json, list) else [data_json])
+            if isinstance(data_json, list):
+                raw_rows = data_json
+            elif isinstance(data_json, dict):
+                raw_rows = data_json.get("records") or data_json.get("data") or [data_json]
+            if raw_rows:
+                columns = list(raw_rows[0].keys())
+
         else:
             # Fallback to standard CSV
-            df = pd.read_csv(io.BytesIO(file_bytes))
+            text_content = file_bytes.decode("utf-8-sig", errors="replace")
+            reader = csv.DictReader(io.StringIO(text_content))
+            columns = reader.fieldnames or []
+            for row in reader:
+                raw_rows.append(dict(row))
 
-        columns = list(df.columns)
         lat_col, lon_col = cls._detect_coordinate_columns(columns)
 
         if not lat_col or not lon_col:
@@ -156,17 +190,21 @@ class SpatialIngestionService:
         parsed_records: List[Dict[str, Any]] = []
         skipped_count = 0
 
-        for idx, row in df.iterrows():
+        for idx, row in enumerate(raw_rows):
             try:
-                lat_val = float(row[lat_col])
-                lon_val = float(row[lon_col])
-
-                # Validate geographic bounding box (Karnataka approx: Lat 11.5-18.5, Lon 74.0-78.6, or general global)
-                if pd.isna(lat_val) or pd.isna(lon_val) or abs(lat_val) > 90 or abs(lon_val) > 180:
+                lat_raw = row.get(lat_col)
+                lon_raw = row.get(lon_col)
+                if lat_raw is None or lon_raw is None or str(lat_raw).strip() == "" or str(lon_raw).strip() == "":
                     skipped_count += 1
                     continue
 
-                # Build record preserving all metadata attributes
+                lat_val = float(str(lat_raw).strip())
+                lon_val = float(str(lon_raw).strip())
+
+                if math.isnan(lat_val) or math.isnan(lon_val) or abs(lat_val) > 90 or abs(lon_val) > 180:
+                    skipped_count += 1
+                    continue
+
                 rec = {
                     "id": f"REC-{idx+1:05d}",
                     "latitude": lat_val,
@@ -176,9 +214,8 @@ class SpatialIngestionService:
                 }
 
                 for col in columns:
-                    val = row[col]
-                    clean_val = None if pd.isna(val) else (str(val) if not isinstance(val, (int, float, bool)) else val)
-                    rec[col] = clean_val
+                    val = row.get(col)
+                    rec[col] = val
 
                 # Canonical standard aliases for UI seamless compatibility
                 if "crime_category" not in rec and "Crime_Category" not in rec:
@@ -200,12 +237,12 @@ class SpatialIngestionService:
                             break
 
                 parsed_records.append(rec)
-            except Exception as e:
+            except Exception:
                 skipped_count += 1
                 continue
 
         stats = {
-            "total_rows": len(df),
+            "total_rows": len(raw_rows),
             "parsed_records": len(parsed_records),
             "skipped_records": skipped_count,
             "detected_lat_column": lat_col,

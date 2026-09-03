@@ -1,0 +1,637 @@
+{
+  "timestamp": "2026-09-01T08:27:22Z",
+  "total_endpoints": 33,
+  "passed": 33,
+  "failed": 0,
+  "pass_rate_pct": 100.0,
+  "avg_latency_ms": 375.95,
+  "p95_latency_ms": 2728.32,
+  "endpoints": [
+    {
+      "category": "Health",
+      "name": "System Health Check",
+      "method": "GET",
+      "endpoint": "/api/health",
+      "status_code": 200,
+      "elapsed_ms": 1.57,
+      "passed": true,
+      "details": {
+        "active_provider": "groq",
+        "architecture": "SOLID Modular Micro-Backend v2.0 (Zoho Catalyst Native)",
+        "catalyst_project_id": "54626000000013049",
+        "gemini": true,
+        "groq": true,
+        "registered_agents": [
+          "ANALYTICAL",
+          "CONVERSATIONAL",
+          "DATA_QUERY",
+          "DOCUMENT",
+          "GRAPH",
+          "FEDERATED",
+          "TACTICAL_PATTERN",
+          "SPATIAL_TACTICAL"
+        ],
+        "status": "ok",
+        "zoho_catalyst": false
+      }
+    },
+    {
+      "category": "Analytics",
+      "name": "Executive Analytics Seed",
+      "method": "GET",
+      "endpoint": "/api/analytics",
+      "status_code": 200,
+      "elapsed_ms": 0.0,
+      "passed": true,
+      "details": {
+        "total_cases": 14820
+      }
+    },
+    {
+      "category": "GIS",
+      "name": "Karnataka Sector GIS Markers",
+      "method": "GET",
+      "endpoint": "/api/map_markers",
+      "status_code": 200,
+      "elapsed_ms": 0.0,
+      "passed": true,
+      "details": {
+        "markers_count": 11
+      }
+    },
+    {
+      "category": "Security",
+      "name": "Section 65B Metadata Extraction",
+      "method": "POST",
+      "endpoint": "/api/extract_metadata",
+      "status_code": 200,
+      "elapsed_ms": 0.0,
+      "passed": true,
+      "details": {
+        "gps": {
+          "latitude": "12.9716",
+          "location_name": "Bengaluru Central Sector",
+          "longitude": "77.5946"
+        },
+        "ip_address": "103.241.136.42",
+        "sha256": "95ec2f496dd81cc6aeda530361beecc7b2050b97169adacd440bdf5ef05daaa1",
+        "threat_category": "Cyber Financial Phishing & Mule UPI Extortion",
+        "threat_severity": "Critical (Level 5 Escalation)",
+        "timestamp": "2026-09-01T08:27:09Z"
+      }
+    },
+    {
+      "category": "Chat",
+      "name": "Analytical Intent Dispatch",
+      "method": "POST",
+      "endpoint": "/chat",
+      "status_code": 200,
+      "elapsed_ms": 5903.64,
+      "passed": true,
+      "details": {
+        "agent_type": "document_agent",
+        "has_charts": false
+      }
+    },
+    {
+      "category": "Chat",
+      "name": "Conversational Statutory Query",
+      "method": "POST",
+      "endpoint": "/chat",
+      "status_code": 200,
+      "elapsed_ms": 2728.32,
+      "passed": true,
+      "details": {
+        "agent_type": "document_agent"
+      }
+    },
+    {
+      "category": "Chat",
+      "name": "Guardrail Interception",
+      "method": "POST",
+      "endpoint": "/chat",
+      "status_code": 200,
+      "elapsed_ms": 6.0,
+      "passed": true,
+      "details": {
+        "agent_type": "guardrail_agent",
+        "icon": "\ud83d\uded1"
+      }
+    },
+    {
+      "category": "Chat",
+      "name": "Empty Query Validation",
+      "method": "POST",
+      "endpoint": "/chat",
+      "status_code": 400,
+      "elapsed_ms": 3.01,
+      "passed": true,
+      "details": {
+        "error": "Query cannot be empty",
+        "success": false
+      }
+    },
+    {
+      "category": "Ingestion",
+      "name": "Tabular CSV Ingestion to DuckDB",
+      "method": "POST",
+      "endpoint": "/api/upload_dataset",
+      "status_code": 200,
+      "elapsed_ms": 577.86,
+      "passed": true,
+      "details": {
+        "active_tables": [
+          "crime_dataset"
+        ],
+        "baseline_charts": [
+          {
+            "datasets": [
+              {
+                "backgroundColor": [
+                  "#0284c7",
+                  "#0ea5e9",
+                  "#38bdf8"
+                ],
+                "borderColor": "#0284c7",
+                "borderRadius": 6,
+                "data": [
+                  1,
+                  1,
+                  1
+                ],
+                "label": "Reported Incidents"
+              }
+            ],
+            "id": "chart-ranking-bar",
+            "labels": [
+              "Mysuru City",
+              "Bengaluru City",
+              "Belagavi"
+            ],
+            "subtitle": "Ranked jurisdictional volume across 3 active records",
+            "summary_annotation": "Highest volume recorded at Mysuru City (1 cases), requiring prioritized patrol dispatch.",
+            "threshold_lines": [
+              {
+                "color": "#ef4444",
+                "label": "Mean Caseload",
+                "value": 1
+              }
+            ],
+            "title": "Top District by Case Caseload",
+            "type": "horizontal_bar"
+          },
+          {
+            "datasets": [
+              {
+                "backgroundColor": "rgba(56, 189, 248, 0.15)",
+                "borderColor": "#38bdf8",
+                "borderWidth": 2.5,
+                "data": [
+                  1
+                ],
+                "fill": false,
+                "label": "Mysuru City",
+                "pointBackgroundColor": "#38bdf8",
+                "pointRadius": 4,
+                "tension": 0.35
+              },
+              {
+                "backgroundColor": "rgba(249, 115, 22, 0.12)",
+                "borderColor": "#f97316",
+                "borderWidth": 2.5,
+                "data": [
+                  1
+                ],
+                "fill": false,
+                "label": "Bengaluru City",
+                "pointBackgroundColor": "#f97316",
+                "pointRadius": 4,
+                "tension": 0.35
+              },
+              {
+                "backgroundColor": "rgba(168, 85, 247, 0.12)",
+                "borderColor": "#a855f7",
+                "borderWidth": 2.5,
+                "data": [
+                  1
+                ],
+                "fill": false,
+                "label": "Belagavi",
+                "pointBackgroundColor": "#a855f7",
+                "pointRadius": 4,
+                "tension": 0.35
+              }
+            ],
+            "id": "chart-trajectory-line",
+            "labels": [
+              "2026"
+            ],
+            "subtitle": "Temporal case velocity across 1 observation windows",
+            "summary_annotation": "Temporal momentum indicates peak operational load in 2026, necessitating pre-emptive patrols.",
+            "threshold_lines": [
+              {
+                "color": "#ef4444",
+                "label": "Surge Threshold",
+                "value": 25
+              }
+            ],
+            "title": "Monthly Incident Trajectory by Top Jurisdictions",
+            "type": "line"
+          }
+        ],
+        "classification": "ANALYTICAL",
+        "columns": [
+          "district",
+          "crime_type",
+          "year",
+          "count",
+          "severity"
+        ],
+        "doc_type": "DuckDB In-Memory Table",
+        "file_size": "0.1 KB",
+        "filename": "audit_sample.csv",
+        "kpis": {
+          "active_table_name": "crime_dataset",
+          "avg_resolution_days": "N/A",
+          "high_risk_alerts": "2",
+          "total_financial_loss": "\u20b90",
+          "total_incidents": "3"
+        },
+        "message": "Successfully ingested 3 records into DuckDB session 'test_audit_session' [ANALYTICAL]",
+        "row_count": 3,
+        "session_id": "test_audit_session",
+        "success": true,
+        "table_name": "crime_dataset",
+        "visuals_updated": true
+      }
+    },
+    {
+      "category": "Ingestion",
+      "name": "Document Markdown Ingestion to RAG",
+      "method": "POST",
+      "endpoint": "/api/upload_document",
+      "status_code": 200,
+      "elapsed_ms": 6.45,
+      "passed": true,
+      "details": {
+        "chunk_count": 1,
+        "doc_type": "Session DuckDB Document Index",
+        "file_size": "0.2 KB",
+        "filename": "cyber_sop.md",
+        "message": "Successfully indexed 'cyber_sop.md' (1 chunks) into session 'test_audit_session'. Document Agent is ready to synthesize answers.",
+        "session_id": "test_audit_session",
+        "success": true,
+        "visuals_updated": false
+      }
+    },
+    {
+      "category": "Ingestion",
+      "name": "List Session Datasets & Docs",
+      "method": "GET",
+      "endpoint": "/api/datasets",
+      "status_code": 200,
+      "elapsed_ms": 1.15,
+      "passed": true,
+      "details": {
+        "documents": [
+          {
+            "chunk_count": 1,
+            "doc_name": "cyber_sop.md",
+            "file_size_kb": 0.2,
+            "ingested_at": "2026-09-01 13:57:19"
+          }
+        ],
+        "has_documents": true,
+        "has_tabular_dataset": true,
+        "session_id": "test_audit_session",
+        "success": true,
+        "tabular_tables": [
+          "crime_dataset"
+        ]
+      }
+    },
+    {
+      "category": "RAG",
+      "name": "Vector/Keyword Chunk Retrieval",
+      "method": "POST",
+      "endpoint": "/api/rag_search",
+      "status_code": 200,
+      "elapsed_ms": 1.13,
+      "passed": true,
+      "details": {
+        "results_count": 1
+      }
+    },
+    {
+      "category": "Graph",
+      "name": "Topology Network Graph Generation",
+      "method": "GET",
+      "endpoint": "/api/network_graph",
+      "status_code": 200,
+      "elapsed_ms": 2.9,
+      "passed": true,
+      "details": {
+        "node_count": 9,
+        "edges": 9
+      }
+    },
+    {
+      "category": "Forensics",
+      "name": "Bilingual Speech Translation & BNS Map",
+      "method": "POST",
+      "endpoint": "/api/audio_transcribe_and_stage",
+      "status_code": 200,
+      "elapsed_ms": 1974.25,
+      "passed": true,
+      "details": {
+        "stage_id": "stg_1788251241177",
+        "bns": [
+          {
+            "desc": "Whoever, by deceiving any person, fraudulently or dishonestly induces the person so deceived to deliver any property to any person, or to make, alter or destroy the whole or any part of a valuable security, or anything which signifies a valuable security, or which is in respect of any debt, or to do or omit to do anything which he would not do or would do if he were not so deceived, and by so deceiving does fraudulently or dishonestly cause that person to do or omit to do the act to his own damage or loss, shall be punished with imprisonment of either description for a term which may extend to three years, and shall also be liable to fine.",
+            "ipc_equivalent": "Section 420 IPC",
+            "section": "Section 318(1) BNS",
+            "title": "Cheating"
+          },
+          {
+            "desc": "Whoever commits the offence of cheating and thereby dishonestly induces the person deceived to deliver any property to any person, or to make, alter or destroy the whole or any part of a valuable security, or anything which signifies a valuable security, or which is in respect of any debt, or to do or omit to do anything which he would not do or would do if he were not so deceived, and by so deceiving does fraudulently or dishonestly cause that person to do or omit to do the act to his own damage or loss, shall be punished with imprisonment of either description for a term which may extend to seven years, and shall also be liable to fine.",
+            "ipc_equivalent": "Section 420 IPC",
+            "section": "Section 318(2) BNS",
+            "title": "Cheating and thereby dishonestly inducing delivery of property, etc."
+          },
+          {
+            "desc": "Whoever, being in a position of trust, commits the offence of cheating, shall be punished with imprisonment of either description for a term which may extend to ten years, and shall also be liable to fine.",
+            "ipc_equivalent": "Section 420 IPC (Aggravated)",
+            "section": "Section 319 BNS",
+            "title": "Cheating by person in position of trust, etc."
+          }
+        ]
+      }
+    },
+    {
+      "category": "Forensics",
+      "name": "Fetch Staged Audio Recordings",
+      "method": "GET",
+      "endpoint": "/api/audio_staged/<session>",
+      "status_code": 200,
+      "elapsed_ms": 2.5,
+      "passed": true,
+      "details": {
+        "count": 1
+      }
+    },
+    {
+      "category": "Forensics",
+      "name": "Confirm & Inject Audio to RAG Index",
+      "method": "POST",
+      "endpoint": "/api/audio_confirm_inject",
+      "status_code": 200,
+      "elapsed_ms": 4.49,
+      "passed": true,
+      "details": {
+        "chunk_count": 2,
+        "doc_name": "audio_statement_stg_1788251241177.md",
+        "file_size_kb": 1.01,
+        "message": "Audio evidence indexed as .md context. Chatbot RAG is now live.",
+        "session_id": "test_audit_session",
+        "stage_id": "stg_1788251241177",
+        "success": true
+      }
+    },
+    {
+      "category": "Forensics",
+      "name": "Layered Mule Financial Flow Graph",
+      "method": "POST",
+      "endpoint": "/api/mule_trail",
+      "status_code": 200,
+      "elapsed_ms": 1.01,
+      "passed": true,
+      "details": {
+        "nodes": 8,
+        "flow": 850000
+      }
+    },
+    {
+      "category": "Spatial",
+      "name": "List Geospatial Datasets",
+      "method": "GET",
+      "endpoint": "/api/spatial/datasets",
+      "status_code": 200,
+      "elapsed_ms": 1.32,
+      "passed": true,
+      "details": {
+        "datasets": 2
+      }
+    },
+    {
+      "category": "Spatial",
+      "name": "DBSCAN Spatial Hotspot Clustering",
+      "method": "GET",
+      "endpoint": "/api/spatial/clusters",
+      "status_code": 200,
+      "elapsed_ms": 46.83,
+      "passed": true,
+      "details": {
+        "features": 5
+      }
+    },
+    {
+      "category": "Spatial",
+      "name": "Spatial Heatmap Points",
+      "method": "GET",
+      "endpoint": "/api/spatial/heatmap",
+      "status_code": 200,
+      "elapsed_ms": 5.49,
+      "passed": true,
+      "details": {
+        "points_count": 500
+      }
+    },
+    {
+      "category": "Spatial",
+      "name": "Combined Active Spatial Layers",
+      "method": "GET",
+      "endpoint": "/api/spatial/active_layers",
+      "status_code": 200,
+      "elapsed_ms": 6.01,
+      "passed": true,
+      "details": {
+        "active_points": 500
+      }
+    },
+    {
+      "category": "Calendar",
+      "name": "Get Operational Calendar Events",
+      "method": "GET",
+      "endpoint": "/api/calendar/events",
+      "status_code": 200,
+      "elapsed_ms": 1.0,
+      "passed": true,
+      "details": {
+        "events_count": 3
+      }
+    },
+    {
+      "category": "Calendar",
+      "name": "Create New Duty Event",
+      "method": "POST",
+      "endpoint": "/api/calendar/events",
+      "status_code": 201,
+      "elapsed_ms": 1.0,
+      "passed": true,
+      "details": {
+        "created_id": "EVT-KSP-ECBFE4"
+      }
+    },
+    {
+      "category": "Calendar",
+      "name": "Delete Duty Event",
+      "method": "DELETE",
+      "endpoint": "/api/calendar/events/EVT-KSP-ECBFE4",
+      "status_code": 200,
+      "elapsed_ms": 0.0,
+      "passed": true,
+      "details": {
+        "message": "Event 'EVT-KSP-ECBFE4' deleted",
+        "success": true
+      }
+    },
+    {
+      "category": "Portals",
+      "name": "Citizen e-Complaint Registration",
+      "method": "POST",
+      "endpoint": "/api/complaints",
+      "status_code": 201,
+      "elapsed_ms": 203.71,
+      "passed": true,
+      "details": {
+        "ack_no": "KSP-COMP-1788251241264",
+        "cloud_synced": false
+      }
+    },
+    {
+      "category": "Portals",
+      "name": "List e-Complaints",
+      "method": "GET",
+      "endpoint": "/api/complaints",
+      "status_code": 200,
+      "elapsed_ms": 206.1,
+      "passed": true,
+      "details": {
+        "count": 1
+      }
+    },
+    {
+      "category": "Portals",
+      "name": "Passport Verification Intake",
+      "method": "POST",
+      "endpoint": "/api/passports",
+      "status_code": 201,
+      "elapsed_ms": 235.81,
+      "passed": true,
+      "details": {
+        "cloud_synced": false,
+        "record": {
+          "AadhaarNumber": "XXXX-XXXX-9012",
+          "ApplicantName": "Rohan Deshmukh",
+          "ApplicationId": "PV-2026-1788251241674",
+          "ApplicationPriority": "HIGH",
+          "ApplicationStatus": "PENDING",
+          "AssignedConstable": "",
+          "DateOfBirth": "1990-01-01",
+          "FieldVisitCompleted": false,
+          "Gender": "Unknown",
+          "PassportType": "Fresh Normal",
+          "PoliceStation": "Indiranagar PS",
+          "SubDivision": "",
+          "TravelCountry": "",
+          "TravelPurpose": ""
+        },
+        "success": true
+      }
+    },
+    {
+      "category": "Portals",
+      "name": "List Passport Applications",
+      "method": "GET",
+      "endpoint": "/api/passports",
+      "status_code": 200,
+      "elapsed_ms": 206.97,
+      "passed": true,
+      "details": {
+        "count": 1
+      }
+    },
+    {
+      "category": "OSINT",
+      "name": "Fetch Social Threat Feed",
+      "method": "GET",
+      "endpoint": "/api/mcp/social_feed",
+      "status_code": 200,
+      "elapsed_ms": 1.04,
+      "passed": true,
+      "details": {
+        "posts": 4
+      }
+    },
+    {
+      "category": "Investigation",
+      "name": "Initialize Spatial Investigation Session",
+      "method": "POST",
+      "endpoint": "/api/investigation/init",
+      "status_code": 201,
+      "elapsed_ms": 2.0,
+      "passed": true,
+      "details": {
+        "session_id": "inv_2f48490e6fda"
+      }
+    },
+    {
+      "category": "Investigation",
+      "name": "Spatial Investigation Chat Turn",
+      "method": "POST",
+      "endpoint": "/api/investigation/chat",
+      "status_code": 200,
+      "elapsed_ms": 270.58,
+      "passed": true,
+      "details": {
+        "tools_executed": 1
+      }
+    },
+    {
+      "category": "Zia AI",
+      "name": "Face Analytics & Demographics",
+      "method": "POST",
+      "endpoint": "/api/zia/face_analytics",
+      "status_code": 200,
+      "elapsed_ms": 2.95,
+      "passed": true,
+      "details": {
+        "attributes": {
+          "age_range": "25-34",
+          "confidence": 0.94,
+          "emotion": "Neutral",
+          "gender": "Male"
+        },
+        "detected_faces": 1,
+        "provider": "zoho_zia_face_analytics",
+        "success": true
+      }
+    },
+    {
+      "category": "Zia AI",
+      "name": "Identity Scanner e-KYC",
+      "method": "POST",
+      "endpoint": "/api/zia/identity_scanner",
+      "status_code": 200,
+      "elapsed_ms": 1.39,
+      "passed": true,
+      "details": {
+        "confidence_score": 0.96,
+        "doc_type": "AADHAAR",
+        "provider": "zoho_zia_identity_scanner",
+        "success": true,
+        "verification_status": "VERIFIED_VALID"
+      }
+    }
+  ]
+}

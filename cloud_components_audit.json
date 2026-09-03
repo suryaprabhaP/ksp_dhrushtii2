@@ -1,0 +1,83 @@
+[
+  {
+    "service": "Zoho Accounts OAuth",
+    "endpoint": "https://accounts.zoho.in/oauth/v2/token",
+    "method": "POST",
+    "status": "PASS",
+    "status_code": 200,
+    "latency_ms": 0.0,
+    "message": "OAuth Token Active & Cached"
+  },
+  {
+    "service": "Zoho QuickML RAG",
+    "endpoint": "https://console.catalyst.zoho.in/quickml/v1/project/54626000000013049/rag/answer",
+    "method": "POST",
+    "status": "FAIL",
+    "status_code": 401,
+    "latency_ms": 177.47,
+    "message": "OAuth Scope/Token Expired: {\"code\":\"INVALID_OAUTHTOKEN\",\"message\":\"INVALID_OAUTHTOKEN\"}"
+  },
+  {
+    "service": "Catalyst DS (eComplaints)",
+    "endpoint": "https://api.catalyst.zoho.in/baas/v1/project/54626000000013049/table/54626000000093817/row",
+    "method": "GET",
+    "status": "FAIL",
+    "status_code": 401,
+    "latency_ms": 112.26,
+    "message": "Token Scope Mismatch / Unauthorized (Local SQLite Resilient Active)"
+  },
+  {
+    "service": "Catalyst DS (Passports)",
+    "endpoint": "https://api.catalyst.zoho.in/baas/v1/project/54626000000013049/table/54626000000093001/row",
+    "method": "GET",
+    "status": "FAIL",
+    "status_code": 401,
+    "latency_ms": 100.01,
+    "message": "Token Scope Mismatch / Unauthorized (Local SQLite Resilient Active)"
+  },
+  {
+    "service": "Catalyst DS (Police FIRs)",
+    "endpoint": "https://api.catalyst.zoho.in/baas/v1/project/54626000000013049/table/54626000000109574/row",
+    "method": "GET",
+    "status": "FAIL",
+    "status_code": 401,
+    "latency_ms": 104.54,
+    "message": "Token Scope Mismatch / Unauthorized (Local SQLite Resilient Active)"
+  },
+  {
+    "service": "Catalyst Redis Cache",
+    "endpoint": "https://api.catalyst.zoho.in/baas/v1/project/54626000000013049/cache/segment/54626000000130035/item",
+    "method": "GET",
+    "status": "PASS",
+    "status_code": 404,
+    "latency_ms": 91.21,
+    "message": "Segment Reachable & Resilient"
+  },
+  {
+    "service": "Zia Face Analytics",
+    "endpoint": "https://console.catalyst.zoho.in/baas/v1/project/54626000000013049/ml/face-analytics",
+    "method": "POST",
+    "status": "WARN",
+    "status_code": 404,
+    "latency_ms": 92.44,
+    "message": "Status 404 (Fallback active)"
+  },
+  {
+    "service": "Groq Cloud LPU",
+    "endpoint": "https://api.groq.com/openai/v1/chat/completions",
+    "method": "POST",
+    "status": "PASS",
+    "status_code": 200,
+    "latency_ms": 1752.67,
+    "message": "Llama 3.3 Active: 'Pong! How can I help'"
+  },
+  {
+    "service": "Zoho Catalyst VLM",
+    "endpoint": "https://api.catalyst.zoho.in/quickml/v1/project/54626000000013049/vlm/chat",
+    "method": "POST",
+    "status": "PASS",
+    "status_code": 200,
+    "latency_ms": 1082.34,
+    "message": "VL-Qwen Active: 'Visual test received.'"
+  }
+]

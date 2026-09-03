@@ -23,6 +23,8 @@ class AgentManifest:
     required_provider_tags: List[str] = field(default_factory=lambda: ["free_reasoning"])
 
 
+import time
+
 @dataclass
 class ExecutionContext:
     """
@@ -37,6 +39,27 @@ class ExecutionContext:
     memory_summary: Optional[str] = None
     last_agent_type: Optional[str] = None
     extra: Dict[str, Any] = field(default_factory=dict)
+    _deadline: Optional[float] = field(default=None, init=False, repr=False)
+
+    @property
+    def deadline(self) -> Optional[float]:
+        return self._deadline
+
+    def set_deadline(self, budget_seconds: float):
+        if self._deadline is not None:
+            raise RuntimeError("Deadline already set and is immutable.")
+        self._deadline = time.monotonic() + budget_seconds
+
+    def get_remaining_budget(self) -> float:
+        """Returns remaining seconds for the global request budget, or 0 if expired."""
+        if self._deadline is None:
+            raise RuntimeError("Execution deadline has not been initialized.")
+        return max(0.0, self._deadline - time.monotonic())
+        
+    def check_cancellation(self):
+        """Raises TimeoutError if the global deadline is exceeded."""
+        if self.get_remaining_budget() <= 0:
+            raise TimeoutError("Global request deadline exceeded (Cooperative Cancellation).")
 
 
 @dataclass
@@ -141,7 +164,7 @@ class ILLMProvider(ABC):
     tags: List[str] = []
 
     @abstractmethod
-    def complete(self, messages: List[Dict[str, str]], json_mode: bool = False, max_tokens: int = 1000) -> tuple[str, str]:
+    def complete(self, messages: List[Dict[str, str]], json_mode: bool = False, max_tokens: int = 1000, timeout: Optional[float] = None) -> tuple[str, str]:
         pass
 
     @abstractmethod

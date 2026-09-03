@@ -21,7 +21,7 @@ class TestInvestigationServices(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.zoho_service = ZohoIntegrationService(db_path=cls.test_db_path)
+        cls.zoho_service = ZohoIntegrationService()
 
     @classmethod
     def tearDownClass(cls):

@@ -9,7 +9,7 @@ from typing import Dict, List, Any, Optional, Tuple
 
 from app.services.session_service import session_service
 from app.services.zoho_integration_service import zoho_service
-from app.providers.gemini_provider import GeminiProvider
+from app.providers.orchestrator import llm_complete
 
 log = logging.getLogger("investigation.agent_service")
 
@@ -22,7 +22,7 @@ class TacticalAgentOrchestrator:
     """
 
     def __init__(self):
-        self.gemini_provider = GeminiProvider()
+        pass
 
     def _build_system_prompt(self, context_payload: Dict[str, Any]) -> str:
         """Constructs an authoritative system prompt injected with the spatial context."""
@@ -36,7 +36,15 @@ class TacticalAgentOrchestrator:
         count = hotspot.get("incident_count", len(samples))
         top_crimes = hotspot.get("primary_crimes", [{"category": "General Crime", "percentage": 100}])
         
-        crimes_summary = ", ".join([f"{c.get('category')} ({c.get('percentage')}%)" for c in top_crimes])
+        formatted_crimes = []
+        for c in top_crimes:
+            if isinstance(c, dict):
+                cat = c.get("category", "General Crime")
+                pct = c.get("percentage")
+                formatted_crimes.append(f"{cat} ({pct}%)" if pct is not None else cat)
+            else:
+                formatted_crimes.append(str(c))
+        crimes_summary = ", ".join(formatted_crimes) if formatted_crimes else "General Crime Patterns"
         
         sample_str = "\n".join([
             f"- [{r.get('id', 'FIR-UNK')}] {r.get('title', 'Incident')} ({r.get('category', 'Crime')}) at {r.get('police_station', district)} [Date: {r.get('date', 'N/A')}]"
@@ -83,7 +91,11 @@ OPERATIONAL INSTRUCTIONS:
         threat = hotspot.get("threat_level", "HIGH")
         count = hotspot.get("incident_count", 0)
         top_crimes = hotspot.get("primary_crimes", [])
-        primary = top_crimes[0].get("category", "Targeted Offenses") if top_crimes else "Patterned Crimes"
+        if top_crimes:
+            first_crime = top_crimes[0]
+            primary = first_crime.get("category", "Targeted Offenses") if isinstance(first_crime, dict) else str(first_crime)
+        else:
+            primary = "Patterned Crimes"
         
         greeting = (
             f"### 🛡️ Tactical Intelligence Dossier: **{district}**\n\n"
@@ -167,14 +179,11 @@ OPERATIONAL INSTRUCTIONS:
         if tool_injected_context:
             llm_messages.append({"role": "system", "content": f"INTEGRATION TOOL FEEDBACK:\n{tool_injected_context}\nIncorporate these verified real-time tool outputs directly in your response."})
 
-        # ── 4. Execute LLM Reasoning via Gemini Provider ─────────────────────
+        # ── 4. Execute LLM Reasoning via Primary/Fallback Orchestrator ──────
         try:
-            if self.gemini_provider.is_available():
-                response_text, provider_name = self.gemini_provider.complete(llm_messages, max_tokens=1000)
-            else:
-                raise RuntimeError("GeminiProvider not available, invoking intelligent rule-based synthesis.")
+            response_text, provider_name = llm_complete(llm_messages, max_tokens=1000)
         except Exception as e:
-            log.warning(f"[AgentOrchestrator] Gemini invocation fallback triggered ({e}). Using deterministic law enforcement synthesis.")
+            log.warning(f"[AgentOrchestrator] Orchestrator invocation fallback triggered ({e}). Using deterministic law enforcement synthesis.")
             response_text = self._generate_fallback_response(user_message, district, threat, tool_injected_context)
 
         # ── 5. Save assistant turn in memory stack ────────────────────────────

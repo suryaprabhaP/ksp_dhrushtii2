@@ -1,27 +1,35 @@
 """
-KSP Sentinel AI — Document Agent (SOLID: SRP + LSP + DIP)
+KSP Sentinel AI — Document & Legal Agent Facade (SOLID: SRP + LSP + DIP)
 Handles legal statutory law (BNS/BNSS/BSA), SOP circulars, FIR filings,
 and session-isolated document/PDF evidence synthesis with citations.
+Composes LegalKnowledgeAgent (Global Base Agent) and EvidenceAnalysisAgent (Session Sandbox).
 """
 import logging
 from typing import List, Optional
 from app.config import KSP_DOCUMENT_PROMPT
 from app.core.interfaces import AgentManifest, AgentResponse, BaseAgent, ExecutionContext, IDocumentRepository
-from app.engine.document_store import document_store
-from app.providers.orchestrator import llm_complete
+from app.engine.catalyst_document_store import catalyst_document_store
+from app.agents.legal import LegalKnowledgeAgent
+from app.agents.evidence import EvidenceAnalysisAgent
 
 log = logging.getLogger("standalone.agents.document")
 
 
 class DocumentAgent(BaseAgent):
     """
-    SRP: Legal reasoning, statutory provisions, FIR procedural guidelines,
-         and evidence document semantic/lexical RAG.
-    DIP: Injects IDocumentRepository for document chunk retrieval.
-    LSP: Returns standardized AgentResponse contract.
+    SRP: Unified facade for Legal Statutory Reasoning and Session Evidence RAG.
+    DIP: Injects IDocumentRepository (CatalystCloudDocumentStore).
+    LSP: Returns standardized AgentResponse contract matching all frontend expectations.
     """
-    def __init__(self, doc_repo: Optional[IDocumentRepository] = None):
-        self.doc_repo = doc_repo or document_store
+    def __init__(
+        self,
+        doc_repo: Optional[IDocumentRepository] = None,
+        legal_agent: Optional[LegalKnowledgeAgent] = None,
+        evidence_agent: Optional[EvidenceAnalysisAgent] = None
+    ):
+        self.doc_repo = doc_repo or catalyst_document_store
+        self._legal_agent = legal_agent or LegalKnowledgeAgent()
+        self._evidence_agent = evidence_agent or EvidenceAnalysisAgent(doc_repo=self.doc_repo)
 
     @property
     def manifest(self) -> AgentManifest:
@@ -39,76 +47,23 @@ class DocumentAgent(BaseAgent):
     def execute(self, ctx: ExecutionContext) -> AgentResponse:
         session_id = ctx.session_id or "default_session"
         has_docs = self.doc_repo.has_documents(session_id)
-        retrieved_chunks = []
-        doc_context = ""
-        citations: List[str] = []
 
-        # ── 1. Session Document Search (RAG Grounding) ────────────────────────
+        # Polymorphic Delegation: If session contains uploaded evidence, use EvidenceAnalysisAgent
         if has_docs:
-            retrieved_chunks = self.doc_repo.search_chunks(session_id, ctx.query, limit=4)
-            if retrieved_chunks:
-                context_parts = []
-                for chunk in retrieved_chunks:
-                    context_parts.append(
-                        f"[DOCUMENT: {chunk.doc_name} | CHUNK {chunk.chunk_index + 1}]\n{chunk.content}"
-                    )
-                    if chunk.doc_name not in citations:
-                        citations.append(chunk.doc_name)
+            log.info(f"[DocumentAgent] Active session documents detected for '{session_id}'. Delegating to EvidenceAnalysisAgent.")
+            resp = self._evidence_agent.execute(ctx)
+            resp.agent_type = "document_agent"
+            resp.agent_label = self.manifest.label
+            resp.agent_icon = self.manifest.icon
+            resp.agent_color = self.manifest.color
+            return resp
 
-                doc_context = (
-                    "\n\n=== RELEVANT EVIDENCE / CASE DOCUMENT EXCERPTS ===\n"
-                    + "\n\n".join(context_parts)
-                    + "\n===================================================\n"
-                    "Instructions for Document Grounding:\n"
-                    "1. Use the above document excerpts to answer the officer's query accurately.\n"
-                    "2. Explicitly cite the document name and section whenever referencing facts.\n"
-                    "3. If the excerpt does not contain the answer, apply statutory KSP legal standards.\n"
-                )
+        # Otherwise, delegate to the Global Legal Knowledge Base
+        log.info(f"[DocumentAgent] No session documents for '{session_id}'. Delegating to LegalKnowledgeAgent (Global Cloud RAG).")
+        resp = self._legal_agent.execute(ctx)
+        resp.agent_type = "document_agent"
+        resp.agent_label = self.manifest.label
+        resp.agent_icon = self.manifest.icon
+        resp.agent_color = self.manifest.color
+        return resp
 
-        # ── 2. Construct Neural Inference Messages ────────────────────────────
-        system_content = self.manifest.system_prompt
-        if doc_context:
-            system_content = f"{system_content}\n{doc_context}"
-
-        messages = [
-            {"role": "system", "content": system_content}
-        ]
-
-        for h in ctx.history:
-            if isinstance(h, dict) and h.get("role") in ("user", "assistant") and h.get("content"):
-                messages.append({"role": h["role"], "content": h["content"]})
-
-        messages.append({"role": "user", "content": ctx.query})
-
-        # ── 3. Orchestrated LLM Completion (Zoho QuickML / Groq / Gemini) ─────
-        answer, provider = llm_complete(
-            messages,
-            json_mode=False,
-            max_tokens=750,
-            required_tags=self.manifest.required_provider_tags
-        )
-        manifest = self.manifest
-
-        # ── 4. Dynamic Suggested Actions ──────────────────────────────────────
-        suggested_actions = []
-        if has_docs:
-            suggested_actions.append("Review Evidence Citations")
-            suggested_actions.append("Search Cross-Referenced FIRs")
-        else:
-            suggested_actions.append("Upload Case PDF / FIR Document")
-            suggested_actions.append("Check Section 65B BSA Requirements")
-            suggested_actions.append("Review Standard Operating Procedure")
-
-        return AgentResponse(
-            answer=answer,
-            agent_type="document_agent",
-            agent_label=manifest.label,
-            agent_icon=manifest.icon,
-            agent_color=manifest.color,
-            charts=[],
-            executive_decision=None,
-            provider=provider,
-            visuals_updated=False,
-            data_available=True,
-            suggested_actions=suggested_actions
-        )

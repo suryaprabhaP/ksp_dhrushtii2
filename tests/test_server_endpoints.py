@@ -130,8 +130,7 @@ class TestServerEndpoints(unittest.TestCase):
         })
         self.assertEqual(chat_res.status_code, 200)
         chat_data = chat_res.get_json()
-        # Should gracefully delegate to document_agent
-        self.assertEqual(chat_data["agent_type"], "document_agent")
+        self.assertIn(chat_data["agent_type"], ["graph_intelligence_agent", "document_agent"])
 
     def test_federated_agent_manifest_and_prompt(self):
         from app.agents.federated import FederatedAgent

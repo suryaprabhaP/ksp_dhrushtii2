@@ -51,7 +51,7 @@ class QueryClassifier:
             return ClassificationResult(intent="CONVERSATIONAL", is_followup=False, reason="Empty query")
 
         # 1. Structural Guardrail Fast-Path Check
-        off_topic = ["recipe", "cricket score", "movie review", "weather forecast", "stock price", "love advice", "song lyrics", "chocolate cake"]
+        off_topic = ["recipe", "cricket score", "movie review", "weather forecast", "stock price", "love advice", "song lyrics", "chocolate cake", "hack", "bypass", "jailbreak", "exploit", "breach database"]
         if any(t in q_clean.lower() for t in off_topic):
             log.info(f"[QueryClassifier] Guardrail triggered for off-topic query: '{q_clean[:40]}'")
             return ClassificationResult(intent="GUARDRAIL", is_followup=False, reason="Off-topic guardrail")
@@ -125,8 +125,10 @@ class QueryClassifier:
                 intent = "TACTICAL_PATTERN"
             elif intent in ("ANALYTICAL_AGENT", "ANALYTICS"):
                 intent = "ANALYTICAL"
-            elif intent in ("DOCUMENT_AGENT", "LEGAL"):
-                intent = "DOCUMENT"
+            elif intent in ("DOCUMENT_AGENT", "LEGAL", "STATUTORY", "LEGAL_KNOWLEDGE_AGENT", "SOP"):
+                intent = "LEGAL_KNOWLEDGE" if "LEGAL_KNOWLEDGE" in valid_intents else "DOCUMENT"
+            elif intent in ("EVIDENCE_AGENT", "EVIDENCE", "CASE_DOC", "EVIDENCE_ANALYSIS_AGENT", "FIR_ANALYSIS"):
+                intent = "EVIDENCE_ANALYSIS" if "EVIDENCE_ANALYSIS" in valid_intents else "DOCUMENT"
             elif intent in ("GRAPH_AGENT", "NETWORK"):
                 intent = "GRAPH"
             elif intent in ("SPATIAL", "SPATIAL_TACTICAL", "SPATIAL_AGENT", "ZOHO", "TACTICAL_SPATIAL"):

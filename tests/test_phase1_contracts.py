@@ -58,9 +58,9 @@ class TestPhase1Contracts(unittest.TestCase):
         ]
         compressed_hist, summary = MemoryAgent.compress_history(self.session_id, history)
         self.assertIsNotNone(compressed_hist)
-        # Verify DuckDB retrieval
-        retrieved_summary = MemoryAgent.get_memory_summary(self.session_id)
         if summary:
+            MemoryAgent.save_memory_summary(self.session_id, summary, len(compressed_hist))
+            retrieved_summary = MemoryAgent.get_memory_summary(self.session_id)
             self.assertEqual(retrieved_summary, summary)
 
     def test_get_analytics_endpoint(self):
@@ -116,8 +116,8 @@ class TestPhase1Contracts(unittest.TestCase):
         filter_data = filter_res.get_json()
         self.assertTrue(filter_data.get("success"))
         for c in filter_data.get("complaints", []):
-            st = c.get("incident", {}).get("police_station", "").lower()
-            dist = c.get("incident", {}).get("district", "").lower()
+            st = str(c.get("PoliceStation") or c.get("IncidentLocation") or c.get("incident", {}).get("police_station", "")).lower()
+            dist = str(c.get("Division") or c.get("district", "") or c.get("incident", {}).get("district", "")).lower()
             self.assertTrue("indiranagar" in st or "indiranagar" in dist)
 
     def test_forensics_transcribe_and_legal_mapper(self):

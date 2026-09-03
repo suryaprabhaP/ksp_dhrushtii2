@@ -1,9 +1,10 @@
 """
 KSP Sentinel AI — Spatial Analytics & Hotspot Detection Engine (SOLID Compliant)
 ================================================================================
+Zero C-extensions, Zero heavy dependencies (Zero shapely / sklearn / numpy).
 Responsible exclusively for:
-1. Spatial clustering using DBSCAN with Haversine distance metric (SRP).
-2. Constructing valid GeoJSON bounding polygons / convex hulls via Shapely (LSP).
+1. Delegating spatial clustering to QuickML cloud inference with pure Python fallback (SRP + DIP).
+2. Constructing valid GeoJSON bounding polygons via pure Python Convex Hull / buffer geometries (LSP).
 3. Computing cluster-level intelligence (incident counts, dominant crimes, peak hours, threat levels).
 4. Generating density-weighted coordinate payloads for Heatmap rendering.
 """
@@ -13,19 +14,15 @@ import logging
 from collections import Counter
 from typing import Dict, List, Optional, Tuple, Any
 
-import numpy as np
-from sklearn.cluster import DBSCAN
-from shapely.geometry import MultiPoint, Polygon, Point, mapping
+from app.core.algorithms.convex_hull import generate_buffered_polygon
+from app.services.quickml_service import quickml_service
 
 log = logging.getLogger("spatial.analytics")
-
-# Earth radius in kilometers for Haversine conversions
-EARTH_RADIUS_KM = 6371.0088
 
 
 class SpatialAnalyticsService:
     """
-    Algorithmic Engine for Spatial Analytics & Hotspot Detection (SRP + OCP)
+    Algorithmic Engine for Spatial Analytics & Hotspot Detection (SRP + OCP + DIP)
     """
 
     @staticmethod
@@ -34,12 +31,12 @@ class SpatialAnalyticsService:
         crime_filter: Optional[str] = None,
         division_filter: Optional[str] = None,
         station_filter: Optional[str] = None
-    ) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
+    ) -> Tuple[List[List[float]], List[Dict[str, Any]]]:
         """
-        Filters records and extracts lat/lon coordinate matrices.
+        Filters records and extracts lat/lon coordinate pairs without numpy/pandas.
         """
-        valid_coords = []
-        valid_records = []
+        valid_coords: List[List[float]] = []
+        valid_records: List[Dict[str, Any]] = []
 
         crime_filter_lower = crime_filter.strip().lower() if crime_filter and crime_filter != "ALL" else None
         div_filter_lower = division_filter.strip().lower() if division_filter and division_filter != "ALL" else None
@@ -75,7 +72,7 @@ class SpatialAnalyticsService:
             except (ValueError, TypeError):
                 continue
 
-        return np.array(valid_coords, dtype=np.float64), valid_records
+        return valid_coords, valid_records
 
     @classmethod
     def detect_hotspots_dbscan(
@@ -88,13 +85,14 @@ class SpatialAnalyticsService:
         station_filter: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Executes DBSCAN clustering and converts detected clusters into GeoJSON polygons with metadata.
+        Executes DBSCAN clustering via QuickML / pure Python engine and converts detected clusters
+        into GeoJSON polygons with metadata.
         """
-        coords_matrix, filtered_records = cls._extract_coordinates_and_records(
+        coords_list, filtered_records = cls._extract_coordinates_and_records(
             records, crime_filter=crime_filter, division_filter=division_filter, station_filter=station_filter
         )
 
-        total_points = len(coords_matrix)
+        total_points = len(coords_list)
         if total_points < min_samples:
             return {
                 "type": "FeatureCollection",
@@ -105,17 +103,17 @@ class SpatialAnalyticsService:
                     "noise_points": total_points,
                     "cluster_count": 0,
                     "eps_km": eps_km,
-                    "min_samples": min_samples
+                    "min_samples": min_samples,
+                    "inference_source": "insufficient_points"
                 }
             }
 
-        # Convert coordinates to radians for Haversine distance metric
-        coords_rad = np.radians(coords_matrix)
-        eps_rad = eps_km / EARTH_RADIUS_KM
-
-        # Execute DBSCAN clustering
-        db = DBSCAN(eps=eps_rad, min_samples=min_samples, metric="haversine", algorithm="ball_tree")
-        labels = db.fit_predict(coords_rad)
+        # Predict cluster labels via QuickML Service (with pure Python fallback)
+        labels, source = quickml_service.predict_spatial_clusters(
+            coords_lat_lon=coords_list,
+            eps_km=eps_km,
+            min_samples=min_samples
+        )
 
         unique_labels = set(labels)
         unique_labels.discard(-1)  # -1 represents noise points in DBSCAN
@@ -130,10 +128,10 @@ class SpatialAnalyticsService:
         for idx, label in enumerate(labels):
             if label != -1:
                 clusters_map[label].append(filtered_records[idx])
-                coords_map[label].append(coords_matrix[idx].tolist())
+                coords_map[label].append(coords_list[idx])
                 total_clustered += 1
 
-        # Generate GeoJSON Polygon Feature for each cluster
+        # Generate GeoJSON Polygon Feature for each cluster using pure Python Graham Scan / buffer
         cluster_list = []
         for label, cluster_pts in coords_map.items():
             cluster_recs = clusters_map[label]
@@ -149,7 +147,7 @@ class SpatialAnalyticsService:
             feature["properties"]["name"] = f"Hotspot #{rank} ({feature['properties']['primary_crime']})"
             features.append(feature)
 
-        noise_count = int(np.sum(labels == -1))
+        noise_count = sum(1 for l in labels if l == -1)
 
         return {
             "type": "FeatureCollection",
@@ -161,7 +159,8 @@ class SpatialAnalyticsService:
                 "cluster_count": len(features),
                 "eps_km": eps_km,
                 "min_samples": min_samples,
-                "crime_filter": crime_filter or "ALL"
+                "crime_filter": crime_filter or "ALL",
+                "inference_source": source
             }
         }
 
@@ -175,28 +174,14 @@ class SpatialAnalyticsService:
     ) -> Dict[str, Any]:
         """
         Constructs a single GeoJSON Feature representing a cluster boundary + statistical intelligence.
+        Uses pure Python convex hull / buffer generation.
         """
-        # pts are [lat, lon] -> Shapely expects (lon, lat) / (x, y)
-        shapely_pts = [Point(p[1], p[0]) for p in pts]
-        multipoint = MultiPoint(shapely_pts)
+        # Generate Polygon Geometry via Pure Python Convex Hull
+        geojson_geometry = generate_buffered_polygon(pts, eps_km=eps_km)
 
         # Compute centroid [lat, lon]
-        centroid_lat = float(np.mean([p[0] for p in pts]))
-        centroid_lon = float(np.mean([p[1] for p in pts]))
-
-        # Adaptive buffer for convex hull (converts points or lines to a realistic bounding polygon)
-        # 1 km in degrees approx ~ 0.009 deg
-        buffer_deg = max(0.005, (eps_km * 0.25) / 111.32)
-
-        if len(pts) < 3:
-            # 1 or 2 points: Create buffered circle/capsule
-            hull_geom = multipoint.buffer(buffer_deg)
-        else:
-            raw_hull = multipoint.convex_hull
-            if raw_hull.geom_type == "Polygon":
-                hull_geom = raw_hull.buffer(buffer_deg)
-            else:
-                hull_geom = multipoint.buffer(buffer_deg)
+        centroid_lat = sum(p[0] for p in pts) / len(pts)
+        centroid_lon = sum(p[1] for p in pts) / len(pts)
 
         # Compute statistics & metadata
         crime_categories = []
@@ -216,7 +201,7 @@ class SpatialAnalyticsService:
         top_station = stn_counts.most_common(1)[0][0] if stn_counts else "Jurisdiction Area"
 
         incident_count = len(records)
-        
+
         # Threat Level Grading
         if incident_count >= 25 or (incident_count >= 10 and primary_crime in ["Robbery", "Extortion", "Assault"]):
             threat_level = "CRITICAL"
@@ -227,8 +212,6 @@ class SpatialAnalyticsService:
         else:
             threat_level = "MODERATE"
             threat_color = "#eab308"  # Yellow
-
-        geojson_geometry = mapping(hull_geom)
 
         properties = {
             "cluster_id": f"cluster_{label}",
@@ -277,14 +260,13 @@ class SpatialAnalyticsService:
         Extracts weighted lat/lon points suitable for rendering continuous density heatmaps.
         Returns: { "points": [[lat, lon, weight], ...], "count": int }
         """
-        coords_matrix, filtered_records = cls._extract_coordinates_and_records(
+        coords_list, filtered_records = cls._extract_coordinates_and_records(
             records, crime_filter=crime_filter, division_filter=division_filter, station_filter=station_filter
         )
 
         heatmap_points = []
-        for idx, coord in enumerate(coords_matrix):
+        for idx, coord in enumerate(coords_list):
             rec = filtered_records[idx]
-            # Severity-weighted intensity
             crime_cat = str(rec.get("Crime_Category") or rec.get("crime_type") or "").lower()
             if any(k in crime_cat for k in ["robbery", "extortion", "assault", "murder"]):
                 weight = 1.0

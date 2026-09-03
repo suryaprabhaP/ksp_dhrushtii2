@@ -181,8 +181,8 @@ class DynamicVisualIntelligenceEngine:
             if rec_col:
                 sql = f'''
                 SELECT "{entity_col}",
-                       ROUND(SUM(TRY_CAST("{loss_col}" AS DOUBLE)) / 100000.0, 1) as l,
-                       ROUND(SUM(TRY_CAST("{rec_col}" AS DOUBLE)) / 100000.0, 1) as r
+                       ROUND(SUM(CAST("{loss_col}" AS REAL)) / 100000.0, 1) as l,
+                       ROUND(SUM(CAST("{rec_col}" AS REAL)) / 100000.0, 1) as r
                 FROM "{target_table}"
                 WHERE "{entity_col}" IS NOT NULL
                 GROUP BY "{entity_col}"
@@ -196,7 +196,7 @@ class DynamicVisualIntelligenceEngine:
                 loss_vals = [float(r[1] or 0) for r in rows]
                 rec_vals = [float(r[2] or 0) for r in rows]
             else:
-                sql = f'SELECT "{entity_col}", ROUND(SUM(TRY_CAST("{loss_col}" AS DOUBLE)) / 100000.0, 1) as l FROM "{target_table}" WHERE "{entity_col}" IS NOT NULL GROUP BY "{entity_col}" ORDER BY l DESC LIMIT 5'
+                sql = f'SELECT "{entity_col}", ROUND(SUM(CAST("{loss_col}" AS REAL)) / 100000.0, 1) as l FROM "{target_table}" WHERE "{entity_col}" IS NOT NULL GROUP BY "{entity_col}" ORDER BY l DESC LIMIT 5'
                 _, rows = session_store.execute_sql(session_id, sql)
                 if not rows:
                     return None
@@ -293,7 +293,7 @@ class VisualSuiteBuilder:
         loss_col = next((c for k, c in cols_map.items() if any(t in k for t in ["loss", "amount", "value", "stolen", "fraud_amount"])), None)
         if loss_col:
             try:
-                _, rows = session_store.execute_sql(session_id, f'SELECT SUM(TRY_CAST("{loss_col}" AS DOUBLE)) FROM "{target_table}"')
+                _, rows = session_store.execute_sql(session_id, f'SELECT SUM(CAST("{loss_col}" AS REAL)) FROM "{target_table}"')
                 sum_loss = rows[0][0] or 0
             except Exception:
                 sum_loss = 0
@@ -305,7 +305,7 @@ class VisualSuiteBuilder:
         dur_col = next((c for k, c in cols_map.items() if re.search(r'resolution|duration|\bdays\b|\btat\b|closure|time_taken|delay', k) and not re.search(r'station|state', k)), None)
         if dur_col:
             try:
-                _, rows = session_store.execute_sql(session_id, f'SELECT AVG(TRY_CAST("{dur_col}" AS DOUBLE)) FROM "{target_table}" WHERE TRY_CAST("{dur_col}" AS DOUBLE) > 0')
+                _, rows = session_store.execute_sql(session_id, f'SELECT AVG(CAST("{dur_col}" AS REAL)) FROM "{target_table}" WHERE CAST("{dur_col}" AS REAL) > 0')
                 if rows and rows[0][0] is not None:
                     avg_res_str = f"{rows[0][0]:.1f} Days"
             except Exception as e:
@@ -317,7 +317,7 @@ class VisualSuiteBuilder:
             rec_col = next((c for k, c in cols_map.items() if any(t in k for t in ["recovery_percentage", "recovery_rate", "recovery_pct"])), None)
             if rec_col:
                 try:
-                    _, rows = session_store.execute_sql(session_id, f'SELECT AVG(TRY_CAST("{rec_col}" AS DOUBLE)) FROM "{target_table}" WHERE TRY_CAST("{rec_col}" AS DOUBLE) >= 0')
+                    _, rows = session_store.execute_sql(session_id, f'SELECT AVG(CAST("{rec_col}" AS REAL)) FROM "{target_table}" WHERE CAST("{rec_col}" AS REAL) >= 0')
                     if rows and rows[0][0] is not None:
                         avg_res_str = f"{rows[0][0]:.1f}% Recovery"
                 except Exception:
@@ -336,12 +336,12 @@ class VisualSuiteBuilder:
             except Exception:
                 high_risk_count = 0
 
-        # Fallback to 90th percentile high loss cases if no text status match
+        # Fallback to high loss cases if no text status match
         if high_risk_count == 0 and loss_col and sum_loss > 0:
             try:
                 _, rows = session_store.execute_sql(
                     session_id,
-                    f'SELECT COUNT(*) FROM "{target_table}" WHERE TRY_CAST("{loss_col}" AS DOUBLE) >= (SELECT QUANTILE_CONT(TRY_CAST("{loss_col}" AS DOUBLE), 0.90) FROM "{target_table}")'
+                    f'SELECT COUNT(*) FROM "{target_table}" WHERE CAST("{loss_col}" AS REAL) >= (SELECT AVG(CAST("{loss_col}" AS REAL)) * 1.5 FROM "{target_table}")'
                 )
                 high_risk_count = rows[0][0] if rows else 0
             except Exception:

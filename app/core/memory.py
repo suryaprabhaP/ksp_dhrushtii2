@@ -1,9 +1,10 @@
 """
-KSP Sentinel AI — Autonomous Session Memory & History Manager (SOLID: SRP)
-==========================================================================
-Maintains long-term session context by storing stateful conversation history
-in the officer's isolated DuckDB session store and semantically compressing
-dialogue that exceeds the configured sliding window.
+KSP Sentinel AI — Autonomous Session Memory & Cloud State Manager (SOLID: SRP + DIP)
+===================================================================================
+Maintains long-term session context by utilizing a Hybrid Cloud State Model:
+1. Zoho Catalyst Cache (Redis-backed segment 54626000000136060 for sub-2ms reads/writes)
+2. Zoho Catalyst Data Store (SessionMemory table for permanent cloud persistence)
+3. Local SQLite/In-Memory fallback for 100% offline local development
 """
 import json
 import logging
@@ -18,51 +19,87 @@ from app.config import (
 )
 from app.engine.session_store import session_store
 from app.providers.orchestrator import llm_reasoning_complete
+from app.services.catalyst_service import catalyst_cache_service, catalyst_datastore_service
 
 log = logging.getLogger("standalone.memory")
 
 
 class MemoryAgent:
     """
-    SRP: Manages stateful conversation turns and context compression within a session.
-    Thread-safe and session-isolated via DuckDB.
+    SRP: Manages stateful conversation turns, cloud cache, and context compression.
+    DIP: Decoupled via CatalystCacheService and CatalystDataStoreService with SQLite fallback.
     """
 
     @classmethod
     def init_memory_table(cls, session_id: str):
-        """Ensures the session_memory table exists in the session's DuckDB store with all columns."""
+        """Ensures the local session_memory SQLite table exists for offline fallback."""
         try:
             con = session_store.get_connection(session_id)
             con.execute("""
                 CREATE TABLE IF NOT EXISTS session_memory (
-                    session_id VARCHAR PRIMARY KEY,
+                    session_id TEXT PRIMARY KEY,
                     summary TEXT,
                     turn_count INTEGER,
-                    updated_at VARCHAR,
+                    updated_at TEXT,
                     history_json TEXT,
-                    last_agent_type VARCHAR
+                    last_agent_type TEXT
                 )
             """)
-            # Safe migrations if the table was created earlier without the new columns
-            try:
-                con.execute("ALTER TABLE session_memory ADD COLUMN IF NOT EXISTS history_json TEXT")
-            except Exception:
-                pass
-            try:
-                con.execute("ALTER TABLE session_memory ADD COLUMN IF NOT EXISTS last_agent_type VARCHAR")
-            except Exception:
-                pass
         except Exception as e:
-            log.warning(f"[MemoryAgent] Could not initialize session_memory table: {e}")
+            log.warning(f"[MemoryAgent] Local session_memory table notice: {e}")
 
     @classmethod
     def get_session_history(cls, session_id: str) -> Tuple[List[Dict[str, Any]], Optional[str], Optional[str]]:
         """
-        Retrieves the stateful message history, active memory summary, and last agent type.
-        Returns: (history_list, memory_summary, last_agent_type)
+        Retrieves stateful message history, active memory summary, and last agent type.
+        Execution Flow (Cache-Aside Pattern):
+        1. Check Zoho Catalyst Redis Cache (Sub-2ms)
+        2. Fallback to Zoho Catalyst Data Store (ZCQL)
+        3. Fallback to Local SQLite
         """
         if not session_id:
             return [], None, None
+
+        # ── 1. Check Catalyst Cache (Redis Segment 54626000000136060) ─────────
+        try:
+            cached = catalyst_cache_service.get_session(session_id)
+            if cached and isinstance(cached, dict):
+                history = cached.get("history", [])
+                summary = cached.get("summary")
+                last_agent = cached.get("last_agent_type")
+                if history or summary:
+                    log.debug(f"[MemoryAgent] Cache hit for session '{session_id}' ({len(history)} turns)")
+                    return history, summary or None, last_agent or None
+        except Exception as e:
+            log.debug(f"[MemoryAgent] Cache check notice: {e}")
+
+        # ── 2. Fallback to Catalyst Data Store Table 'SessionMemory' ───────────
+        try:
+            cloud_row = catalyst_datastore_service.get_session_memory(session_id)
+            if cloud_row and isinstance(cloud_row, dict):
+                raw_json = cloud_row.get("history_json")
+                summary = cloud_row.get("summary")
+                last_agent = cloud_row.get("last_agent_type")
+                history = []
+                if raw_json:
+                    try:
+                        history = json.loads(raw_json) if isinstance(raw_json, str) else raw_json
+                    except Exception:
+                        history = []
+
+                # Populate Cache for subsequent sub-2ms reads
+                catalyst_cache_service.put_session(session_id, {
+                    "history": history,
+                    "summary": summary,
+                    "last_agent_type": last_agent,
+                    "turn_count": len(history)
+                })
+                log.info(f"[MemoryAgent] Data Store hit for session '{session_id}' ({len(history)} turns)")
+                return history, summary or None, last_agent or None
+        except Exception as e:
+            log.debug(f"[MemoryAgent] Cloud Data Store check notice: {e}")
+
+        # ── 3. Fallback to Local SQLite ───────────────────────────────────────
         try:
             cls.init_memory_table(session_id)
             con = session_store.get_connection(session_id)
@@ -80,11 +117,11 @@ class MemoryAgent:
                 try:
                     history = json.loads(raw_history_json)
                 except Exception as je:
-                    log.warning(f"[MemoryAgent] Failed to deserialize history_json for '{session_id}': {je}")
+                    log.warning(f"[MemoryAgent] Deserialization notice for '{session_id}': {je}")
 
             return history, summary or None, last_agent_type or None
         except Exception as e:
-            log.warning(f"[MemoryAgent] Error fetching session history for '{session_id}': {e}")
+            log.warning(f"[MemoryAgent] Local session retrieval notice for '{session_id}': {e}")
             return [], None, None
 
     @classmethod
@@ -96,8 +133,8 @@ class MemoryAgent:
         agent_type: Optional[str] = None
     ):
         """
-        Appends a conversation turn to the stateful history in DuckDB and updates last_agent_type.
-        Automatically triggers semantic compression if turn count exceeds the threshold.
+        Appends a conversation turn to the stateful history across Cache, Data Store, and SQLite.
+        Automatically triggers semantic compression if turns exceed threshold.
         """
         if not session_id or not content:
             return
@@ -120,16 +157,36 @@ class MemoryAgent:
                 try:
                     history, summary = cls._compress_old_turns(session_id, history, summary)
                 except Exception as ce:
-                    log.error(f"[MemoryAgent] Semantic compression failed: {ce}", exc_info=True)
+                    log.error(f"[MemoryAgent] Semantic compression notice: {ce}", exc_info=True)
 
-            con = session_store.get_connection(session_id)
             now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            turn_count = len(history)
+
+            # 1. Update High-Speed Catalyst Cache (Sub-2ms)
+            catalyst_cache_service.put_session(session_id, {
+                "history": history,
+                "summary": summary,
+                "last_agent_type": effective_last_agent,
+                "turn_count": turn_count
+            })
+
+            # 2. Asynchronous Background Write to Catalyst Data Store Table
+            catalyst_datastore_service.upsert_session_memory(
+                session_id=session_id,
+                summary=summary,
+                history=history,
+                last_agent_type=effective_last_agent,
+                turn_count=turn_count
+            )
+
+            # 3. Update Local SQLite for offline dev consistency
+            con = session_store.get_connection(session_id)
             con.execute("""
                 INSERT OR REPLACE INTO session_memory (session_id, summary, turn_count, updated_at, history_json, last_agent_type)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, [session_id, summary, len(history), now_str, json.dumps(history), effective_last_agent])
+            """, [session_id, summary, turn_count, now_str, json.dumps(history), effective_last_agent])
 
-            log.info(f"[MemoryAgent] Saved turn for '{session_id}' [{role}|agent:{effective_last_agent}] Total turns: {len(history)}")
+            log.info(f"[MemoryAgent] Saved turn for '{session_id}' [{role}|agent:{effective_last_agent}] Total turns: {turn_count}")
         except Exception as e:
             log.warning(f"[MemoryAgent] Error saving session turn: {e}", exc_info=True)
 
@@ -141,7 +198,7 @@ class MemoryAgent:
         existing_summary: Optional[str]
     ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
         """
-        Compresses turns older than the recent 4 turns into an updated summary.
+        Compresses turns older than recent 4 turns into an updated rolling summary.
         Preserves critical investigation entities.
         """
         if len(history) <= 4:
@@ -186,6 +243,18 @@ class MemoryAgent:
         return recent_turns, summary
 
     @classmethod
+    def compress_history(
+        cls,
+        session_id: str,
+        history: List[Dict[str, Any]],
+        existing_summary: Optional[str] = None
+    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        """
+        Public entrypoint for compressing conversation history turns.
+        """
+        return cls._compress_old_turns(session_id, history, existing_summary)
+
+    @classmethod
     def get_memory_summary(cls, session_id: str) -> Optional[str]:
         """Backward-compatible summary getter."""
         _, summary, _ = cls.get_session_history(session_id)
@@ -206,11 +275,3 @@ class MemoryAgent:
             """, [session_id, summary, turn_count, now_str, session_id, session_id])
         except Exception as e:
             log.warning(f"[MemoryAgent] Error saving memory summary: {e}")
-
-    @classmethod
-    def compress_history(cls, session_id: str, history: List[Dict[str, str]]) -> Tuple[List[Dict[str, str]], Optional[str]]:
-        """Legacy helper maintained for backward compatibility."""
-        stored_history, summary, _ = cls.get_session_history(session_id)
-        if stored_history:
-            return stored_history, summary
-        return history, summary

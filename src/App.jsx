@@ -3,49 +3,34 @@ import Chatbot from './components/Chatbot';
 import AnalyticsDashboard from './analytics/AnalyticsDashboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import DraggableGlobalChat from './components/DraggableGlobalChat';
+import ComplaintPortalContainer from './components/portals/EComplaint/ComplaintPortalContainer';
+import PassportPortalContainer from './components/portals/PassportVerification/PassportPortalContainer';
+import PoliceInitiatedPortalContainer from './components/portals/PoliceInitiated/PoliceInitiatedPortalContainer';
+import CommandCenterMenu from './components/portals/CommandCenter/CommandCenterMenu';
+import CrimeAnalyticsHub from './components/portals/CrimeAnalyticsHub';
 import { GlobalInvestigationContextProvider } from './context/GlobalInvestigationContext';
 import { initialDatasetState } from './analytics/services/datasetStore';
 import { globalNetworkStore } from './analytics/services/networkAnalyticsService';
 import { Shield, MapPin, Radio, BarChart2 } from 'lucide-react';
+
+// KSP Main Division & Landing Components
+import BengaluruHeadDashboard from './components/command_center/BengaluruHeadDashboard';
+import MysuruHeadDashboard from './components/command_center/MysuruHeadDashboard';
+import BelagaviHeadDashboard from './components/command_center/BelagaviHeadDashboard';
+import KalaburagiHeadDashboard from './components/command_center/KalaburagiHeadDashboard';
+import Login from './components/command_center/Login';
+import DrishtiLanding from './ksp_drishti_landing/DrishtiLanding';
 
 /**
  * STANDALONE CHATBOT UI MODULE ENTRY POINT
  * Supports seamless switching between Chatbot Console and Advanced Analytics Hub,
  * with shared dataset state across both interfaces.
  */
-function AppContent() {
-  const [selectedDivision, setSelectedDivision] = useState('Bengaluru Division');
-  const [activeView, setActiveView] = useState('chat'); // 'chat' | 'analytics'
+function ChatbotAppContainer({ selectedDivision, onNavigateBackToCommandCenter }) {
+  const [activeView, setActiveView] = useState('chat'); // 'chat' | 'analytics' | 'ecomplaint' | 'passport' | 'police_fir'
   const [analyticsInitialTab, setAnalyticsInitialTab] = useState('dashboard');
   const [datasetState, setDatasetState] = useState(initialDatasetState);
   
-  // MOCK LOGIN STATE
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return window.location.hash !== '#login';
-  });
-  const [badgeId, setBadgeId] = useState('OFFICER_BGL_001');
-  const [password, setPassword] = useState('ksp2026');
-
-  const handleLoginSubmit = (e) => {
-    if (e) e.preventDefault();
-    setIsLoggedIn(true);
-    if (window.location.hash === '#login') {
-      window.history.replaceState(null, '', window.location.pathname);
-    }
-  };
-
-  const handleQuickBypass = () => {
-    setIsLoggedIn(true);
-    if (window.location.hash === '#login') {
-      window.history.replaceState(null, '', window.location.pathname);
-    }
-  };
-
-  const handleSignOut = () => {
-    setIsLoggedIn(false);
-    window.location.hash = '#login';
-  };
-
   // Ingestion callback
   const handleDatasetLoaded = ({ filename, fileSizeBytes, sha256, headers, records }) => {
     // Synchronize both Tabular Store and Network Topology Graph Store
@@ -129,158 +114,51 @@ function AppContent() {
     }
   };
 
-  // MOCK LOGIN PORTAL VIEW
-  if (!isLoggedIn) {
+  if (activeView === 'ecomplaint') {
     return (
       <ErrorBoundary>
-        <div style={{
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: '#090d16',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
-        }}>
-          <div style={{
-            width: '380px',
-            padding: '36px 32px',
-            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-            border: '1px solid rgba(59, 130, 246, 0.4)',
-            borderRadius: '16px',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(59, 130, 246, 0.2)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '16px',
-              boxShadow: '0 0 20px rgba(37, 99, 235, 0.6)',
-              border: '1px solid rgba(147, 197, 253, 0.5)'
-            }}>
-              <Shield size={32} color="#ffffff" />
-            </div>
-
-            <h2 style={{
-              margin: '0 0 4px 0',
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              color: '#f8fafc',
-              textAlign: 'center',
-              letterSpacing: '0.5px'
-            }}>
-              KSP SENTINEL AI
-            </h2>
-
-            <p style={{
-              margin: '0 0 24px 0',
-              fontSize: '0.75rem',
-              color: '#94a3b8',
-              textAlign: 'center'
-            }}>
-              Law Enforcement Officer Access
-            </p>
-
-            <form onSubmit={handleLoginSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Badge ID
-                </label>
-                <input
-                  type="text"
-                  value={badgeId}
-                  onChange={(e) => setBadgeId(e.target.value)}
-                  placeholder="e.g. OFFICER_BGL_001"
-                  required
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '10px 14px',
-                    backgroundColor: 'rgba(30, 41, 59, 0.7)',
-                    border: '1px solid #334155',
-                    borderRadius: '8px',
-                    color: '#f8fafc',
-                    fontSize: '0.85rem',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Security Pin / Passcode
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '10px 14px',
-                    backgroundColor: 'rgba(30, 41, 59, 0.7)',
-                    border: '1px solid #334155',
-                    borderRadius: '8px',
-                    color: '#f8fafc',
-                    fontSize: '0.85rem',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                style={{
-                  marginTop: '10px',
-                  padding: '12px',
-                  background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '0.88rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 15px rgba(37, 99, 235, 0.4)'
-                }}
-              >
-                Sign In to Sentinel Console
-              </button>
-            </form>
-
-            <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '10px' }}>
-              <div style={{ flex: 1, height: '1px', backgroundColor: '#334155' }} />
-              <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>OR</span>
-              <div style={{ flex: 1, height: '1px', backgroundColor: '#334155' }} />
-            </div>
-
-            <button
-              onClick={handleQuickBypass}
-              style={{
-                width: '100%',
-                padding: '11px',
-                backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                color: '#4ade80',
-                border: '1px solid rgba(34, 197, 94, 0.4)',
-                borderRadius: '10px',
-                fontSize: '0.82rem',
-                fontWeight: 800,
-                cursor: 'pointer'
-              }}
-            >
-              ⚡ Quick Launch Assistant (Bypass Login)
-            </button>
-          </div>
+        <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <ComplaintPortalContainer onBackToDashboard={() => setActiveView('chat')} />
+          <DraggableGlobalChat divisionName={selectedDivision} />
         </div>
+      </ErrorBoundary>
+    );
+  }
+
+  if (activeView === 'passport') {
+    return (
+      <ErrorBoundary>
+        <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <PassportPortalContainer onBackToDashboard={() => setActiveView('chat')} />
+          <DraggableGlobalChat divisionName={selectedDivision} />
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
+  if (activeView === 'police_fir') {
+    return (
+      <ErrorBoundary>
+        <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <PoliceInitiatedPortalContainer onBackToDashboard={() => setActiveView('chat')} />
+          <DraggableGlobalChat divisionName={selectedDivision} />
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
+  if (activeView === 'crime_analytics_hub') {
+    return (
+      <ErrorBoundary>
+        <CrimeAnalyticsHub
+          selectedDivision={selectedDivision}
+          onNavigateBackToCommandCenter={() => setActiveView('chat')}
+          isDatasetLoaded={datasetState.isLoaded}
+          datasetState={datasetState}
+          onDatasetIngested={handleDatasetLoaded}
+          onSessionReset={handleSessionReset}
+        />
+        <DraggableGlobalChat divisionName={selectedDivision} />
       </ErrorBoundary>
     );
   }
@@ -317,85 +195,98 @@ function AppContent() {
         color: '#f8fafc',
         position: 'relative'
       }}>
-        {/* STANDALONE CHATBOT UI TOP BAR (WITH ANALYTICS HUB BUTTON) */}
+        {/* TOP COMMAND BAR (TACTICAL FOREST GREEN & GOLD THEME) */}
         <header style={{
-          height: '52px',
-          background: 'linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
-          borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
+          height: '50px',
+          background: 'linear-gradient(90deg, #0A130E 0%, #132B20 50%, #0A130E 100%)',
+          borderBottom: '1px solid rgba(212, 155, 68, 0.35)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 20px',
+          padding: '0 18px',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
           zIndex: 50
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 12px rgba(37, 99, 235, 0.5)',
-              border: '1px solid rgba(147, 197, 253, 0.4)'
-            }}>
-              <Shield size={20} color="#ffffff" />
-            </div>
-            <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div 
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+              onClick={onNavigateBackToCommandCenter}
+              title="Click to return to KSP Main Command GIS Portal"
+            >
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #132B20 0%, #1E4332 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 12px rgba(212, 155, 68, 0.35)',
+                border: '1px solid #D49B44'
+              }}>
+                <Shield size={18} color="#D49B44" />
+              </div>
               <h1 style={{
                 margin: 0,
                 fontSize: '0.95rem',
+                fontFamily: "'Outfit', sans-serif",
                 fontWeight: 900,
                 letterSpacing: '0.6px',
-                background: 'linear-gradient(90deg, #ffffff 0%, #93c5fd 100%)',
+                background: 'linear-gradient(90deg, #FCFCFA 0%, #E8C17C 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
               }}>
-                SENTINEL AI CHATBOT — STANDALONE UI MODULE
+                KSP SENTINEL AI COMMAND
               </h1>
-              <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, marginTop: '-2px' }}>
-                React UI Component Module (`Chatbot.jsx` + `analytics/`)
-              </div>
             </div>
+
+            {/* UNIFIED COMMAND CENTER BUTTON (DIRECT ROUTE TO MAIN GIS LAYER) */}
+            <CommandCenterMenu onNavigateBackToCommandCenter={onNavigateBackToCommandCenter} />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* DIVISION SELECTOR */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* DIVISION INFO */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              background: 'rgba(30, 41, 59, 0.8)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
+              background: 'rgba(19, 43, 32, 0.85)',
+              border: '1px solid rgba(212, 155, 68, 0.35)',
               borderRadius: '8px',
-              padding: '4px 10px',
-              fontSize: '0.75rem',
-              color: '#94a3b8'
+              padding: '3px 9px',
+              fontSize: '0.72rem',
+              color: '#889E90'
             }}>
-              <MapPin size={13} color="#60a5fa" />
-              <span style={{ color: '#cbd5e1', fontWeight: 600 }}>Division:</span>
-              <select
-                value={selectedDivision}
-                onChange={(e) => setSelectedDivision(e.target.value)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#60a5fa',
-                  fontWeight: 700,
-                  fontSize: '0.78rem',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="Bengaluru Division" style={{ background: '#0f172a', color: '#f8fafc' }}>Bengaluru Division</option>
-                <option value="Mysuru Division" style={{ background: '#0f172a', color: '#f8fafc' }}>Mysuru Division</option>
-                <option value="Belagavi Division" style={{ background: '#0f172a', color: '#f8fafc' }}>Belagavi Division</option>
-                <option value="Kalaburagi Division" style={{ background: '#0f172a', color: '#f8fafc' }}>Kalaburagi Division</option>
-                <option value="State HQ Command" style={{ background: '#0f172a', color: '#f8fafc' }}>State HQ Command</option>
-              </select>
+              <MapPin size={12} color="#D49B44" />
+              <span style={{ color: '#CBD5E1', fontWeight: 600 }}>Division:</span>
+              <span style={{ color: '#D49B44', fontWeight: 700 }}>{selectedDivision}</span>
             </div>
+
+            {/* ZOHO DUAL-SCREEN ANALYTICS HUB BUTTON */}
+            <button
+              onClick={() => setActiveView('crime_analytics_hub')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%)',
+                border: '1px solid #38bdf8',
+                borderRadius: '8px',
+                padding: '4px 11px',
+                fontSize: '0.72rem',
+                color: '#ffffff',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 0 12px rgba(56, 189, 248, 0.35)',
+                transition: 'all 0.15s ease'
+              }}
+              title="Open Zoho Analytics Split-Screen Hub"
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              <BarChart2 size={13} color="#ffffff" />
+              <span>ZOHO ANALYTICS HUB</span>
+            </button>
 
             {/* STATUS BADGE */}
             <div style={{
@@ -405,13 +296,13 @@ function AppContent() {
               background: 'rgba(16, 185, 129, 0.15)',
               border: '1px solid rgba(16, 185, 129, 0.4)',
               borderRadius: '20px',
-              padding: '4px 10px',
-              fontSize: '0.7rem',
-              color: '#34d399',
+              padding: '3px 9px',
+              fontSize: '0.68rem',
+              color: '#34D399',
               fontWeight: 700
             }}>
-              <Radio size={12} color="#34d399" />
-              <span>UI MODULE READY</span>
+              <Radio size={11} color="#34D399" />
+              <span>COMMAND READY</span>
             </div>
           </div>
         </header>
@@ -422,6 +313,7 @@ function AppContent() {
             divisionName={selectedDivision}
             onNavigateToAnalytics={() => { setAnalyticsInitialTab('dashboard'); setActiveView('analytics'); }}
             onNavigateToNetwork={() => { setAnalyticsInitialTab('network_graph'); setActiveView('analytics'); }}
+            onNavigateBackToCommandCenter={onNavigateBackToCommandCenter}
             onDatasetIngested={handleDatasetLoaded}
             onSessionReset={handleSessionReset}
             onRestoreSessionData={handleRestoreSessionData}
@@ -438,9 +330,79 @@ function AppContent() {
 }
 
 export default function App() {
-  return (
-    <GlobalInvestigationContextProvider>
-      <AppContent />
-    </GlobalInvestigationContextProvider>
-  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  
+  // Controls the main view: 'main_command' (GIS Map) vs 'chatbot' (Assistant)
+  const [appActiveView, setAppActiveView] = useState('main_command');
+
+  const handleLoginSuccess = (userAuthData) => {
+    setCurrentUser(userAuthData);
+    setIsAuthenticated(true);
+    setAppActiveView('main_command'); // Default to main GIS command after login
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+  };
+
+  const navigateToChatbot = () => {
+    setAppActiveView('chatbot');
+  };
+
+  const navigateToMainCommand = () => {
+    setAppActiveView('main_command');
+  };
+
+  // 1. Initial Interactive Landing Experience
+  if (isLoading) {
+    return <DrishtiLanding onComplete={() => setIsLoading(false)} />;
+  }
+
+  // 2. Authentication Entry Point
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLoginSuccess} />;
+  }
+
+  // 3. Chatbot Layer
+  if (appActiveView === 'chatbot') {
+    return (
+      <GlobalInvestigationContextProvider>
+        <ChatbotAppContainer 
+          selectedDivision={currentUser?.division?.name || 'Bengaluru Division'} 
+          onNavigateBackToCommandCenter={navigateToMainCommand}
+        />
+      </GlobalInvestigationContextProvider>
+    );
+  }
+
+  // 4. Main Landing Layer (Division GIS Dashboards)
+  const username = currentUser?.username || '';
+  const divId = currentUser?.division?.id || '';
+
+  const isBengaluruUser = username === 'ksp.bengaluru.head' || username.startsWith('ksp.bengaluru') || username.startsWith('ksp.chikkaballapura') || username.startsWith('ksp.chitradurga') || username.startsWith('ksp.davanagere') || username.startsWith('ksp.kolar') || username.startsWith('ksp.kgf') || username.startsWith('ksp.ramanagara') || username.startsWith('ksp.tumakuru') || divId === 'bengaluru';
+  const isMysuruUser = username === 'ksp.mysuru.head' || username.startsWith('ksp.mysuru') || username.startsWith('ksp.chamarajanagara') || username.startsWith('ksp.chikkamagaluru') || username.startsWith('ksp.dakshina.kannada') || username.startsWith('ksp.hassan') || username.startsWith('ksp.kodagu') || username.startsWith('ksp.mandya') || username.startsWith('ksp.udupi') || divId === 'mysuru';
+  const isBelagaviUser = username === 'ksp.belagavi.head' || username.startsWith('ksp.belagavi') || username.startsWith('ksp.bagalkote') || username.startsWith('ksp.dharwad') || username.startsWith('ksp.gadag') || username.startsWith('ksp.haveri') || username.startsWith('ksp.uttara.kannada') || username.startsWith('ksp.vijayapura') || divId === 'belagavi';
+  const isKalaburagiUser = username === 'ksp.kalaburagi.head' || username.startsWith('ksp.kalaburagi') || username.startsWith('ksp.ballari') || username.startsWith('ksp.bidar') || username.startsWith('ksp.koppal') || username.startsWith('ksp.raichur') || username.startsWith('ksp.vijayanagara') || username.startsWith('ksp.yadgir') || divId === 'kalaburagi';
+
+  if (isBengaluruUser) {
+    return <BengaluruHeadDashboard currentUser={currentUser} onLogout={handleLogout} onNavigateToChatbot={navigateToChatbot} />;
+  }
+
+  if (isMysuruUser) {
+    return <MysuruHeadDashboard currentUser={currentUser} onLogout={handleLogout} onNavigateToChatbot={navigateToChatbot} />;
+  }
+
+  if (isBelagaviUser) {
+    return <BelagaviHeadDashboard currentUser={currentUser} onLogout={handleLogout} onNavigateToChatbot={navigateToChatbot} />;
+  }
+
+  if (isKalaburagiUser) {
+    return <KalaburagiHeadDashboard currentUser={currentUser} onLogout={handleLogout} onNavigateToChatbot={navigateToChatbot} />;
+  }
+
+  // Fallback to Bengaluru if authenticated
+  return <BengaluruHeadDashboard currentUser={currentUser} onLogout={handleLogout} onNavigateToChatbot={navigateToChatbot} />;
 }

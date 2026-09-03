@@ -1,94 +1,139 @@
-import json
+"""
+Live End-to-End API Response Testing Suite
+Tests all agent blueprints, dispatch workflows, suspect queries, and Chatbot interactions.
+"""
+import os
 import sys
-from pathlib import Path
+import json
 
-# Add project root to sys.path
-BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BASE_DIR))
+# Ensure project root is on sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from server import app
+from app.services.zoho_integration_service import zoho_service
 
-client = app.test_client()
 
-print("=" * 80)
-print("1. TEST: POST /chat (PatternAgent Interrogation Dilemma)")
-print("=" * 80)
-chat_res = client.post("/chat", json={
-    "query": "Suspect Ramesh claims he was at Indiranagar hotel at 2 AM, but witness notes say he was at Koramangala. How should I interrogate him?",
-    "history": [],
-    "session_id": "live_test_session_001",
-    "division": "Bengaluru Division"
-})
-chat_data = chat_res.get_json()
-print(f"HTTP Status: {chat_res.status_code}")
-print(f"Agent Type: {chat_data.get('agent_type')}")
-print(f"Agent Label: {chat_data.get('agent_label')}")
-print(f"Provider: {chat_data.get('provider')}")
-print("Response Text:")
-print(chat_data.get('answer'))
-print()
+def test_api_responses():
+    print("=" * 80)
+    print("[START] RUNNING END-TO-END API RESPONSE VERIFICATION")
+    print("=" * 80)
 
-print("=" * 80)
-print("2. TEST: POST /api/transcribe (Audio / Narrative to BNS/IPC Legal Mapping)")
-print("=" * 80)
-trans_res = client.post("/api/transcribe", json={
-    "text": "Mr. Ramesh Kumar stole my mobile phone and gold chain in Koramangala during November 2025."
-})
-trans_data = trans_res.get_json()
-print(f"HTTP Status: {trans_res.status_code}")
-print(f"Crime Category: {trans_data.get('crime_category')}")
-print(f"Locations Detected: {trans_data.get('locations')}")
-print(f"Suspects Detected: {trans_data.get('suspects')}")
-print(f"BNS / IPC Sections Mapped: {json.dumps(trans_data.get('bns_sections'), indent=2)}")
-print(f"Investigative Summary: {trans_data.get('investigative_summary')}")
-print()
+    client = app.test_client()
 
-print("=" * 80)
-print("3. TEST: GET /api/analytics (Dashboard Statistics)")
-print("=" * 80)
-ana_res = client.get("/api/analytics")
-ana_data = ana_res.get_json()
-print(f"HTTP Status: {ana_res.status_code}")
-print(f"Total Cases: {ana_data.get('total_cases')}")
-print(f"Recovery Rate: {ana_data.get('recovery_rate_pct')}%")
-print(f"Annual Trend Sample: {ana_data.get('annual_trend')[:3]}")
-print(f"Category Breakdown Sample: {ana_data.get('category_breakdown')[:3]}")
-print()
+    # ──────────────────────────────────────────────────────────────────────────
+    # 1. GET /api/investigation/suspects
+    # ──────────────────────────────────────────────────────────────────────────
+    print("\n[ENDPOINT 1] GET /api/investigation/suspects?district=Bengaluru+Urban")
+    resp = client.get("/api/investigation/suspects?district=Bengaluru+Urban")
+    print(f"Status Code: {resp.status_code}")
+    data = json.loads(resp.data.decode("utf-8"))
+    print("Response JSON Payload:")
+    print(json.dumps(data, indent=2))
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+    assert data["success"] is True
+    assert data["count"] > 0
+    print("  -> Suspects Endpoint Verification: [PASS]")
 
-print("=" * 80)
-print("4. TEST: GET /api/map_markers (Geospatial Pins)")
-print("=" * 80)
-map_res = client.get("/api/map_markers")
-map_data = map_res.get_json()
-print(f"HTTP Status: {map_res.status_code}")
-print(f"Markers Count: {map_data.get('count')}")
-print(f"First 2 Sector Pins: {json.dumps(map_data.get('markers')[:2], indent=2)}")
-print()
+    # ──────────────────────────────────────────────────────────────────────────
+    # 2. POST /api/investigation/init
+    # ──────────────────────────────────────────────────────────────────────────
+    print("\n[ENDPOINT 2] POST /api/investigation/init")
+    init_payload = {
+        "spatial_context": {
+            "district_name": "Bengaluru Urban",
+            "station": "Koramangala Police Station"
+        },
+        "hotspot_metadata": {
+            "threat_level": "CRITICAL",
+            "incident_count": 14,
+            "primary_crimes": ["Chain Snatching", "Armed Robbery"]
+        }
+    }
+    resp = client.post(
+        "/api/investigation/init",
+        data=json.dumps(init_payload),
+        content_type="application/json"
+    )
+    print(f"Status Code: {resp.status_code}")
+    init_data = json.loads(resp.data.decode("utf-8"))
+    print("Response JSON Payload:")
+    print(json.dumps(init_data, indent=2))
+    assert resp.status_code == 201, f"Expected 201, got {resp.status_code}"
+    assert init_data["success"] is True
+    session_id = init_data["session_id"]
+    print(f"  -> Investigation Session Initialized: {session_id} [PASS]")
 
-print("=" * 80)
-print("5. TEST: POST & GET /api/complaints (Citizen e-Portal & Filter)")
-print("=" * 80)
-comp_post = client.post("/api/complaints", json={
-    "citizen_name": "Deepak Gowda",
-    "phone": "+91 99001 22334",
-    "station": "Indiranagar Police Station",
-    "district": "Bengaluru Urban",
-    "category": "Cyber Phishing",
-    "description": "Lost ₹50,000 in fake investment scheme."
-})
-print(f"POST Status: {comp_post.status_code}, Ack No: {comp_post.get_json().get('acknowledgement_number')}")
+    # ──────────────────────────────────────────────────────────────────────────
+    # 3. POST /api/investigation/chat (Dispatch Trigger & Suspect Tool Execution)
+    # ──────────────────────────────────────────────────────────────────────────
+    print(f"\n[ENDPOINT 3] POST /api/investigation/chat (Session: {session_id})")
+    chat_payload = {
+        "session_id": session_id,
+        "message": "Dispatch immediate Hoysala PCR backup and identify high risk suspects in this sector."
+    }
+    resp = client.post(
+        "/api/investigation/chat",
+        data=json.dumps(chat_payload),
+        content_type="application/json"
+    )
+    print(f"Status Code: {resp.status_code}")
+    chat_data = json.loads(resp.data.decode("utf-8"))
+    print("Response JSON Payload (Truncated text):")
+    print(json.dumps({
+        "success": chat_data.get("success"),
+        "session_id": chat_data.get("session_id"),
+        "response_preview": chat_data.get("response", "")[:250] + "...",
+        "tool_executions": chat_data.get("tool_executions", [])
+    }, indent=2))
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+    assert chat_data["success"] is True
+    assert len(chat_data.get("tool_executions", [])) > 0
+    print("  -> Investigation Agent Turn & Tool Execution: [PASS]")
 
-comp_get = client.get("/api/complaints?station=indiranagar")
-print(f"GET (Indiranagar Filter) Count: {comp_get.get_json().get('count')}")
-print(f"Sample Complaint: {json.dumps(comp_get.get_json().get('complaints')[0], indent=2)}")
-print()
+    # ──────────────────────────────────────────────────────────────────────────
+    # 4. GET /api/investigation/tickets
+    # ──────────────────────────────────────────────────────────────────────────
+    print("\n[ENDPOINT 4] GET /api/investigation/tickets")
+    resp = client.get("/api/investigation/tickets")
+    print(f"Status Code: {resp.status_code}")
+    tickets_data = json.loads(resp.data.decode("utf-8"))
+    print("Response JSON Payload:")
+    print(json.dumps(tickets_data, indent=2))
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+    assert tickets_data["success"] is True
+    assert tickets_data["count"] > 0
+    print(f"  -> Live Dispatch Tickets Count: {tickets_data['count']} [PASS]")
 
-print("=" * 80)
-print("6. TEST: GET /api/mcp/social_feed (OSINT Live Intelligence)")
-print("=" * 80)
-mcp_res = client.get("/api/mcp/social_feed")
-mcp_data = mcp_res.get_json()
-print(f"HTTP Status: {mcp_res.status_code}")
-print(f"Feed Count: {mcp_data.get('count')}")
-print(f"Top Alert: {json.dumps(mcp_data.get('feed')[0], indent=2)}")
-print("=" * 80)
+    # ──────────────────────────────────────────────────────────────────────────
+    # 5. POST /chat (Core Chatbot Polymorphic Dispatch)
+    # ──────────────────────────────────────────────────────────────────────────
+    print("\n[ENDPOINT 5] POST /chat (Polymorphic Chatbot Router)")
+    post_chat_payload = {
+        "query": "What are the latest spatial crime patterns in Bengaluru?",
+        "session_id": "test_verification_session_001"
+    }
+    resp = client.post(
+        "/chat",
+        data=json.dumps(post_chat_payload),
+        content_type="application/json"
+    )
+    print(f"Status Code: {resp.status_code}")
+    main_chat_data = json.loads(resp.data.decode("utf-8"))
+    print("Response JSON Payload Preview:")
+    print(json.dumps({
+        "agent_type": main_chat_data.get("agent_type"),
+        "model_used": main_chat_data.get("model_used") or main_chat_data.get("provider"),
+        "answer_preview": (main_chat_data.get("answer") or "")[:250] + "...",
+        "has_charts": len(main_chat_data.get("charts", [])) > 0
+    }, indent=2))
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+    assert "answer" in main_chat_data or "text" in main_chat_data
+    print(f"  -> Polymorphic /chat Response ({main_chat_data.get('agent_type')}) [PASS]")
+
+    print("\n" + "=" * 80)
+    print("[DONE] ALL ENDPOINT RESPONSES TESTED AND FULLY VALIDATED!")
+    print("=" * 80)
+
+
+if __name__ == "__main__":
+    test_api_responses()

@@ -37,6 +37,7 @@ import {
   GRAPHIFY_COLOR_PALETTE
 } from '../services/networkAnalyticsService';
 import { parseCSV } from '../services/datasetStore';
+import { getApiUrl } from '../../services/apiClient';
 
 export default function NetworkGraphView({ datasetState, onBackToChat, onDatasetLoaded }) {
   const canvasRef = useRef(null);
@@ -577,7 +578,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           formData.append('file', file);
           formData.append('session_id', activeSessionId);
 
-          fetch('http://127.0.0.1:5000/api/upload_dataset', {
+          fetch(getApiUrl('/api/upload_dataset'), {
             method: 'POST',
             body: formData
           }).then(res => res.json()).then(data => {
