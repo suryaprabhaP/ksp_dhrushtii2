@@ -24,66 +24,106 @@ export default function VerificationModal({ record, onClose, onApprove, onReject
       position: 'fixed',
       inset: 0,
       zIndex: 9999,
-      background: 'rgba(9, 13, 22, 0.85)',
-      backdropFilter: 'blur(10px)',
+      background: 'rgba(19, 43, 32, 0.45)',
+      backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '20px'
     }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '780px',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
-        border: '1px solid rgba(59, 130, 246, 0.4)',
-        borderRadius: '16px',
-        padding: '24px',
-        color: '#f8fafc',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)'
-      }}>
+      <div
+        className="portal-scroll"
+        style={{
+          width: '100%',
+          maxWidth: '780px',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          background: '#F4F0E8',
+          border: '1px solid #D4CEBF',
+          borderRadius: '16px',
+          padding: '28px',
+          color: '#132B20',
+          boxShadow: '0 20px 45px rgba(19, 43, 32, 0.15)'
+        }}
+      >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid #334155', paddingBottom: '14px' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '20px',
+          borderBottom: '1px solid #D4CEBF',
+          paddingBottom: '16px'
+        }}>
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.5px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#8A5A18', letterSpacing: '0.5px' }}>
               POLICE VERIFICATION DOSSIER
             </span>
-            <h2 style={{ margin: '2px 0 0 0', fontSize: '1.25rem', fontWeight: 900 }}>
+            <h2 style={{ margin: '4px 0 0 0', fontSize: '1.3rem', fontWeight: 900, color: '#132B20' }}>
               {record.applicant_name} ({record.application_id})
             </h2>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
-            <X size={20} />
+          <button
+            onClick={onClose}
+            style={{
+              background: '#FCFCFA',
+              border: '1px solid #D4CEBF',
+              borderRadius: '8px',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#132B20',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFEBE2'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FCFCFA'}
+          >
+            <X size={18} />
           </button>
         </div>
 
         {/* Info Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '20px', fontSize: '0.85rem' }}>
-          <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '10px 14px', borderRadius: '8px' }}>
-            <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem' }}>Aadhaar Number</span>
-            <strong>{record.aadhaar_number}</strong>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '14px',
+          marginBottom: '20px',
+          fontSize: '0.85rem'
+        }}>
+          <div style={{ background: '#FCFCFA', border: '1px solid #D4CEBF', padding: '12px 16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(19, 43, 32, 0.03)' }}>
+            <span style={{ color: '#526058', display: 'block', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px' }}>Aadhaar Number</span>
+            <strong style={{ color: '#132B20', fontSize: '0.9rem' }}>{record.aadhaar_number}</strong>
           </div>
-          <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '10px 14px', borderRadius: '8px' }}>
-            <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem' }}>Jurisdiction</span>
-            <strong>{record.police_station}</strong> ({record.division})
+          <div style={{ background: '#FCFCFA', border: '1px solid #D4CEBF', padding: '12px 16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(19, 43, 32, 0.03)' }}>
+            <span style={{ color: '#526058', display: 'block', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px' }}>Jurisdiction</span>
+            <strong style={{ color: '#132B20', fontSize: '0.9rem' }}>{record.police_station}</strong> <span style={{ color: '#526058', fontSize: '0.8rem' }}>({record.division})</span>
           </div>
-          <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '10px 14px', borderRadius: '8px' }}>
-            <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem' }}>Purpose & Country</span>
-            <strong>{record.purpose}</strong> ({record.travel_country})
+          <div style={{ background: '#FCFCFA', border: '1px solid #D4CEBF', padding: '12px 16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(19, 43, 32, 0.03)' }}>
+            <span style={{ color: '#526058', display: 'block', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px' }}>Purpose & Country</span>
+            <strong style={{ color: '#132B20', fontSize: '0.9rem' }}>{record.purpose}</strong> <span style={{ color: '#8A5A18', fontSize: '0.8rem', fontWeight: 700 }}>({record.travel_country})</span>
           </div>
-          <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '10px 14px', borderRadius: '8px' }}>
-            <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem' }}>Assigned Field Officer</span>
-            <strong>{record.assigned_constable_name}</strong> ({record.assigned_constable_id})
+          <div style={{ background: '#FCFCFA', border: '1px solid #D4CEBF', padding: '12px 16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(19, 43, 32, 0.03)' }}>
+            <span style={{ color: '#526058', display: 'block', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px' }}>Assigned Field Officer</span>
+            <strong style={{ color: '#132B20', fontSize: '0.9rem' }}>{record.assigned_constable_name}</strong> <span style={{ color: '#6E7D75', fontSize: '0.8rem' }}>({record.assigned_constable_id})</span>
           </div>
         </div>
 
         {/* Remarks Box */}
-        <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid #334155', borderRadius: '10px', padding: '14px', marginBottom: '24px' }}>
-          <span style={{ color: '#60a5fa', fontWeight: 800, fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>
+        <div style={{
+          background: '#FCFCFA',
+          border: '1px solid #D4CEBF',
+          borderRadius: '10px',
+          padding: '16px',
+          marginBottom: '24px',
+          boxShadow: '0 1px 3px rgba(19, 43, 32, 0.03)'
+        }}>
+          <span style={{ color: '#8A5A18', fontWeight: 800, fontSize: '0.75rem', display: 'block', marginBottom: '6px', letterSpacing: '0.3px' }}>
             OFFICER VERIFICATION REMARKS / CCTNS AUDIT:
           </span>
-          <p style={{ margin: 0, fontSize: '0.85rem', color: '#cbd5e1' }}>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#132B20', lineHeight: 1.5, fontWeight: 500 }}>
             {record.verification_remarks || 'Physical verification conducted. Identity, address proof, and non-involvement in crime verified across CCTNS records.'}
           </p>
         </div>
@@ -94,17 +134,20 @@ export default function VerificationModal({ record, onClose, onApprove, onReject
             onClick={downloadClearanceCertificate}
             style={{
               padding: '10px 16px',
-              background: 'rgba(59, 130, 246, 0.15)',
-              border: '1px solid rgba(59, 130, 246, 0.4)',
+              background: '#EFEBE2',
+              border: '1px solid #D4CEBF',
               borderRadius: '8px',
-              color: '#60a5fa',
-              fontSize: '0.85rem',
+              color: '#132B20',
+              fontSize: '0.82rem',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              transition: 'all 0.15s ease'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E5DEC9'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EFEBE2'}
           >
             <Download size={15} /> Download Police Report PDF
           </button>
@@ -114,17 +157,20 @@ export default function VerificationModal({ record, onClose, onApprove, onReject
               onClick={() => onReject(record)}
               style={{
                 padding: '10px 18px',
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid rgba(239, 68, 68, 0.4)',
+                background: 'rgba(220, 38, 38, 0.1)',
+                border: '1px solid rgba(220, 38, 38, 0.3)',
                 borderRadius: '8px',
-                color: '#f87171',
-                fontSize: '0.85rem',
+                color: '#DC2626',
+                fontSize: '0.82rem',
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                transition: 'all 0.15s ease'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.18)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.1)'}
             >
               <XCircle size={15} /> Reject
             </button>
@@ -132,18 +178,21 @@ export default function VerificationModal({ record, onClose, onApprove, onReject
               onClick={() => onApprove(record)}
               style={{
                 padding: '10px 22px',
-                background: 'linear-gradient(135deg, #10b981, #059669)',
+                background: '#132B20',
                 border: 'none',
                 borderRadius: '8px',
-                color: '#ffffff',
-                fontSize: '0.85rem',
+                color: '#FCFCFA',
+                fontSize: '0.82rem',
                 fontWeight: 800,
                 cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+                boxShadow: '0 4px 12px rgba(19, 43, 32, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                transition: 'all 0.15s ease'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1D3D2F'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#132B20'}
             >
               <Check size={16} /> Clear & Approve Verification
             </button>
@@ -152,4 +201,4 @@ export default function VerificationModal({ record, onClose, onApprove, onReject
       </div>
     </div>
   );
-}
+}

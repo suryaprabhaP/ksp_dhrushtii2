@@ -26,14 +26,14 @@ export default function CrimeAnalyticsHub({
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      backgroundColor: '#090d16',
-      color: '#f8fafc',
+      backgroundColor: '#0D1512',
+      color: '#FCFCFA',
       fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
     }}>
       {/* ── TOP HUB COMMAND BAR ──────────────────────────────────────────────── */}
       <header style={{
         height: '48px',
-        backgroundColor: '#0a130e',
+        backgroundColor: '#0A130E',
         borderBottom: '1px solid rgba(212, 155, 68, 0.35)',
         display: 'flex',
         alignItems: 'center',
@@ -49,7 +49,7 @@ export default function CrimeAnalyticsHub({
               style={{
                 background: 'rgba(255, 255, 255, 0.05)',
                 border: '1px solid rgba(212, 155, 68, 0.3)',
-                color: '#d49b44',
+                color: '#D49B44',
                 padding: '4px 10px',
                 borderRadius: '6px',
                 fontSize: '0.72rem',
@@ -81,7 +81,7 @@ export default function CrimeAnalyticsHub({
             <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fcfcfa', letterSpacing: '0.4px' }}>
               CRIME ANALYTICS HUB
             </span>
-            <span style={{ fontSize: '0.65rem', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.1)', padding: '1px 6px', borderRadius: '4px', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+            <span style={{ fontSize: '0.65rem', color: '#D49B44', background: 'rgba(212, 155, 68, 0.12)', padding: '1px 6px', borderRadius: '4px', border: '1px solid rgba(212, 155, 68, 0.3)' }}>
               Zoho Analytics Dual-Console
             </span>
           </div>
@@ -89,16 +89,16 @@ export default function CrimeAnalyticsHub({
 
         {/* VIEW RATIO TOGGLES */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div style={{ fontSize: '0.68rem', color: '#8A9A90', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span>Split:</span>
             <button
               onClick={() => setSplitRatio(50)}
               style={{
                 padding: '2px 8px',
                 borderRadius: '4px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: splitRatio === 50 ? '#1e3a8a' : 'transparent',
-                color: splitRatio === 50 ? '#38bdf8' : '#94a3b8',
+                border: splitRatio === 50 ? '1px solid rgba(212, 155, 68, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: splitRatio === 50 ? '#1A2C24' : 'transparent',
+                color: splitRatio === 50 ? '#D49B44' : '#8A9A90',
                 fontSize: '0.65rem',
                 cursor: 'pointer'
               }}
@@ -110,9 +110,9 @@ export default function CrimeAnalyticsHub({
               style={{
                 padding: '2px 8px',
                 borderRadius: '4px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: splitRatio === 65 ? '#1e3a8a' : 'transparent',
-                color: splitRatio === 65 ? '#38bdf8' : '#94a3b8',
+                border: splitRatio === 65 ? '1px solid rgba(212, 155, 68, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: splitRatio === 65 ? '#1A2C24' : 'transparent',
+                color: splitRatio === 65 ? '#D49B44' : '#8A9A90',
                 fontSize: '0.65rem',
                 cursor: 'pointer'
               }}
@@ -124,9 +124,9 @@ export default function CrimeAnalyticsHub({
               style={{
                 padding: '2px 8px',
                 borderRadius: '4px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: splitRatio === 80 ? '#1e3a8a' : 'transparent',
-                color: splitRatio === 80 ? '#38bdf8' : '#94a3b8',
+                border: splitRatio === 80 ? '1px solid rgba(212, 155, 68, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: splitRatio === 80 ? '#1A2C24' : 'transparent',
+                color: splitRatio === 80 ? '#D49B44' : '#8A9A90',
                 fontSize: '0.65rem',
                 cursor: 'pointer'
               }}
@@ -164,7 +164,7 @@ export default function CrimeAnalyticsHub({
           width: `${100 - splitRatio}%`,
           height: '100%',
           overflow: 'hidden',
-          borderLeft: '1px solid rgba(59, 130, 246, 0.25)',
+          borderLeft: '1px solid rgba(212, 155, 68, 0.25)',
           transition: 'width 0.2s ease-in-out'
         }}>
           <Chatbot

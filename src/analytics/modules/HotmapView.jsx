@@ -406,11 +406,11 @@ export default function HotmapView({
       try {
         const layer = L.geoJSON(boundaryGeoData, {
           style: {
-            color: activeTileType === 'DARK' ? '#38bdf8' : '#1d4ed8',
+            color: '#132B20',
             weight: 2.2,
             opacity: 0.85,
-            fillColor: activeTileType === 'DARK' ? '#0369a1' : '#60a5fa',
-            fillOpacity: activeTileType === 'DARK' ? 0.05 : 0.03,
+            fillColor: '#132B20',
+            fillOpacity: 0.03,
             dashArray: '4, 4'
           },
           onEachFeature: (feature, l) => {
@@ -456,10 +456,10 @@ export default function HotmapView({
                              (searchQuery && searchQuery.toLowerCase().includes(dName.toLowerCase())) ||
                              (selectedDistrictName === dName);
           return {
-            color: isSelected ? '#f59e0b' : (activeTileType === 'DARK' ? '#38bdf8' : '#0284c7'),
+            color: isSelected ? '#D49B44' : '#1E5E45',
             weight: isSelected ? 2.5 : 1.2,
             opacity: isSelected ? 0.95 : 0.65,
-            fillColor: isSelected ? '#f59e0b' : (activeTileType === 'DARK' ? '#0284c7' : '#38bdf8'),
+            fillColor: isSelected ? '#D49B44' : '#1E5E45',
             fillOpacity: isSelected ? 0.16 : 0.04,
             dashArray: isSelected ? '' : '3, 3'
           };
@@ -496,13 +496,13 @@ export default function HotmapView({
 
           // Interactive Tooltip on Hover
           l.bindTooltip(`
-            <div style="font-family: 'Inter', system-ui, sans-serif; font-size: 11px; color: #0f172a; padding: 3px 6px; min-width: 140px;">
-              <div style="font-weight: 800; color: #1e40af; font-size: 12px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-family: 'Inter', system-ui, sans-serif; font-size: 11px; color: #132B20; padding: 3px 6px; min-width: 140px;">
+              <div style="font-weight: 800; color: #132B20; font-size: 12px; display: flex; align-items: center; justify-content: space-between;">
                 <span>🏛️ ${dName}</span>
-                ${code ? `<span style="font-size: 9px; color: #64748b;">#${code}</span>` : ''}
+                ${code ? `<span style="font-size: 9px; color: #6B7A72;">#${code}</span>` : ''}
               </div>
-              <div style="color: #334155; font-size: 10.5px; margin-top: 3px; font-weight: 600;">
-                <span style="color: #0284c7; font-weight: 800;">${count.toLocaleString()}</span> Incidents in Scope
+              <div style="color: #526058; font-size: 10.5px; margin-top: 3px; font-weight: 600;">
+                <span style="color: #0F5132; font-weight: 800;">${count.toLocaleString()}</span> Incidents in Scope
               </div>
             </div>
           `, {
@@ -516,7 +516,7 @@ export default function HotmapView({
             const target = e.target;
             target.setStyle({
               weight: 2.5,
-              color: '#f59e0b',
+              color: '#D49B44',
               fillOpacity: 0.15
             });
             target.bringToFront();
@@ -569,10 +569,10 @@ export default function HotmapView({
         try {
           const bLayer = L.geoJSON(boundary.geojson, {
             style: {
-              color: '#f59e0b',
+              color: '#D49B44',
               weight: 2,
               opacity: 0.9,
-              fillColor: '#fbbf24',
+              fillColor: '#D49B44',
               fillOpacity: 0.12,
               dashArray: '6, 6'
             },
@@ -694,21 +694,21 @@ export default function HotmapView({
       });
 
       const popupHtml = `
-        <div style="font-family: 'Inter', system-ui, sans-serif; font-size: 11px; min-width: 200px; color: #0f172a; line-height: 1.5;">
-          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 6px;">
-            <b style="color: #1e40af; font-size: 12px;">🛡️ ${fir}</b>
+        <div style="font-family: 'Inter', system-ui, sans-serif; font-size: 11px; min-width: 200px; color: #132B20; line-height: 1.5;">
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #D4CEBF; padding-bottom: 5px; margin-bottom: 6px;">
+            <b style="color: #132B20; font-size: 12px;">🛡️ ${fir}</b>
             <span style="background: ${color}20; color: ${color}; font-weight: 800; font-size: 9px; padding: 2px 6px; border-radius: 10px; border: 1px solid ${color}40;">
               ${category}
             </span>
           </div>
           <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; font-size: 10.5px;">
-            <span style="color: #64748b; font-weight: 700;">Division:</span> <span>${division}</span>
-            <span style="color: #64748b; font-weight: 700;">Station:</span> <span>${station}</span>
-            <span style="color: #64748b; font-weight: 700;">Status:</span> <span style="font-weight: 700; color: ${status.toLowerCase().includes('pending') ? '#dc2626' : '#059669'};">${status}</span>
-            <span style="color: #64748b; font-weight: 700;">Date:</span> <span>${date}</span>
-            ${loss ? `<span style="color: #64748b; font-weight: 700;">Loss:</span> <span style="font-weight: 800; color: #d97706;">₹${Number(loss).toLocaleString()}</span>` : ''}
+            <span style="color: #526058; font-weight: 700;">Division:</span> <span style="color: #132B20;">${division}</span>
+            <span style="color: #526058; font-weight: 700;">Station:</span> <span style="color: #132B20;">${station}</span>
+            <span style="color: #526058; font-weight: 700;">Status:</span> <span style="font-weight: 700; color: ${status.toLowerCase().includes('pending') ? '#DC2626' : '#0F5132'};">${status}</span>
+            <span style="color: #526058; font-weight: 700;">Date:</span> <span style="color: #132B20;">${date}</span>
+            ${loss ? `<span style="color: #526058; font-weight: 700;">Loss:</span> <span style="font-weight: 800; color: #C88A2C;">₹${Number(loss).toLocaleString()}</span>` : ''}
           </div>
-          <div style="margin-top: 8px; padding-top: 5px; border-top: 1px solid #f1f5f9; font-size: 9.5px; color: #94a3b8; text-align: right;">
+          <div style="margin-top: 8px; padding-top: 5px; border-top: 1px solid #EFEBE2; font-size: 9.5px; color: #6B7A72; text-align: right;">
             GPS: ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E
           </div>
         </div>
@@ -799,10 +799,11 @@ export default function HotmapView({
 
       const geoLayer = L.geoJSON(hotspotsData, {
         style: (feature) => {
-          const threatColor = feature.properties?.threat_color || '#ef4444';
+          const isCritical = feature.properties?.threat_level === 'CRITICAL';
+          const threatColor = isCritical ? '#DC2626' : (feature.properties?.threat_color || '#D49B44');
           const isSelected = selectedHotspot?.cluster_id === feature.properties?.cluster_id;
           return {
-            color: isSelected ? '#ffffff' : threatColor,
+            color: isSelected ? '#132B20' : threatColor,
             weight: isSelected ? 3.5 : 2.5,
             opacity: 0.95,
             fillColor: threatColor,
@@ -907,11 +908,11 @@ export default function HotmapView({
       height: '100%',
       width: '100%',
       overflow: 'hidden',
-      backgroundColor: '#090d16',
-      color: '#f8fafc',
+      backgroundColor: '#F4F0E8',
+      color: '#132B20',
       fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
     }}>
-      {/* ── SLIMLINE TOP BAR (48px) ─────────────────────────────────────────── */}
+      {/* ── SLIMLINE TOP BAR (52px) ─────────────────────────────────────────── */}
       <SpatialTopNav
         onBackToChat={onBackToChat}
         viewMode={viewMode}
@@ -982,43 +983,43 @@ export default function HotmapView({
             position: 'absolute',
             top: '20px',
             left: '20px',
-            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(59, 130, 246, 0.4)',
+            backgroundColor: '#FCFCFA',
+            border: '1px solid #D4CEBF',
             borderRadius: '14px',
             padding: '16px',
             zIndex: 999,
             maxWidth: '300px',
-            boxShadow: '0 12px 35px rgba(0, 0, 0, 0.6)',
-            animation: 'bubble-slide-up 0.2s ease-out'
+            boxShadow: '0 12px 30px rgba(19, 43, 32, 0.1)',
+            animation: 'bubble-slide-up 0.2s ease-out',
+            color: '#132B20'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ShieldCheck size={16} color="#38bdf8" />
-                <span style={{ fontWeight: 800, color: '#f8fafc', fontSize: '0.85rem' }}>
+                <ShieldCheck size={16} color="#D49B44" />
+                <span style={{ fontWeight: 800, color: '#132B20', fontSize: '0.85rem' }}>
                   {selectedIncident.FIR_Number || selectedIncident.fir_number || selectedIncident.id || 'Case Record'}
                 </span>
               </div>
               <button
                 onClick={() => setSelectedIncident(null)}
-                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800 }}
+                style={{ background: 'transparent', border: 'none', color: '#6B7A72', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800 }}
               >
                 ✕
               </button>
             </div>
 
-            <div style={{ fontSize: '0.74rem', display: 'flex', flexDirection: 'column', gap: '5px', color: '#cbd5e1' }}>
-              <div><b>Station:</b> {selectedIncident.Police_Station || selectedIncident.police_station || 'HQ'}</div>
-              <div><b>Category:</b> {selectedIncident.Crime_Category || selectedIncident.crime_category || 'General'}</div>
-              <div><b>Status:</b> <span style={{ color: '#34d399', fontWeight: 700 }}>{selectedIncident.Status || selectedIncident.status || 'Active'}</span></div>
-              {selectedIncident.Accused_Name && <div><b>Accused:</b> {selectedIncident.Accused_Name}</div>}
-              {selectedIncident.Loss_Amount_INR && <div><b>Loss Amount:</b> ₹{Number(selectedIncident.Loss_Amount_INR).toLocaleString()}</div>}
+            <div style={{ fontSize: '0.74rem', display: 'flex', flexDirection: 'column', gap: '5px', color: '#2E3A33' }}>
+              <div><b style={{ color: '#526058' }}>Station:</b> {selectedIncident.Police_Station || selectedIncident.police_station || 'HQ'}</div>
+              <div><b style={{ color: '#526058' }}>Category:</b> {selectedIncident.Crime_Category || selectedIncident.crime_category || 'General'}</div>
+              <div><b style={{ color: '#526058' }}>Status:</b> <span style={{ color: selectedIncident.Status?.toLowerCase().includes('pending') ? '#DC2626' : '#0F5132', fontWeight: 700 }}>{selectedIncident.Status || selectedIncident.status || 'Active'}</span></div>
+              {selectedIncident.Accused_Name && <div><b style={{ color: '#526058' }}>Accused:</b> {selectedIncident.Accused_Name}</div>}
+              {selectedIncident.Loss_Amount_INR && <div><b style={{ color: '#526058' }}>Loss Amount:</b> <span style={{ color: '#C88A2C', fontWeight: 800 }}>₹{Number(selectedIncident.Loss_Amount_INR).toLocaleString()}</span></div>}
               {selectedIncident._dataset_name && (
-                <div style={{ color: '#38bdf8', fontSize: '0.68rem', marginTop: '2px', fontWeight: 700 }}>
+                <div style={{ color: '#0F5132', fontSize: '0.68rem', marginTop: '2px', fontWeight: 700 }}>
                   Source: {selectedIncident._dataset_name}
                 </div>
               )}
-              <div style={{ color: '#64748b', fontSize: '0.68rem', marginTop: '4px' }}>
+              <div style={{ color: '#6B7A72', fontSize: '0.68rem', marginTop: '4px' }}>
                 GPS: {Number(selectedIncident.Latitude || selectedIncident.latitude || 0).toFixed(4)}° N, {Number(selectedIncident.Longitude || selectedIncident.longitude || 0).toFixed(4)}° E
               </div>
             </div>

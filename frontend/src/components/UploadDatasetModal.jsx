@@ -125,7 +125,7 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
       left: 0,
       width: '100vw',
       height: '100vh',
-      backgroundColor: 'rgba(9, 13, 22, 0.85)',
+      backgroundColor: 'rgba(19, 43, 32, 0.45)',
       backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
@@ -137,14 +137,14 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
       <div style={{
         maxWidth: '620px',
         width: '100%',
-        backgroundColor: '#0f172a',
+        backgroundColor: '#F4F0E8',
         borderRadius: '24px',
-        border: '1px solid rgba(59, 130, 246, 0.35)',
+        border: '1px solid #D4CEBF',
         padding: '28px 32px',
-        boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(37, 99, 235, 0.2)',
+        boxShadow: '0 20px 45px rgba(19, 43, 32, 0.12)',
         textAlign: 'center',
         position: 'relative',
-        color: '#f8fafc',
+        color: '#132B20',
         fontFamily: "'Inter', system-ui, sans-serif"
       }}>
         {/* CLOSE BUTTON */}
@@ -154,17 +154,25 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
             position: 'absolute',
             top: '18px',
             right: '18px',
-            background: 'rgba(30, 41, 59, 0.6)',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
+            background: '#FCFCFA',
+            border: '1px solid #D4CEBF',
             borderRadius: '50%',
             width: '32px',
             height: '32px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#94a3b8',
+            color: '#132B20',
             cursor: 'pointer',
             transition: 'all 0.15s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#C88A2C';
+            e.currentTarget.style.color = '#C88A2C';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#D4CEBF';
+            e.currentTarget.style.color = '#132B20';
           }}
         >
           <X size={16} />
@@ -175,42 +183,40 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
           width: '52px',
           height: '52px',
           borderRadius: '16px',
-          background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
+          background: '#132B20',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           margin: '0 auto 12px auto',
-          boxShadow: '0 0 25px rgba(37, 99, 235, 0.5)',
-          border: '1px solid rgba(147, 197, 253, 0.4)'
+          boxShadow: '0 4px 14px rgba(19, 43, 32, 0.15)',
+          border: '1px solid #D49B44'
         }}>
-          <BarChart2 size={26} color="#ffffff" />
+          <BarChart2 size={26} color="#D49B44" />
         </div>
 
         <h3 style={{
           margin: '0 0 6px 0',
           fontSize: '1.3rem',
           fontWeight: 800,
-          background: 'linear-gradient(90deg, #ffffff 0%, #93c5fd 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent'
+          color: '#132B20'
         }}>
           Upload Crime Dataset & Source Records
         </h3>
         <p style={{
           fontSize: '0.8rem',
-          color: '#94a3b8',
+          color: '#4B5A52',
           margin: '0 0 20px 0',
           lineHeight: 1.4
         }}>
-          Attach police FIR records or choose an instant benchmark dataset to activate the <b>55% Visual Intelligence Studio</b> and AI Analyst Agent.
+          Attach police FIR records or choose an instant benchmark dataset to activate the <b style={{ color: '#C88A2C' }}>55% Visual Intelligence Studio</b> and AI Analyst Agent.
         </p>
 
         {/* INSTANT DEMO OPTIONS CONTAINER */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '18px' }}>
           {/* OPTION 1: BENGALURU METRO 3,500 SPECIAL OPS */}
           <div style={{
-            backgroundColor: 'rgba(56, 189, 248, 0.08)',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
+            backgroundColor: '#FCFCFA',
+            border: '1px solid #D4CEBF',
             borderRadius: '12px',
             padding: '12px 16px',
             display: 'flex',
@@ -220,10 +226,10 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
             textAlign: 'left'
           }}>
             <div>
-              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Sparkles size={14} /> Bengaluru Metro Special Ops (3,500 FIRs)
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#C88A2C', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Sparkles size={14} color="#C88A2C" /> Bengaluru Metro Special Ops (3,500 FIRs)
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+              <div style={{ fontSize: '0.7rem', color: '#526058', marginTop: '2px' }}>
                 High-density Cyber Crime, Heinous Corridors, Whitefield & Tech Parks (2024–2026).
               </div>
             </div>
@@ -231,17 +237,23 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
               onClick={handleLoadMetroDemo}
               disabled={isLoading}
               style={{
-                backgroundColor: '#0284c7',
-                color: '#ffffff',
-                border: 'none',
+                backgroundColor: '#132B20',
+                color: '#FCFCFA',
+                border: '1px solid #132B20',
                 borderRadius: '8px',
                 padding: '7px 14px',
                 fontSize: '0.76rem',
                 fontWeight: 800,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 2px 10px rgba(2, 132, 199, 0.4)',
+                boxShadow: '0 2px 8px rgba(19, 43, 32, 0.15)',
                 transition: 'all 0.15s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#D49B44';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#132B20';
               }}
             >
               {isLoading ? 'Loading...' : 'Load 3.5K ➔'}
@@ -250,8 +262,8 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
 
           {/* OPTION 2: STATEWIDE 2,500 BENCHMARK */}
           <div style={{
-            backgroundColor: 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            backgroundColor: '#FCFCFA',
+            border: '1px solid #D4CEBF',
             borderRadius: '12px',
             padding: '12px 16px',
             display: 'flex',
@@ -261,10 +273,10 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
             textAlign: 'left'
           }}>
             <div>
-              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Sparkles size={14} /> Karnataka Statewide Benchmark (2,500 FIRs)
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F5132', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Sparkles size={14} color="#0F5132" /> Karnataka Statewide Benchmark (2,500 FIRs)
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+              <div style={{ fontSize: '0.7rem', color: '#526058', marginTop: '2px' }}>
                 Multi-division records across Mysuru, Belagavi, Kalaburagi & Bengaluru.
               </div>
             </div>
@@ -272,8 +284,8 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
               onClick={handleLoadBenchmarkDemo}
               disabled={isLoading}
               style={{
-                backgroundColor: '#059669',
-                color: '#ffffff',
+                backgroundColor: '#0F5132',
+                color: '#FCFCFA',
                 border: 'none',
                 borderRadius: '8px',
                 padding: '7px 14px',
@@ -281,7 +293,7 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
                 fontWeight: 800,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 2px 10px rgba(5, 150, 105, 0.4)',
+                boxShadow: '0 2px 8px rgba(15, 81, 50, 0.2)',
                 transition: 'all 0.15s'
               }}
             >
@@ -297,8 +309,8 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
           style={{
-            border: `2px dashed ${isDragging ? '#3b82f6' : 'rgba(148, 163, 184, 0.3)'}`,
-            backgroundColor: isDragging ? 'rgba(59, 130, 246, 0.12)' : 'rgba(30, 41, 59, 0.4)',
+            border: isDragging ? '1.5px dashed #D49B44' : '1.5px dashed #C2BAAA',
+            backgroundColor: isDragging ? '#EDE7DA' : '#FCFCFA',
             borderRadius: '16px',
             padding: '32px 20px',
             cursor: 'pointer',
@@ -325,35 +337,35 @@ export default function UploadDatasetModal({ isOpen, onClose, onDatasetIngested,
             width: '48px',
             height: '48px',
             borderRadius: '50%',
-            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+            backgroundColor: '#EAE4D6',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: '12px',
-            border: '1px solid rgba(59, 130, 246, 0.3)'
+            border: '1px solid #D4CEBF'
           }}>
-            <Upload size={22} color="#60a5fa" />
+            <Upload size={22} color="#132B20" />
           </div>
 
-          <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f8fafc', marginBottom: '4px' }}>
+          <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#132B20', marginBottom: '4px' }}>
             {isDragging ? 'Drop your dataset file here' : 'Drag & Drop dataset file here, or click to browse'}
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', marginBottom: '16px' }}>
+          <div style={{ fontSize: '0.74rem', color: '#6B7A72', marginBottom: '16px' }}>
             Max recommended size: 50MB per file
           </div>
 
           {/* FORMAT BADGES */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '4px 10px', borderRadius: '6px', backgroundColor: '#EFEBE2', color: '#132B20', border: '1px solid #D4CEBF' }}>
               📄 CSV Dataset
             </span>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', backgroundColor: 'rgba(34, 197, 94, 0.15)', color: '#86efac', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '4px 10px', borderRadius: '6px', backgroundColor: '#EFEBE2', color: '#132B20', border: '1px solid #D4CEBF' }}>
               📊 Excel (.xlsx / .xls)
             </span>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#fca5a5', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '4px 10px', borderRadius: '6px', backgroundColor: '#EFEBE2', color: '#132B20', border: '1px solid #D4CEBF' }}>
               📑 PDF Dossier
             </span>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#d8b4fe', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '4px 10px', borderRadius: '6px', backgroundColor: '#EFEBE2', color: '#132B20', border: '1px solid #D4CEBF' }}>
               💾 JSON / SQL Dumps
             </span>
           </div>

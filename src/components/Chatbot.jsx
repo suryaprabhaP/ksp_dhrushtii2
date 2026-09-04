@@ -385,6 +385,17 @@ function Chatbot({
     return null;
   });
   const [studioExecutiveDecision, setStudioExecutiveDecision] = useState(null);
+  const [activeDatasetName, setActiveDatasetName] = useState(() => {
+    try {
+      return localStorage.getItem(`ksp_sentinel_active_ds_name_${divisionName}`) || null;
+    } catch (e) { return null; }
+  });
+  const [activeDatasetRows, setActiveDatasetRows] = useState(() => {
+    try {
+      const r = localStorage.getItem(`ksp_sentinel_active_ds_rows_${divisionName}`);
+      return r ? parseInt(r, 10) : null;
+    } catch (e) { return null; }
+  });
 
   // CHATGPT STYLE SAVED SESSION HISTORY STATE
   const [savedSessions, setSavedSessions] = useState(() => {
@@ -447,6 +458,8 @@ function Chatbot({
         studioKpis: studioKpis || null,
         isVisualStudioOpen: isVisualStudioOpen || false,
         datasetState: datasetState || null,
+        activeDatasetName: activeDatasetName || null,
+        activeDatasetRows: activeDatasetRows || null,
         spatialPayload: spatialPayload || null,
         updatedAt: Date.now(),
         dateStr
@@ -505,6 +518,10 @@ function Chatbot({
       localStorage.setItem(`ksp_sentinel_chat_history_${divisionName}`, JSON.stringify(welcomeMsg));
       localStorage.removeItem(`ksp_sentinel_studio_charts_${divisionName}`);
       localStorage.removeItem(`ksp_sentinel_studio_kpis_${divisionName}`);
+      localStorage.removeItem(`ksp_sentinel_active_ds_name_${divisionName}`);
+      localStorage.removeItem(`ksp_sentinel_active_ds_rows_${divisionName}`);
+      setActiveDatasetName(null);
+      setActiveDatasetRows(null);
       localStorage.setItem(`ksp_sentinel_studio_open_${divisionName}`, 'false');
     } catch (e) {}
   };
@@ -518,6 +535,22 @@ function Chatbot({
       setStudioExecutiveDecision(session.studioExecutiveDecision || null);
       setStudioKpis(session.studioKpis || null);
       setIsVisualStudioOpen(Boolean(session.isVisualStudioOpen && session.studioCharts?.length > 0));
+
+      setActiveDatasetName(session.activeDatasetName || null);
+      setActiveDatasetRows(session.activeDatasetRows || null);
+      if (session.activeDatasetName) {
+        try {
+          localStorage.setItem(`ksp_sentinel_active_ds_name_${divisionName}`, session.activeDatasetName);
+          if (session.activeDatasetRows) {
+            localStorage.setItem(`ksp_sentinel_active_ds_rows_${divisionName}`, String(session.activeDatasetRows));
+          }
+        } catch (e) {}
+      } else {
+        try {
+          localStorage.removeItem(`ksp_sentinel_active_ds_name_${divisionName}`);
+          localStorage.removeItem(`ksp_sentinel_active_ds_rows_${divisionName}`);
+        } catch (e) {}
+      }
 
       // Restore spatial investigation context if present, or clear
       if (session.spatialPayload && openInvestigation) {
@@ -1082,12 +1115,12 @@ function Chatbot({
     setShowUploadDatasetModal(true);
   };
 
-  const handleProcessRagFile = async (file, datasetPurpose = "auto") => {
+  const handleProcessRagFile = async (file) => {
     if (!file) return;
 
     setMessages(prev => [
       ...prev.filter(m => m.type !== 'rag-upload-prompt'),
-      { id: Date.now() + '-u-file', sender: 'user', text: `Uploaded: <b>${file.name}</b> (${roundSize(file.size)}) [${datasetPurpose}]` },
+      { id: Date.now() + '-u-file', sender: 'user', text: `Uploaded: <b>${file.name}</b> (${roundSize(file.size)})` },
       { id: Date.now() + '-b-term', sender: 'bot', text: `Initializing RAG Vector Indexer for '${file.name}':`, type: 'rag-terminal' }
     ]);
 
@@ -1102,7 +1135,6 @@ function Chatbot({
     const formData = new FormData();
     formData.append('file', file);
     formData.append('session_id', activeSessionId);
-    formData.append('dataset_purpose', datasetPurpose);
 
     try {
       const response = await fetch(getApiUrl('/api/upload_dataset'), {
@@ -1155,12 +1187,23 @@ function Chatbot({
           }
           setIsVisualStudioOpen(true);
 
+          const dsName = data.filename || file.name;
+          const dsRows = data.row_count || null;
+          setActiveDatasetName(dsName);
+          setActiveDatasetRows(dsRows);
+          try {
+            localStorage.setItem(`ksp_sentinel_active_ds_name_${divisionName}`, dsName);
+            if (dsRows) {
+              localStorage.setItem(`ksp_sentinel_active_ds_rows_${divisionName}`, String(dsRows));
+            }
+          } catch(e) {}
+
           setMessages(prev => [
             ...prev,
             {
               id: Date.now() + '-rag-ok',
               sender: 'bot',
-              text: `✅ <b>File '${data.filename}' successfully ingested into DuckDB Engine!</b><br/>Indexed <b>${data.row_count ? data.row_count.toLocaleString() : 'active'} records</b> into in-memory table <code>${data.table_name || 'crime_dataset'}</code>. The <b>55% Visual Intelligence Studio & 45% Conversational Chat</b> split canvas is now live on your screen.`,
+              text: `✅ <b>File '${data.filename}' successfully ingested into Investigation Engine!</b><br/>Indexed <b>${data.row_count ? data.row_count.toLocaleString() : 'active'} records</b> into in-memory table <code>${data.table_name || 'crime_dataset'}</code>. The <b>Visual Intelligence Studio</b> is now bound to your case dataset.`,
               agent_type: 'analytical_agent',
               agent_label: 'KSP Sentinel AI Engine',
               agent_icon: '📊',
@@ -1185,6 +1228,16 @@ function Chatbot({
       console.error(err);
       setMessages(prev => [...prev, { sender: 'bot', text: "Failed to upload and index document." }]);
       setActiveFlow(null);
+    }
+  };
+
+  const handleUploadWithAutoQuery = (file, pendingQuery) => {
+    if (!file) return;
+    handleProcessRagFile(file);
+    if (pendingQuery) {
+      setTimeout(() => {
+        handleSend(pendingQuery);
+      }, 2600);
     }
   };
 
@@ -1398,10 +1451,10 @@ function Chatbot({
 
   return (
     <div className="full-screen-chat-layout">
-      {/* LEFT SIDEBAR PANEL (Karnataka Police Dark-Green & Gold Obsidian Theme) */}
-      <div className="chat-sidebar-panel">
+      {/* LEFT SIDEBAR PANEL (DRISHTI Tactical Dark Forest & Amber Gold Command Theme) */}
+      <div className="chat-sidebar-panel" style={{ background: '#0B1712', borderRight: '1px solid rgba(212, 155, 68, 0.25)' }}>
         {/* BRAND LOGO HEADER */}
-        <div className="sidebar-brand-ksp">
+        <div className="sidebar-brand-ksp" style={{ background: '#132B20', border: '1px solid #244434' }}>
           <div className="brand-emblem-wrap">
             <img 
               src="/ksp_police_logo.png" 
@@ -1418,9 +1471,9 @@ function Chatbot({
             />
           </div>
           <div className="brand-text-wrap">
-            <div className="brand-state-title">KARNATAKA STATE POLICE</div>
-            <div className="brand-main-title">KSP DRISHTI</div>
-            <div className="brand-sub-title">CRIME INTELLIGENCE ASSISTANT</div>
+            <div className="brand-state-title" style={{ color: '#D49B44', letterSpacing: '0.8px' }}>KARNATAKA STATE POLICE</div>
+            <div className="brand-main-title" style={{ color: '#FCFCFA' }}>KSP DRISHTI</div>
+            <div className="brand-sub-title" style={{ color: '#94A89D' }}>CRIME INTELLIGENCE ASSISTANT</div>
           </div>
         </div>
 
@@ -1448,11 +1501,11 @@ function Chatbot({
             title="Toggle Side-by-Side Visual Intelligence Studio"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <BarChart2 size={16} className="nav-btn-icon" />
+              <BarChart2 size={16} className="nav-btn-icon" style={{ color: '#10B981' }} />
               <span>Crime Data Analytics</span>
             </div>
             <span className="nav-btn-badge">
-              {isDatasetLoaded ? ((activeMainView === VIEW_STATES.CHAT && isVisualStudioOpen) ? 'STUDIO ✕' : 'STUDIO ➔') : 'DATA ➔'}
+              {isDatasetLoaded ? ((activeMainView === VIEW_STATES.CHAT && isVisualStudioOpen) ? 'STUDIO ✕' : 'STUDIO →') : 'DATA →'}
             </span>
           </button>
 
@@ -1465,11 +1518,11 @@ function Chatbot({
             title="Toggle Network Link Intelligence & Graph Topology Mapping"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <Network size={16} className="nav-btn-icon" />
+              <Network size={16} className="nav-btn-icon" style={{ color: '#D49B44' }} />
               <span>Network Link Intelligence</span>
             </div>
             <span className="nav-btn-badge">
-              {activeMainView === VIEW_STATES.NETWORK ? 'ACTIVE ✕' : 'GRAPH ➔'}
+              {activeMainView === VIEW_STATES.NETWORK ? 'ACTIVE ✕' : 'GRAPH →'}
             </span>
           </button>
 
@@ -1482,11 +1535,11 @@ function Chatbot({
             title="Open Geospatial Hotspot Radar & Tactical Jurisdiction Map"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <Compass size={16} className="nav-btn-icon" style={{ color: '#38bdf8' }} />
+              <Compass size={16} className="nav-btn-icon" style={{ color: '#10B981' }} />
               <span>Geospatial Hotspot Radar</span>
             </div>
-            <span className="nav-btn-badge" style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8' }}>
-              {activeMainView === VIEW_STATES.GEOSPATIAL ? 'ACTIVE ✕' : 'MAP ➔'}
+            <span className="nav-btn-badge">
+              {activeMainView === VIEW_STATES.GEOSPATIAL ? 'ACTIVE ✕' : 'MAP →'}
             </span>
           </button>
 
@@ -1499,11 +1552,11 @@ function Chatbot({
             title="Open Standalone Voice Forensics & STT Speech Intelligence Studio"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <Mic size={16} className="nav-btn-icon" style={{ color: '#a855f7' }} />
+              <Mic size={16} className="nav-btn-icon" style={{ color: '#D49B44' }} />
               <span>Voice Forensics & STT</span>
             </div>
-            <span className="nav-btn-badge" style={{ borderColor: 'rgba(168, 85, 247, 0.4)', color: '#c084fc' }}>
-              {activeMainView === VIEW_STATES.AUDIO_FORENSICS ? 'ACTIVE ✕' : 'AUDIO ➔'}
+            <span className="nav-btn-badge">
+              {activeMainView === VIEW_STATES.AUDIO_FORENSICS ? 'ACTIVE ✕' : 'AUDIO →'}
             </span>
           </button>
 
@@ -1516,11 +1569,11 @@ function Chatbot({
             title="Open Citizen E-Complaint & Incident Registration Portal"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <ShieldCheck size={16} className="nav-btn-icon" style={{ color: '#34d399' }} />
+              <ShieldCheck size={16} className="nav-btn-icon" style={{ color: '#10B981' }} />
               <span>e-Complaint</span>
             </div>
             <span className="nav-btn-badge">
-              {activeMainView === VIEW_STATES.ECOMPLAINT ? 'ACTIVE ✕' : 'PORTAL ➔'}
+              {activeMainView === VIEW_STATES.ECOMPLAINT ? 'ACTIVE ✕' : 'PORTAL →'}
             </span>
           </button>
 
@@ -1533,11 +1586,11 @@ function Chatbot({
             title="Open Police Verification & Passport Clearance Workflow Portal"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <FileText size={16} className="nav-btn-icon" style={{ color: '#38bdf8' }} />
+              <FileText size={16} className="nav-btn-icon" style={{ color: '#D49B44' }} />
               <span>Passport Verification</span>
             </div>
             <span className="nav-btn-badge">
-              {activeMainView === VIEW_STATES.PASSPORT ? 'ACTIVE ✕' : 'PORTAL ➔'}
+              {activeMainView === VIEW_STATES.PASSPORT ? 'ACTIVE ✕' : 'PORTAL →'}
             </span>
           </button>
 
@@ -1550,11 +1603,11 @@ function Chatbot({
             title="Open Police Initiated Spot FIR & Seizure Reporting Portal"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <ShieldAlert size={16} className="nav-btn-icon" style={{ color: '#f59e0b' }} />
+              <ShieldAlert size={16} className="nav-btn-icon" style={{ color: '#10B981' }} />
               <span>Police Complaint</span>
             </div>
             <span className="nav-btn-badge">
-              {activeMainView === VIEW_STATES.POLICE_FIR ? 'ACTIVE ✕' : 'PORTAL ➔'}
+              {activeMainView === VIEW_STATES.POLICE_FIR ? 'ACTIVE ✕' : 'PORTAL →'}
             </span>
           </button>
         </div>
@@ -1562,13 +1615,13 @@ function Chatbot({
         {/* SAVED SESSIONS HISTORY PANEL */}
         <div className="sidebar-section" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '120px', marginTop: '6px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', padding: '0 4px' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.62rem', fontWeight: 800, color: '#889e90', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-              <History size={12} style={{ color: '#c9a96e' }} /> RECENT SESSIONS ({savedSessions.length})
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.65rem', fontWeight: 800, color: '#D49B44', letterSpacing: '1.2px', textTransform: 'uppercase' }}>
+              <History size={12} style={{ color: '#D49B44' }} /> RECENT SESSIONS ({savedSessions.length})
             </span>
             {savedSessions.length > 0 && (
               <button 
                 onClick={handleClearAllSessions}
-                style={{ background: 'transparent', color: '#ef4444', border: 'none', fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer' }}
+                className="sidebar-clear-all-btn"
                 title="Clear all saved sessions"
               >
                 Clear All
@@ -1576,9 +1629,21 @@ function Chatbot({
             )}
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
+          <div 
+            className="sessions-list-scroll" 
+            style={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '4px', 
+              paddingRight: '2px',
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#1E382B transparent'
+            }}
+          >
             {savedSessions.length === 0 ? (
-              <div style={{ fontSize: '0.68rem', color: '#889e90', fontStyle: 'italic', padding: '6px 4px' }}>
+              <div style={{ fontSize: '0.68rem', color: '#81988D', fontStyle: 'italic', padding: '6px 4px' }}>
                 No saved chat sessions. Ask a query and click "+ New Conversation" to save.
               </div>
             ) : (
@@ -1590,33 +1655,25 @@ function Chatbot({
                   title={`Click to view: ${session.title}`}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
-                    <MessageSquare size={13} style={{ color: activeSessionId === session.id ? '#c9a96e' : '#889e90', flexShrink: 0 }} />
+                    <MessageSquare size={13} style={{ color: activeSessionId === session.id ? '#10B981' : '#81988D', flexShrink: 0 }} />
                     <div style={{ overflow: 'hidden', flex: 1 }}>
-                      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: activeSessionId === session.id ? '#ffffff' : '#cbd5e1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div className="sidebar-session-title" style={{ color: activeSessionId === session.id ? '#FCFCFA' : '#E5EAE7' }}>
                         {session.title || 'Conversation Session'}
                       </div>
-                      <div style={{ fontSize: '0.58rem', color: '#889e90', marginTop: '1px' }}>
-                        {session.dateStr || 'Saved'} • {session.messages?.length || 0} msgs
+                      <div className="sidebar-session-subtitle">
+                        <span>{session.dateStr || 'Saved'}</span>
+                        <span> • </span>
+                        <span className="sidebar-session-msg-badge" style={{ color: '#10B981' }}>
+                          {session.messages?.length || 0} msgs
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   <button
                     onClick={(e) => handleDeleteSession(e, session.id)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#889e90',
-                      cursor: 'pointer',
-                      padding: '2px 4px',
-                      borderRadius: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      flexShrink: 0
-                    }}
+                    className="sidebar-session-delete-btn"
                     title="Delete this session"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#889e90'}
                   >
                     <Trash2 size={12} />
                   </button>
@@ -1626,7 +1683,7 @@ function Chatbot({
           </div>
         </div>
 
-        {/* SYSTEM STATUS WIDGET MATCHING MOCKUP */}
+        {/* SYSTEM STATUS WIDGET MATCHING SPEC */}
         <div className="sidebar-system-status-box">
           <div className="system-status-header">SYSTEM STATUS</div>
           <div className="system-status-body">
@@ -1637,7 +1694,7 @@ function Chatbot({
             <div className="system-status-time">
               <div>Data Stream Active</div>
             </div>
-            <RotateCw size={12} style={{ color: '#889e90' }} />
+            <RotateCw size={12} style={{ color: '#81988D' }} />
           </div>
         </div>
       </div>
@@ -1652,30 +1709,30 @@ function Chatbot({
               padding: '10px 20px',
               gap: '8px',
               flexWrap: 'wrap',
-              background: DRISHTI_THEME.colors.subHeaderBg,
-              borderBottom: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`
+              background: '#FCFCFA',
+              borderBottom: '1px solid #E5E0D5'
             }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <img src="/ksp_police_logo.png" alt="KSP Logo" style={{ width: 20, height: 20 }} />
-              <span style={{ fontWeight: 800, color: DRISHTI_THEME.colors.forestDark, fontSize: '0.88rem' }}>
-                Drishti Command Assistant — {divisionName || 'State HQ'}
+              <span style={{ fontWeight: 800, color: '#132B20', fontSize: '0.88rem' }}>
+                Drishti Command Assistant — {divisionName || 'Bengaluru Division'}
               </span>
 
               {/* ACTIVE FIR CASE WORKSPACE SELECTOR */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
-                background: DRISHTI_THEME.colors.cardBg, border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
+                background: '#FCFCFA', border: '1px solid #E5E0D5',
                 borderRadius: '8px', padding: '2px 8px', marginLeft: '6px'
               }}>
-                <FolderKanban size={13} style={{ color: DRISHTI_THEME.colors.forestDark }} />
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: DRISHTI_THEME.colors.forestDark }}>Active FIR Context:</span>
+                <FolderKanban size={13} style={{ color: '#132B20' }} />
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#132B20' }}>Active FIR Context:</span>
                 <select
                   value={selectedFir}
                   onChange={(e) => setSelectedFir(e.target.value)}
                   style={{
-                    fontSize: '0.68rem', fontWeight: 700, background: DRISHTI_THEME.colors.cardBg,
-                    border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`, borderRadius: '6px', padding: '2px 6px',
-                    color: selectedFir ? DRISHTI_THEME.colors.forestDark : DRISHTI_THEME.colors.textSecondary, cursor: 'pointer'
+                    fontSize: '0.68rem', fontWeight: 600, background: '#FFFFFF',
+                    border: '1px solid #D6D1C4', borderRadius: '6px', padding: '3px 8px',
+                    color: '#1F2937', cursor: 'pointer', outline: 'none'
                   }}
                 >
                   <option value="">-- All Stations / General Context --</option>
@@ -1705,9 +1762,9 @@ function Chatbot({
                 {selectedFir && (
                   <span style={{
                     fontSize: '0.6rem',
-                    background: DRISHTI_THEME.colors.goldTint,
-                    color: DRISHTI_THEME.colors.goldDark,
-                    border: `1px solid ${DRISHTI_THEME.colors.borderAccent}`,
+                    background: '#F0EBE1',
+                    color: '#8A5D19',
+                    border: '1px solid #D49B44',
                     padding: '1px 5px',
                     borderRadius: '4px',
                     fontWeight: 800
@@ -1716,134 +1773,167 @@ function Chatbot({
                   </span>
                 )}
               </div>
+
+              {/* ACTIVE DATASET STATUS BADGE */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: activeDatasetName ? 'rgba(16, 185, 129, 0.12)' : '#FCFCFA',
+                border: `1px solid ${activeDatasetName ? '#10b981' : '#E5E0D5'}`,
+                borderRadius: '8px', padding: '2px 8px', marginLeft: '6px'
+              }}>
+                <Database size={13} style={{ color: activeDatasetName ? '#059669' : '#132B20' }} />
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: activeDatasetName ? '#065f46' : '#132B20' }}>Dataset:</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: activeDatasetName ? '#047857' : '#4B5563' }}>
+                  {activeDatasetName ? `${activeDatasetName} (${activeDatasetRows ? activeDatasetRows.toLocaleString() + ' rows' : 'Active'})` : 'None (Isolated)'}
+                </span>
+                {!activeDatasetName ? (
+                  <label 
+                    htmlFor="chat-header-file-upload" 
+                    style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      background: '#132B20',
+                      color: '#FCFCFA',
+                      border: 'none',
+                      borderRadius: '5px',
+                      padding: '2px 7px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Upload case CSV/Excel to bind to this session"
+                  >
+                    + Upload
+                  </label>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setActiveDatasetName(null);
+                      setActiveDatasetRows(null);
+                      try {
+                        localStorage.removeItem(`ksp_sentinel_active_ds_name_${divisionName}`);
+                        localStorage.removeItem(`ksp_sentinel_active_ds_rows_${divisionName}`);
+                      } catch(e) {}
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#ef4444',
+                      cursor: 'pointer',
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      padding: '0 2px'
+                    }}
+                    title="Detach dataset from session"
+                  >
+                    ✕
+                  </button>
+                )}
+                <input
+                  type="file"
+                  id="chat-header-file-upload"
+                  accept=".csv,.xlsx,.json"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleProcessRagFile(e.target.files[0]);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+              </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {/* LANGUAGE SELECTOR TOGGLE */}
+              {/* LANGUAGE SELECTOR TOGGLE - Deep Tactical Forest Green with clean white text */}
               <button 
                 onClick={() => setVoiceLang(voiceLang === 'kn-IN' ? 'en-IN' : 'kn-IN')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: voiceLang === 'kn-IN' ? DRISHTI_THEME.colors.forestDark : DRISHTI_THEME.colors.cardBg,
-                  color: voiceLang === 'kn-IN' ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.forestDark,
-                  border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
-                  borderRadius: '6px',
-                  padding: '4px 10px',
+                  background: '#132B20',
+                  color: '#FCFCFA',
+                  border: '1px solid #132B20',
+                  borderRadius: '9999px',
+                  padding: '4px 12px',
                   fontSize: '0.7rem',
                   fontWeight: 800,
                   cursor: 'pointer',
-                  boxShadow: DRISHTI_THEME.shadows.soft,
+                  boxShadow: '0 1px 3px rgba(19, 43, 32, 0.15)',
                   transition: 'all 0.15s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (voiceLang !== 'kn-IN') {
-                    e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
-                    e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (voiceLang !== 'kn-IN') {
-                    e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
-                    e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark;
-                  }
                 }}
                 title="Toggle Language (Kannada kn-IN / English en-IN)"
               >
-                <Languages size={12} /> {voiceLang === 'kn-IN' ? '🌐 ಕನ್ನಡ (KN)' : '🌐 English (EN)'}
+                <Languages size={12} style={{ color: '#FCFCFA' }} /> {voiceLang === 'kn-IN' ? 'ಕನ್ನಡ (KN)' : 'English (EN)'}
               </button>
 
-              {/* AUTO-PLAY VOICE TOGGLE */}
+              {/* AUTO-PLAY VOICE TOGGLE - Crisp White/Off-White with thin border and dark text */}
               <button
                 onClick={() => setAutoSpeak(!autoSpeak)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: autoSpeak ? DRISHTI_THEME.colors.forestDark : DRISHTI_THEME.colors.cardBg,
-                  color: autoSpeak ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.textSecondary,
-                  border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
-                  borderRadius: '6px',
-                  padding: '4px 9px',
+                  background: '#FFFFFF',
+                  color: '#1F2937',
+                  border: '1px solid #D6D1C4',
+                  borderRadius: '9999px',
+                  padding: '4px 12px',
                   fontSize: '0.7rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
-                onMouseEnter={(e) => {
-                  if (!autoSpeak) {
-                    e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
-                    e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!autoSpeak) {
-                    e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
-                    e.currentTarget.style.color = DRISHTI_THEME.colors.textSecondary;
-                  }
-                }}
                 title="Toggle Auto Read-Aloud for Bot Responses"
               >
-                {autoSpeak ? <Volume2 size={12} /> : <VolumeX size={12} />} Voice
+                {autoSpeak ? <Volume2 size={12} style={{ color: '#10B981' }} /> : <VolumeX size={12} style={{ color: '#6B7280' }} />} Voice
               </button>
 
-              {/* VISUAL INTELLIGENCE STUDIO TOGGLE BUTTON */}
+              {/* VISUAL INTELLIGENCE STUDIO TOGGLE BUTTON - Crisp White/Off-White with thin border */}
               <button
                 onClick={() => setIsVisualStudioOpen(v => !v)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '5px',
-                  background: isVisualStudioOpen ? DRISHTI_THEME.colors.forestDark : DRISHTI_THEME.colors.cardBg,
-                  color: isVisualStudioOpen ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.forestDark,
-                  border: isVisualStudioOpen ? `1px solid ${DRISHTI_THEME.colors.borderAccent}` : `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
-                  borderRadius: '6px',
-                  padding: '4px 10px',
+                  background: isVisualStudioOpen ? '#132B20' : '#FFFFFF',
+                  color: isVisualStudioOpen ? '#FCFCFA' : '#1F2937',
+                  border: isVisualStudioOpen ? '1px solid #132B20' : '1px solid #D6D1C4',
+                  borderRadius: '9999px',
+                  padding: '4px 12px',
                   fontSize: '0.7rem',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   cursor: 'pointer',
-                  boxShadow: isVisualStudioOpen ? DRISHTI_THEME.shadows.soft : 'none',
                   transition: 'all 0.15s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isVisualStudioOpen) {
-                    e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
-                    e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isVisualStudioOpen) {
-                    e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
-                    e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark;
-                  }
                 }}
                 title="Toggle Side-by-Side Visual Intelligence Studio"
               >
-                <BarChart2 size={13} style={{ color: isVisualStudioOpen ? DRISHTI_THEME.colors.goldAccent : DRISHTI_THEME.colors.forestDark }} />
-                <span>{isVisualStudioOpen ? '📊 Hide Studio' : '📊 Visual Studio'}</span>
+                <BarChart2 size={13} style={{ color: isVisualStudioOpen ? '#D49B44' : '#1F2937' }} />
+                <span>{isVisualStudioOpen ? 'Hide Studio' : 'Visual Studio'}</span>
               </button>
 
-              {/* EXPORT SUMMARY PDF BUTTON */}
+              {/* EXPORT SUMMARY PDF BUTTON - Dark Forest Green with off-white text */}
               <button 
                 onClick={downloadChatSummaryPDF}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: DRISHTI_THEME.colors.forestDark,
-                  color: DRISHTI_THEME.colors.textWhite,
-                  border: `1px solid ${DRISHTI_THEME.colors.borderAccent}`,
-                  borderRadius: '6px',
-                  padding: '4px 10px',
+                  background: '#132B20',
+                  color: '#FCFCFA',
+                  border: '1px solid #132B20',
+                  borderRadius: '9999px',
+                  padding: '4px 12px',
                   fontSize: '0.7rem',
                   fontWeight: 800,
                   cursor: 'pointer',
-                  boxShadow: DRISHTI_THEME.shadows.soft,
+                  boxShadow: '0 1px 3px rgba(19, 43, 32, 0.15)',
                   transition: 'all 0.15s ease'
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestMid; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#1E4332'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#132B20'; }}
                 title="Download Executive Chat Summary as PDF"
               >
                 <Download size={12} /> PDF Summary
@@ -1907,11 +1997,11 @@ function Chatbot({
             {/* DRISHTI OFFICIAL WELCOME BANNER */}
             {messages.length <= 1 && (
               <div style={{ textAlign: 'left', padding: '14px 6px 18px 6px', animation: 'bubble-slide-up 0.4s ease-out' }}>
-                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: DRISHTI_THEME.colors.forestDark, display: 'flex', alignItems: 'center', gap: '10px', lineHeight: 1.25 }}>
-                  <ShieldCheck size={26} style={{ color: DRISHTI_THEME.colors.forestDark }} /> Drishti Command Assistant
+                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#132B20', display: 'flex', alignItems: 'center', gap: '10px', lineHeight: 1.25 }}>
+                  <Shield size={26} style={{ color: '#132B20', strokeWidth: 2.2 }} /> Drishti Command Assistant,
                 </div>
-                <div style={{ fontSize: '1.05rem', color: DRISHTI_THEME.colors.textSecondary, fontWeight: 600, marginTop: '4px' }}>
-                  Karnataka State Police Command Intelligence platform active for {divisionName || 'State HQ'}.
+                <div style={{ fontSize: '1.02rem', color: '#4B5563', fontWeight: 500, marginTop: '4px' }}>
+                  Karnataka State Police Command Intelligence platform active for {divisionName || 'Bengaluru Division'}.
                 </div>
               </div>
             )}
@@ -1925,48 +2015,39 @@ function Chatbot({
                       display: 'flex', alignItems: 'center', gap: '8px',
                       marginBottom: '4px'
                     }}>
-                      <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '7px',
-                        background: DRISHTI_THEME.colors.forestTint,
-                        border: `1.5px solid ${DRISHTI_THEME.colors.forestDark}`,
-                        borderRadius: '20px',
-                        padding: '5px 14px 5px 10px',
-                        fontSize: '0.88rem',
-                        fontWeight: 800,
-                        color: DRISHTI_THEME.colors.forestDark,
-                      }}>
-                        <span style={{ fontSize: '1rem' }}>{m.agent_icon || '🛡️'}</span>
-                        {m.agent_label || 'Drishti Command Assistant'}
+                      <div className="bot-sender-badge">
+                        <ShieldCheck size={15} style={{ color: '#2563EB' }} />
+                        <span>{m.agent_label || `KSP ${divisionName || 'Bengaluru'} Division Assistant`}</span>
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div dangerouslySetInnerHTML={{ __html: markdownToHtml(m.text) }} />
+                <div className="bot-message-prose" dangerouslySetInnerHTML={{ __html: markdownToHtml(m.text) }} />
 
                 {m.sender === 'bot' && m.prompt_suggestions && m.prompt_suggestions.length > 0 && (
                   <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: DRISHTI_THEME.colors.forestDark, letterSpacing: '0.3px' }}>💡 CLICK TO GENERATE SAMPLE REPORT:</div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#132B20', letterSpacing: '0.3px' }}>💡 CLICK TO GENERATE SAMPLE REPORT:</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {m.prompt_suggestions.map((suggestionText, idx) => (
                         <button
                           key={idx}
                           onClick={() => handleSend(suggestionText)}
                           style={{
-                            background: DRISHTI_THEME.colors.cardBg,
-                            color: DRISHTI_THEME.colors.forestDark,
-                            border: `1.5px solid ${DRISHTI_THEME.colors.borderAccent}`,
+                            background: '#F0EBE1',
+                            color: '#132B20',
+                            border: '1px solid #D49B44',
                             borderRadius: '16px',
                             padding: '6px 14px',
-                            fontSize: '0.86rem',
+                            fontSize: '0.84rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             textAlign: 'left',
                             transition: 'all 0.15s ease',
-                            boxShadow: DRISHTI_THEME.shadows.soft
+                            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)'
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark; e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg; e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#132B20'; e.currentTarget.style.color = '#FCFCFA'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = '#F0EBE1'; e.currentTarget.style.color = '#132B20'; }}
                         >
                           ✨ {suggestionText}
                         </button>
@@ -1983,31 +2064,30 @@ function Chatbot({
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
-                        background: isSpeaking ? DRISHTI_THEME.colors.danger : DRISHTI_THEME.colors.cardBg,
-                        color: isSpeaking ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.forestDark,
-                        border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
-                        borderRadius: '8px',
-                        padding: '5px 12px',
-                        fontSize: '0.85rem',
-                        fontWeight: 800,
+                        background: isSpeaking ? '#B93829' : '#EAE5DA',
+                        color: isSpeaking ? '#FCFCFA' : '#1F2937',
+                        border: '1px solid #D6D1C4',
+                        borderRadius: '9999px',
+                        padding: '4px 14px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
                         cursor: 'pointer',
                         transition: 'all 0.15s ease'
                       }}
                       onMouseEnter={(e) => {
                         if (!isSpeaking) {
-                          e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
-                          e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
+                          e.currentTarget.style.background = '#DFD9CD';
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (!isSpeaking) {
-                          e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
-                          e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark;
+                          e.currentTarget.style.background = '#EAE5DA';
                         }
                       }}
                       title="Read Aloud via Voice Synthesis"
                     >
-                      <Volume2 size={13} /> {isSpeaking ? 'Stop Voice' : `🔊 Listen (${voiceLang === 'kn-IN' ? 'ಕನ್ನಡ' : 'EN'})`}
+                      <Volume2 size={13} style={{ color: isSpeaking ? '#FCFCFA' : '#10B981' }} />
+                      <span>{isSpeaking ? 'Stop Voice' : `Listen (${voiceLang === 'kn-IN' ? 'ಕನ್ನಡ' : 'EN'})`}</span>
                     </button>
                   </div>
                 )}
@@ -2132,9 +2212,58 @@ function Chatbot({
                   </div>
                 )}
 
+                {m.data_available === false && (
+                  <div style={{
+                    marginTop: '10px',
+                    padding: '12px 14px',
+                    background: 'rgba(2, 132, 199, 0.08)',
+                    border: '1px solid rgba(2, 132, 199, 0.3)',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Upload size={14} /> Attach Investigation Ledger (CSV / Excel):
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <label
+                        htmlFor={`upload-case-${m.id || Date.now()}`}
+                        style={{
+                          background: '#0284c7',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '6px 14px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 2px 4px rgba(2, 132, 199, 0.25)'
+                        }}
+                      >
+                        <Upload size={13} /> Select Case File to Analyze
+                      </label>
+                      <input
+                        type="file"
+                        id={`upload-case-${m.id || Date.now()}`}
+                        accept=".csv,.xlsx,.json"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleUploadWithAutoQuery(e.target.files[0], m.user_query);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="message-status">
                   <span>Read</span>
-                  <CheckCheck size={10} style={{ color: DRISHTI_THEME.colors.forestDark }} />
+                  <CheckCheck size={11} style={{ color: '#C49746' }} />
                 </div>
               </div>
             ))}
@@ -2159,88 +2288,43 @@ function Chatbot({
           </div>
 
           {/* DRISHTI INPUT AREA */}
-          <div className="chat-input-area" style={{ padding: '12px 32px 20px 32px', background: DRISHTI_THEME.colors.canvasBg, borderTop: `1px solid ${DRISHTI_THEME.colors.borderSubtle}` }}>
+          <div className="chat-input-area" style={{ padding: '12px 32px 20px 32px', background: '#F4F0E8', borderTop: '1px solid #E5E0D5' }}>
             <div className="ksp-input-container" style={{
               display: 'flex',
               alignItems: 'center',
               width: '100%',
-              background: DRISHTI_THEME.colors.inputBg,
-              borderRadius: '20px',
-              padding: '10px 16px',
-              border: `1.5px solid ${DRISHTI_THEME.colors.borderSubtle}`,
-              boxShadow: DRISHTI_THEME.shadows.card,
+              background: '#FFFFFF',
+              borderRadius: '9999px',
+              padding: '6px 12px',
+              border: '1px solid #DDD7CA',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
               transition: 'all 0.2s',
               maxWidth: '100%',
               margin: '0'
             }}>
-          {/* MIC BUTTON */}
-          <button
-            type="button"
-            onClick={toggleVoiceListen}
-            style={{
-              background: isListening ? DRISHTI_THEME.colors.danger : DRISHTI_THEME.colors.cardBg,
-              color: isListening ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.forestDark,
-              border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
-              borderRadius: '10px',
-              width: '36px',
-              height: '36px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              marginRight: '8px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              if (!isListening) {
-                e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
-                e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isListening) {
-                e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
-                e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark;
-              }
-            }}
-            title={isListening ? 'Stop Listening' : `Speak in ${voiceLang === 'kn-IN' ? 'Kannada (ಕನ್ನಡ)' : 'English'}`}
-          >
-            {isListening ? <MicOff size={18} /> : <Mic size={18} />}
-          </button>
-
           {/* + OPTIONS MENU BUTTON */}
-          <div style={{ position: 'relative', display: 'inline-block', marginRight: '8px' }}>
+          <div style={{ position: 'relative', display: 'inline-block', marginRight: '6px' }}>
             <button
               type="button"
               onClick={() => setShowPlusMenu(!showPlusMenu)}
               style={{
-                background: showPlusMenu ? DRISHTI_THEME.colors.forestDark : DRISHTI_THEME.colors.cardBg,
-                color: showPlusMenu ? DRISHTI_THEME.colors.textWhite : DRISHTI_THEME.colors.forestDark,
-                border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
-                borderRadius: '10px',
-                width: '36px',
-                height: '36px',
+                background: '#F3EFE6',
+                color: '#374151',
+                border: '1px solid #DDD7CA',
+                borderRadius: '50%',
+                width: '34px',
+                height: '34px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
-              onMouseEnter={(e) => {
-                if (!showPlusMenu) {
-                  e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark;
-                  e.currentTarget.style.color = DRISHTI_THEME.colors.textWhite;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!showPlusMenu) {
-                  e.currentTarget.style.background = DRISHTI_THEME.colors.cardBg;
-                  e.currentTarget.style.color = DRISHTI_THEME.colors.forestDark;
-                }
-              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#E8E3D8'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#F3EFE6'; }}
               title="Add Files, Connectors, Databases & Skills"
             >
-              <Plus size={18} style={{ transform: showPlusMenu ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }} />
+              <Plus size={17} style={{ transform: showPlusMenu ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', color: '#374151' }} />
             </button>
 
             {/* POPUP OPTIONS DROPDOWN MENU */}
@@ -2251,14 +2335,14 @@ function Chatbot({
                   bottom: '44px',
                   left: '0',
                   width: '260px',
-                  background: DRISHTI_THEME.colors.cardBg,
-                  border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`,
+                  background: '#FCFCFA',
+                  border: '1px solid #E5E0D5',
                   borderRadius: '14px',
-                  boxShadow: DRISHTI_THEME.shadows.elevated,
+                  boxShadow: '0 8px 24px rgba(19, 43, 32, 0.12)',
                   padding: '8px',
                   zIndex: 9999,
                   animation: 'bubble-slide-up 0.15s ease-out',
-                  color: DRISHTI_THEME.colors.forestDark
+                  color: '#1F2937'
                 }}
               >
                 {/* Option 1: Add files or photos */}
@@ -2276,19 +2360,19 @@ function Chatbot({
                     borderRadius: '8px',
                     fontSize: '0.88rem',
                     fontWeight: 600,
-                    color: DRISHTI_THEME.colors.forestDark,
+                    color: '#1F2937',
                     cursor: 'pointer',
                     transition: 'background 0.15s'
                   }}
                   className="popup-menu-item"
-                  onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestTint; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(19, 43, 32, 0.08)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Paperclip size={16} style={{ color: DRISHTI_THEME.colors.forestDark }} />
+                    <Paperclip size={16} style={{ color: '#132B20' }} />
                     <span>Add files or photos</span>
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: DRISHTI_THEME.colors.textSecondary, background: DRISHTI_THEME.colors.canvasBg, border: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`, padding: '2px 6px', borderRadius: '4px' }}>Ctrl+U</span>
+                  <span style={{ fontSize: '0.7rem', color: '#4B5563', background: '#F4F0E8', border: '1px solid #E5E0D5', padding: '2px 6px', borderRadius: '4px' }}>Ctrl+U</span>
                 </div>
 
                 {/* Option 2: Add Database Connector (Relational / NoSQL) */}
@@ -2302,19 +2386,19 @@ function Chatbot({
                     borderRadius: '8px',
                     fontSize: '0.88rem',
                     fontWeight: 600,
-                    color: DRISHTI_THEME.colors.forestDark,
+                    color: '#1F2937',
                     cursor: 'pointer',
                     transition: 'background 0.15s'
                   }}
                   className="popup-menu-item"
-                  onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestTint; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(19, 43, 32, 0.08)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Database size={16} style={{ color: DRISHTI_THEME.colors.goldAccent }} />
+                    <Database size={16} style={{ color: '#D49B44' }} />
                     <span>Add connector (SQL/NoSQL)</span>
                   </div>
-                  <ChevronRight size={15} style={{ color: DRISHTI_THEME.colors.textMuted }} />
+                  <ChevronRight size={15} style={{ color: '#9CA3AF' }} />
                 </div>
 
                 {/* Option 3: Add Knowledge Document */}
@@ -2328,23 +2412,56 @@ function Chatbot({
                     borderRadius: '8px',
                     fontSize: '0.88rem',
                     fontWeight: 600,
-                    color: DRISHTI_THEME.colors.forestDark,
+                    color: '#1F2937',
                     cursor: 'pointer',
                     transition: 'background 0.15s'
                   }}
                   className="popup-menu-item"
-                  onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestTint; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(19, 43, 32, 0.08)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FolderPlus size={16} style={{ color: DRISHTI_THEME.colors.forestMid }} />
+                    <FolderPlus size={16} style={{ color: '#1E4332' }} />
                     <span>Add to RAG project</span>
                   </div>
-                  <ChevronRight size={15} style={{ color: DRISHTI_THEME.colors.textMuted }} />
+                  <ChevronRight size={15} style={{ color: '#9CA3AF' }} />
                 </div>
               </div>
             )}
           </div>
+
+          {/* MIC BUTTON */}
+          <button
+            type="button"
+            onClick={toggleVoiceListen}
+            style={{
+              background: isListening ? '#B93829' : '#F3EFE6',
+              color: isListening ? '#FFFFFF' : '#374151',
+              border: '1px solid #DDD7CA',
+              borderRadius: '50%',
+              width: '34px',
+              height: '34px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              marginRight: '8px',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              if (!isListening) {
+                e.currentTarget.style.background = '#E8E3D8';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isListening) {
+                e.currentTarget.style.background = '#F3EFE6';
+              }
+            }}
+            title={isListening ? 'Stop Listening' : `Speak in ${voiceLang === 'kn-IN' ? 'Kannada (ಕನ್ನಡ)' : 'English'}`}
+          >
+            {isListening ? <MicOff size={16} /> : <Mic size={16} style={{ color: '#374151' }} />}
+          </button>
 
           {/* HIDDEN FILE INPUT (PERMANENTLY MOUNTED IN DOM) */}
           <input 
@@ -2367,40 +2484,42 @@ function Chatbot({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
+            className="ksp-chat-text-input"
             style={{
               flex: 1,
               border: 'none',
               outline: 'none',
-              fontSize: '1.05rem',
+              fontSize: '0.96rem',
               fontWeight: 500,
-              padding: '6px 10px',
+              padding: '6px 12px',
               background: 'transparent',
-              color: DRISHTI_THEME.colors.forestDark
+              color: '#1F2937'
             }}
           />
 
-          {/* SEND BUTTON */}
+          {/* SEND BUTTON - Deep Tactical Forest Green circle with white/gold send icon */}
           <button 
             className="chat-send-btn" 
             onClick={() => handleSend()}
             style={{
-              background: DRISHTI_THEME.colors.forestDark,
-              border: `1px solid ${DRISHTI_THEME.colors.borderAccent}`,
-              color: DRISHTI_THEME.colors.textWhite,
-              borderRadius: '12px',
-              width: '38px',
-              height: '38px',
+              background: '#132B20',
+              border: 'none',
+              color: '#FFFFFF',
+              borderRadius: '50%',
+              width: '36px',
+              height: '36px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: DRISHTI_THEME.shadows.soft,
-              transition: 'all 0.2s'
+              boxShadow: '0 2px 8px rgba(19, 43, 32, 0.25)',
+              transition: 'all 0.2s',
+              flexShrink: 0
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestMid; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = DRISHTI_THEME.colors.forestDark; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#1E4332'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#132B20'; }}
           >
-            <Send size={18} />
+            <Send size={16} style={{ color: '#FFFFFF', marginLeft: '1px' }} />
           </button>
         </div>
       </div>
@@ -2500,8 +2619,8 @@ function Chatbot({
         isOpen={showUploadDatasetModal}
         onClose={() => setShowUploadDatasetModal(false)}
         onDatasetIngested={onDatasetIngested}
-        onProcessFile={async (file, datasetPurpose) => {
-          await handleProcessRagFile(file, datasetPurpose);
+        onProcessFile={async (file) => {
+          await handleProcessRagFile(file);
           setIsVisualStudioOpen(true);
         }}
       />

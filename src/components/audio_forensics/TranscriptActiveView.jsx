@@ -1,10 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Globe,
   FileText,
   Edit3,
   RotateCcw,
-  Sparkles,
   Send,
   Trash2,
   Scale,
@@ -12,13 +11,12 @@ import {
   UserCheck,
   Tag,
   Play,
-  Pause,
-  Volume2
+  Pause
 } from 'lucide-react';
 import ElevenLabsTextStreamer from './ElevenLabsTextStreamer';
 
 /**
- * TranscriptActiveView — ElevenLabs & Spotify Style Bilingual Voice Intelligence Panel
+ * TranscriptActiveView — ElevenLabs & Spotify Style Bilingual Voice Intelligence Panel in DRISHTI Light Theme
  * (SOLID: SRP — High-fidelity word-by-word streaming & audio sync presentation)
  */
 export default function TranscriptActiveView({
@@ -78,18 +76,18 @@ export default function TranscriptActiveView({
       padding: '16px 24px',
       gap: '14px',
       overflow: 'hidden',
-      backgroundColor: '#090d16'
+      backgroundColor: '#F4F0E8'
     }}>
-      {/* ── TOP BILINGUAL ELEVENLABS-STYLE CARD ── */}
+      {/* ── TOP BILINGUAL EVIDENCE CARD ── */}
       <div style={{
         flex: 1,
-        background: 'linear-gradient(145deg, #0f172a 0%, #151b2e 50%, #0d1222 100%)',
-        border: '1px solid rgba(99, 102, 241, 0.35)',
+        backgroundColor: '#FCFCFA',
+        border: '1px solid #D4CEBF',
         borderRadius: '20px',
         padding: '20px 24px',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+        boxShadow: '0 15px 35px rgba(19, 43, 32, 0.08)',
         overflow: 'hidden',
         position: 'relative'
       }}>
@@ -99,19 +97,19 @@ export default function TranscriptActiveView({
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: '14px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: '1px solid #D4CEBF',
           paddingBottom: '12px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#ffffff', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#132B20', letterSpacing: '0.04em' }}>
               🎙️ BILINGUAL EVIDENCE TRANSCRIPT
             </span>
             {isStreaming ? (
               <span style={{
                 fontSize: '0.7rem',
-                background: 'rgba(168, 85, 247, 0.2)',
-                color: '#d8b4fe',
-                border: '1px solid rgba(168, 85, 247, 0.4)',
+                backgroundColor: '#EAE4D6',
+                color: '#8A5A18',
+                border: '1px solid #C4B9A5',
                 padding: '2px 10px',
                 borderRadius: '12px',
                 display: 'flex',
@@ -119,14 +117,14 @@ export default function TranscriptActiveView({
                 gap: '6px',
                 fontWeight: 700
               }}>
-                <div className="audio-live-dot" /> ElevenLabs Speech-to-Text Streaming...
+                <div className="audio-live-dot" style={{ backgroundColor: '#D49B44' }} /> ElevenLabs Speech-to-Text Streaming...
               </span>
             ) : (
               <span style={{
                 fontSize: '0.68rem',
-                background: 'rgba(16, 185, 129, 0.15)',
-                color: '#34d399',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
+                backgroundColor: '#EAE4D6',
+                color: '#0F5132',
+                border: '1px solid #C4B9A5',
                 padding: '2px 8px',
                 borderRadius: '12px',
                 fontWeight: 700
@@ -143,8 +141,8 @@ export default function TranscriptActiveView({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: 'rgba(30, 41, 59, 0.7)',
-                border: '1px solid rgba(56, 189, 248, 0.3)',
+                backgroundColor: '#EFEBE2',
+                border: '1px solid #D4CEBF',
                 borderRadius: '8px',
                 padding: '4px 10px'
               }}>
@@ -158,8 +156,8 @@ export default function TranscriptActiveView({
                 <button
                   onClick={togglePlay}
                   style={{
-                    background: isPlaying ? '#38bdf8' : '#6366f1',
-                    color: '#ffffff',
+                    backgroundColor: '#132B20',
+                    color: '#FCFCFA',
                     border: 'none',
                     borderRadius: '50%',
                     width: '24px',
@@ -171,9 +169,9 @@ export default function TranscriptActiveView({
                   }}
                   title={isPlaying ? 'Pause Audio' : 'Play Audio & Sync Highlights'}
                 >
-                  {isPlaying ? <Pause size={12} /> : <Play size={12} style={{ marginLeft: '1px' }} />}
+                  {isPlaying ? <Pause size={12} color="#D49B44" /> : <Play size={12} color="#D49B44" style={{ marginLeft: '1px' }} />}
                 </button>
-                <span style={{ fontSize: '0.72rem', color: '#93c5fd', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.72rem', color: '#132B20', fontWeight: 700 }}>
                   {isPlaying ? 'Playing & Syncing...' : 'Sync Playback'}
                 </span>
               </div>
@@ -182,9 +180,9 @@ export default function TranscriptActiveView({
             <button
               onClick={onToggleEdit}
               style={{
-                background: isEditing ? '#4338ca' : 'rgba(51, 65, 85, 0.8)',
-                color: '#e0e7ff',
-                border: '1px solid rgba(129, 140, 248, 0.3)',
+                backgroundColor: isEditing ? '#132B20' : '#EFEBE2',
+                color: isEditing ? '#FCFCFA' : '#132B20',
+                border: '1px solid #D4CEBF',
                 borderRadius: '8px',
                 padding: '5px 12px',
                 fontSize: '0.74rem',
@@ -193,19 +191,19 @@ export default function TranscriptActiveView({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.15s ease'
               }}
             >
-              <Edit3 size={13} /> {isEditing ? 'Done Editing' : 'Edit Text'}
+              <Edit3 size={13} color={isEditing ? '#D49B44' : '#132B20'} /> {isEditing ? 'Done Editing' : 'Edit Text'}
             </button>
 
             <button
               disabled={isStreaming}
               onClick={onReplayStreaming}
               style={{
-                background: 'rgba(51, 65, 85, 0.8)',
-                color: '#94a3b8',
-                border: '1px solid rgba(148, 163, 184, 0.2)',
+                backgroundColor: '#EFEBE2',
+                color: '#526058',
+                border: '1px solid #D4CEBF',
                 borderRadius: '8px',
                 padding: '5px 10px',
                 fontSize: '0.74rem',
@@ -235,19 +233,19 @@ export default function TranscriptActiveView({
           {/* Column 1: Kannada Original */}
           <div style={{
             minWidth: 0,
-            background: 'rgba(15, 23, 42, 0.65)',
+            backgroundColor: '#F9F7F2',
             borderRadius: '16px',
             padding: '18px',
-            border: '1px solid rgba(255,255,255,0.06)',
+            border: '1px solid #D4CEBF',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.3)',
+            boxShadow: 'inset 0 1px 4px rgba(19, 43, 32, 0.04)',
             overflow: 'hidden'
           }}>
             <div style={{
               fontSize: '0.74rem',
               fontWeight: 800,
-              color: '#fbbf24',
+              color: '#C88A2C',
               textTransform: 'uppercase',
               marginBottom: '12px',
               display: 'flex',
@@ -255,7 +253,7 @@ export default function TranscriptActiveView({
               gap: '6px',
               letterSpacing: '0.04em'
             }}>
-              <Globe size={14} /> Kannada Spoken Original (ಕನ್ನಡ ಪ್ರತಿಲೇಖನ)
+              <Globe size={14} color="#C88A2C" /> Kannada Spoken Original (ಕನ್ನಡ ಪ್ರತಿಲೇಖನ)
             </div>
 
             <ElevenLabsTextStreamer
@@ -266,26 +264,26 @@ export default function TranscriptActiveView({
               editedValue={editedKn}
               onEditedChange={onEditedKnChange}
               placeholder="Waiting for Kannada speech transcription..."
-              accentColor="#fbbf24"
+              accentColor="#C88A2C"
             />
           </div>
 
           {/* Column 2: English Translation */}
           <div style={{
             minWidth: 0,
-            background: 'rgba(15, 23, 42, 0.65)',
+            backgroundColor: '#F9F7F2',
             borderRadius: '16px',
             padding: '18px',
-            border: '1px solid rgba(255,255,255,0.06)',
+            border: '1px solid #D4CEBF',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.3)',
+            boxShadow: 'inset 0 1px 4px rgba(19, 43, 32, 0.04)',
             overflow: 'hidden'
           }}>
             <div style={{
               fontSize: '0.74rem',
               fontWeight: 800,
-              color: '#38bdf8',
+              color: '#0F5132',
               textTransform: 'uppercase',
               marginBottom: '12px',
               display: 'flex',
@@ -293,7 +291,7 @@ export default function TranscriptActiveView({
               gap: '6px',
               letterSpacing: '0.04em'
             }}>
-              <FileText size={14} /> English Translated Narrative
+              <FileText size={14} color="#0F5132" /> English Translated Narrative
             </div>
 
             <ElevenLabsTextStreamer
@@ -304,7 +302,7 @@ export default function TranscriptActiveView({
               editedValue={editedEn}
               onEditedChange={onEditedEnChange}
               placeholder="Translated English narrative will stream here..."
-              accentColor="#38bdf8"
+              accentColor="#0F5132"
             />
           </div>
         </div>
@@ -313,8 +311,8 @@ export default function TranscriptActiveView({
         {entities && (
           <div style={{
             marginTop: '14px',
-            background: 'rgba(15, 23, 42, 0.85)',
-            border: '1px solid rgba(59, 130, 246, 0.25)',
+            backgroundColor: '#EFEBE2',
+            border: '1px solid #D4CEBF',
             borderRadius: '12px',
             padding: '10px 18px',
             display: 'flex',
@@ -326,17 +324,17 @@ export default function TranscriptActiveView({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Tag size={13} color="#f87171" />
-                <span style={{ color: '#94a3b8' }}>Category:</span>
-                <span style={{ color: '#f87171', fontWeight: 800 }}>{entities.crime_category || 'General Crime'}</span>
+                <Tag size={13} color="#DC2626" />
+                <span style={{ color: '#526058', fontWeight: 600 }}>Category:</span>
+                <span style={{ color: '#DC2626', fontWeight: 800 }}>{entities.crime_category || 'General Crime'}</span>
               </div>
 
               {entities.locations?.length > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <MapPin size={13} color="#38bdf8" />
-                  <span style={{ color: '#94a3b8' }}>Locations:</span>
+                  <MapPin size={13} color="#0F5132" />
+                  <span style={{ color: '#526058', fontWeight: 600 }}>Locations:</span>
                   {entities.locations.map((loc, i) => (
-                    <span key={i} style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '2px 7px', borderRadius: '5px', fontWeight: 700 }}>
+                    <span key={i} style={{ backgroundColor: '#FCFCFA', color: '#0F5132', padding: '2px 7px', borderRadius: '5px', border: '1px solid #D4CEBF', fontWeight: 700 }}>
                       {loc}
                     </span>
                   ))}
@@ -345,10 +343,10 @@ export default function TranscriptActiveView({
 
               {entities.suspects?.length > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <UserCheck size={13} color="#fbbf24" />
-                  <span style={{ color: '#94a3b8' }}>Suspects:</span>
+                  <UserCheck size={13} color="#C88A2C" />
+                  <span style={{ color: '#526058', fontWeight: 600 }}>Suspects:</span>
                   {entities.suspects.map((susp, i) => (
-                    <span key={i} style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', padding: '2px 7px', borderRadius: '5px', fontWeight: 700 }}>
+                    <span key={i} style={{ backgroundColor: '#FCFCFA', color: '#C88A2C', padding: '2px 7px', borderRadius: '5px', border: '1px solid #D4CEBF', fontWeight: 700 }}>
                       {susp}
                     </span>
                   ))}
@@ -358,9 +356,9 @@ export default function TranscriptActiveView({
 
             {entities.bns_sections?.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Scale size={13} color="#c084fc" />
+                <Scale size={13} color="#132B20" />
                 {entities.bns_sections.map((sec, i) => (
-                  <span key={i} style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', padding: '2px 8px', borderRadius: '5px', fontSize: '0.72rem', fontWeight: 700 }} title={sec.title}>
+                  <span key={i} style={{ backgroundColor: '#EAE4D6', color: '#132B20', border: '1px solid #C4B9A5', padding: '2px 8px', borderRadius: '5px', fontSize: '0.72rem', fontWeight: 700 }} title={sec.title}>
                     {sec.section} ({sec.ipc_equivalent})
                   </span>
                 ))}
@@ -372,21 +370,22 @@ export default function TranscriptActiveView({
 
       {/* ── BOTTOM HUMAN-IN-THE-LOOP ACTION BAR ── */}
       <div style={{
-        background: 'rgba(15, 23, 42, 0.85)',
-        border: '1px solid rgba(59, 130, 246, 0.25)',
+        backgroundColor: '#FCFCFA',
+        border: '1px solid #D4CEBF',
         borderRadius: '16px',
         padding: '12px 20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        flexShrink: 0
+        flexShrink: 0,
+        boxShadow: '0 6px 20px rgba(19, 43, 32, 0.06)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
-            Status: <strong style={{ color: '#f8fafc' }}>{stageId ? 'Staged (Sandboxed in Session)' : 'Idle'}</strong>
+          <span style={{ fontSize: '0.76rem', color: '#526058' }}>
+            Status: <strong style={{ color: '#132B20' }}>{stageId ? 'Staged (Sandboxed in Session)' : 'Idle'}</strong>
           </span>
           {processingTimeMs > 0 && (
-            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+            <span style={{ fontSize: '0.72rem', color: '#8A9A90' }}>
               • Zia STT Latency: {processingTimeMs}ms
             </span>
           )}
@@ -396,9 +395,9 @@ export default function TranscriptActiveView({
           <button
             onClick={onDiscard}
             style={{
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              color: '#f87171',
+              backgroundColor: '#FEF2F2',
+              border: '1px solid #FECACA',
+              color: '#DC2626',
               padding: '9px 16px',
               borderRadius: '8px',
               fontSize: '0.78rem',
@@ -406,7 +405,8 @@ export default function TranscriptActiveView({
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              transition: 'all 0.15s ease'
             }}
           >
             <Trash2 size={13} /> Discard Evidence
@@ -416,11 +416,11 @@ export default function TranscriptActiveView({
             disabled={!transcriptKn || isStreaming}
             onClick={onOpenDisclaimerModal}
             style={{
-              background: !transcriptKn || isStreaming
-                ? '#334155'
-                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: '#ffffff',
-              border: 'none',
+              backgroundColor: !transcriptKn || isStreaming
+                ? '#A8A29E'
+                : '#132B20',
+              color: '#FCFCFA',
+              border: '1px solid #132B20',
               borderRadius: '10px',
               padding: '10px 22px',
               fontSize: '0.86rem',
@@ -429,10 +429,23 @@ export default function TranscriptActiveView({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              boxShadow: transcriptKn && !isStreaming ? '0 4px 15px rgba(16, 185, 129, 0.4)' : 'none'
+              boxShadow: transcriptKn && !isStreaming ? '0 4px 14px rgba(19, 43, 32, 0.2)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (transcriptKn && !isStreaming) {
+                e.currentTarget.style.backgroundColor = '#0F5132';
+                e.currentTarget.style.borderColor = '#D49B44';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (transcriptKn && !isStreaming) {
+                e.currentTarget.style.backgroundColor = '#132B20';
+                e.currentTarget.style.borderColor = '#132B20';
+              }
             }}
           >
-            <Send size={15} /> Send to Investigation Context (RAG) ➔
+            <Send size={15} color="#D49B44" /> Send to Investigation Context (RAG) ➔
           </button>
         </div>
       </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { Shield, CheckCircle2 } from 'lucide-react';
 
 /**
- * AudioGatewayModal — Human-in-the-Loop Evidentiary Chain-of-Custody Modal
+ * AudioGatewayModal — Human-in-the-Loop Evidentiary Chain-of-Custody Modal in DRISHTI Light Theme
  * (SOLID: SRP — Confirmation Gateway Presentation)
  */
 export default function AudioGatewayModal({
@@ -21,7 +21,7 @@ export default function AudioGatewayModal({
       left: 0,
       width: '100vw',
       height: '100vh',
-      background: 'rgba(0, 0, 0, 0.75)',
+      background: 'rgba(19, 43, 32, 0.45)',
       backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
@@ -32,12 +32,13 @@ export default function AudioGatewayModal({
       <div style={{
         maxWidth: '520px',
         width: '90%',
-        background: 'linear-gradient(145deg, #0f172a 0%, #1e1b4b 100%)',
-        border: '1px solid rgba(99, 102, 241, 0.5)',
+        backgroundColor: '#F4F0E8',
+        border: '1px solid #D4CEBF',
         borderRadius: '20px',
         padding: '28px',
-        boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
-        color: '#f8fafc'
+        boxShadow: '0 20px 45px rgba(19, 43, 32, 0.15)',
+        color: '#132B20',
+        fontFamily: "'Inter', system-ui, sans-serif"
       }}>
         {/* Header Icon + Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
@@ -45,19 +46,20 @@ export default function AudioGatewayModal({
             width: '44px',
             height: '44px',
             borderRadius: '12px',
-            background: 'rgba(234, 179, 8, 0.2)',
+            backgroundColor: '#132B20',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            border: '1px solid rgba(234, 179, 8, 0.4)'
+            border: '1px solid #D49B44',
+            boxShadow: '0 2px 8px rgba(19, 43, 32, 0.15)'
           }}>
-            <Shield size={24} color="#eab308" />
+            <Shield size={22} color="#D49B44" />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#fef08a' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#132B20' }}>
               Official Evidentiary Chain-of-Custody
             </h3>
-            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+            <div style={{ fontSize: '0.72rem', color: '#526058' }}>
               Human-in-the-Loop Verification Gate • Section 65B Audit
             </div>
           </div>
@@ -65,27 +67,27 @@ export default function AudioGatewayModal({
 
         {/* Notice Info Box */}
         <div style={{
-          background: 'rgba(30, 41, 59, 0.65)',
+          backgroundColor: '#FCFCFA',
           borderRadius: '12px',
           padding: '16px',
           fontSize: '0.82rem',
           lineHeight: '1.5',
-          color: '#cbd5e1',
-          border: '1px solid rgba(148, 163, 184, 0.2)',
+          color: '#1F2937',
+          border: '1px solid #D4CEBF',
           marginBottom: '22px'
         }}>
-          <p style={{ margin: '0 0 10px 0', color: '#f8fafc', fontWeight: 700 }}>
+          <p style={{ margin: '0 0 10px 0', color: '#8A5A18', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
             ⚠️ Law Enforcement Verification Notice:
           </p>
-          <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px', color: '#526058' }}>
             <li>
-              This audio transcript will be saved as structured Markdown (<code>.md</code>) in session <strong>`{sessionId}`</strong>.
+              This audio transcript will be saved as structured Markdown (<code>.md</code>) in session <strong style={{ color: '#132B20' }}>`{sessionId}`</strong>.
             </li>
             <li>
-              <strong>Strict Replacement Model:</strong> Confirming this statement will index it as the active audio evidence in DuckDB RAG and automatically replace any previous audio statements.
+              <strong style={{ color: '#132B20' }}>Strict Replacement Model:</strong> Confirming this statement will index it as the active audio evidence in DuckDB RAG and automatically replace any previous audio statements.
             </li>
             <li>
-              The <strong>Document & Legal Agent</strong> will immediately cite this transcript during chatbot queries.
+              The <strong style={{ color: '#132B20' }}>Document & Legal Agent</strong> will immediately cite this transcript during chatbot queries.
             </li>
           </ul>
         </div>
@@ -96,14 +98,21 @@ export default function AudioGatewayModal({
             disabled={isInjecting}
             onClick={onCancel}
             style={{
-              background: 'transparent',
-              border: '1px solid #475569',
-              color: '#94a3b8',
+              backgroundColor: '#EFEBE2',
+              border: '1px solid #D4CEBF',
+              color: '#526058',
               borderRadius: '8px',
               padding: '10px 18px',
               fontSize: '0.82rem',
               fontWeight: 700,
-              cursor: isInjecting ? 'not-allowed' : 'pointer'
+              cursor: isInjecting ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (!isInjecting) e.currentTarget.style.backgroundColor = '#EDE7DA';
+            }}
+            onMouseLeave={(e) => {
+              if (!isInjecting) e.currentTarget.style.backgroundColor = '#EFEBE2';
             }}
           >
             Cancel / Keep Staged
@@ -113,11 +122,9 @@ export default function AudioGatewayModal({
             disabled={isInjecting}
             onClick={onConfirm}
             style={{
-              background: isInjecting
-                ? '#334155'
-                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: '#ffffff',
-              border: 'none',
+              backgroundColor: isInjecting ? '#A8A29E' : '#132B20',
+              color: '#FCFCFA',
+              border: '1px solid #132B20',
               borderRadius: '8px',
               padding: '10px 22px',
               fontSize: '0.86rem',
@@ -126,14 +133,27 @@ export default function AudioGatewayModal({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)'
+              boxShadow: isInjecting ? 'none' : '0 4px 14px rgba(19, 43, 32, 0.2)',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (!isInjecting) {
+                e.currentTarget.style.backgroundColor = '#0F5132';
+                e.currentTarget.style.borderColor = '#D49B44';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isInjecting) {
+                e.currentTarget.style.backgroundColor = '#132B20';
+                e.currentTarget.style.borderColor = '#132B20';
+              }
             }}
           >
             {isInjecting ? (
               <>Indexing Markdown into RAG...</>
             ) : (
               <>
-                <CheckCircle2 size={16} /> Confirm & Inject Evidence
+                <CheckCircle2 size={16} color="#D49B44" /> Confirm & Inject Evidence
               </>
             )}
           </button>

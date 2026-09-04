@@ -2,11 +2,11 @@ import React, { useMemo } from 'react';
 
 /**
  * ElevenLabsTextStreamer — High-fidelity ElevenLabs-style Word-by-Word Streaming & Karaoke Component
- * (SOLID: SRP — Text tokenization & active word lighting rendering)
+ * (SOLID: SRP — Text tokenization & active word lighting rendering in DRISHTI Light Theme)
  * 
- * - Active/Revealed words: Crisp bold white (#ffffff, font-weight: 800)
- * - Current word: Glowing highlight / active cursor
- * - Upcoming/Unspoken words: Dimmed translucent grey (rgba(255, 255, 255, 0.22))
+ * - Active/Revealed words: Crisp dark charcoal (#1F2937, font-weight: 600)
+ * - Current word: Illuminated Amber Gold badge (#FEF3C7 fill, #D49B44 border, #132B20 bold text)
+ * - Upcoming/Unspoken words: Dimmed light grey (#A8A29E)
  */
 export default function ElevenLabsTextStreamer({
   text = '',
@@ -16,7 +16,7 @@ export default function ElevenLabsTextStreamer({
   editedValue = '',
   onEditedChange,
   placeholder = 'Awaiting speech audio stream...',
-  accentColor = '#fbbf24'
+  accentColor = '#C88A2C'
 }) {
   // Tokenize text into words preserving natural spacing
   const words = useMemo(() => {
@@ -34,10 +34,10 @@ export default function ElevenLabsTextStreamer({
           flex: 1,
           width: '100%',
           minHeight: '180px',
-          background: '#090d16',
-          border: '1px solid #475569',
+          backgroundColor: '#FCFCFA',
+          border: '1px solid #D4CEBF',
           borderRadius: '12px',
-          color: '#f8fafc',
+          color: '#132B20',
           padding: '14px',
           fontSize: '1.05rem',
           lineHeight: '1.7',
@@ -45,7 +45,7 @@ export default function ElevenLabsTextStreamer({
           fontFamily: "'Inter', system-ui, sans-serif",
           resize: 'none',
           outline: 'none',
-          boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)',
+          boxShadow: 'inset 0 2px 6px rgba(19, 43, 32, 0.05)',
           overflowWrap: 'break-word',
           wordBreak: 'break-word'
         }}
@@ -56,7 +56,7 @@ export default function ElevenLabsTextStreamer({
   if (words.length === 0) {
     return (
       <div style={{
-        color: 'rgba(255, 255, 255, 0.3)',
+        color: '#8A9A90',
         fontSize: '0.95rem',
         fontWeight: 500,
         fontStyle: 'italic',
@@ -90,7 +90,6 @@ export default function ElevenLabsTextStreamer({
         // If not streaming, all words are fully visible and crisp
         const isPast = !isStreaming || idx < currentWordIndex;
         const isCurrent = isStreaming && idx === currentWordIndex;
-        const isFuture = isStreaming && idx > currentWordIndex;
 
         return (
           <span
@@ -99,17 +98,15 @@ export default function ElevenLabsTextStreamer({
             style={{
               display: 'inline',
               color: isCurrent
-                ? '#ffffff'
+                ? '#132B20'
                 : isPast
-                ? '#f8fafc'
-                : 'rgba(255, 255, 255, 0.3)',
+                ? '#1F2937'
+                : '#A8A29E',
               fontWeight: isCurrent ? 800 : isPast ? 600 : 500,
-              backgroundColor: isCurrent ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+              backgroundColor: isCurrent ? '#FEF3C7' : 'transparent',
+              border: isCurrent ? '1px solid #D49B44' : 'none',
               borderRadius: isCurrent ? '4px' : '0',
-              padding: isCurrent ? '1px 3px' : '0',
-              textShadow: isCurrent
-                ? '0 0 12px rgba(255, 255, 255, 0.6), 0 0 20px rgba(99, 102, 241, 0.5)'
-                : 'none',
+              padding: isCurrent ? '1px 4px' : '0',
               transition: 'color 0.15s ease, background-color 0.15s ease',
               marginRight: '0.32em'
             }}
@@ -119,9 +116,9 @@ export default function ElevenLabsTextStreamer({
               <span
                 style={{
                   display: 'inline-block',
-                  width: '4px',
+                  width: '3px',
                   height: '1em',
-                  background: '#a855f7',
+                  background: '#D49B44',
                   marginLeft: '2px',
                   verticalAlign: '-0.1em',
                   borderRadius: '2px',

@@ -281,21 +281,21 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
         ctx.lineTo(targetNode.x, targetNode.y);
 
         if (isPathEdge) {
-          ctx.strokeStyle = '#38bdf8';
+          ctx.strokeStyle = '#0F5132';
           ctx.lineWidth = 3.8;
-          ctx.shadowColor = '#38bdf8';
-          ctx.shadowBlur = 14;
-        } else if (isFocusedEdge) {
-          ctx.strokeStyle = '#a855f7';
-          ctx.lineWidth = 2.6;
-          ctx.shadowColor = '#a855f7';
+          ctx.shadowColor = '#0F5132';
           ctx.shadowBlur = 10;
+        } else if (isFocusedEdge) {
+          ctx.strokeStyle = '#D49B44';
+          ctx.lineWidth = 2.6;
+          ctx.shadowColor = '#D49B44';
+          ctx.shadowBlur = 8;
         } else if (activeFocus) {
-          ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+          ctx.strokeStyle = 'rgba(19, 43, 32, 0.08)';
           ctx.lineWidth = 0.8;
           ctx.shadowBlur = 0;
         } else {
-          ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
+          ctx.strokeStyle = 'rgba(19, 43, 32, 0.22)';
           ctx.lineWidth = 1.2;
           ctx.shadowBlur = 0;
         }
@@ -322,7 +322,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
         if (n.degree >= 4 || isPathNode || isSelected || isHovered) {
           ctx.beginPath();
           ctx.arc(n.x, n.y, radius + 8, 0, Math.PI * 2);
-          ctx.fillStyle = isPathNode ? 'rgba(56, 189, 248, 0.45)' : isSelected ? 'rgba(239, 68, 68, 0.45)' : isHovered ? 'rgba(168, 85, 247, 0.45)' : `${n.color}35`;
+          ctx.fillStyle = isPathNode ? 'rgba(15, 81, 50, 0.35)' : isSelected ? 'rgba(212, 155, 68, 0.35)' : isHovered ? 'rgba(19, 43, 32, 0.25)' : `${n.color}25`;
           ctx.fill();
         }
 
@@ -330,15 +330,15 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
         ctx.beginPath();
         ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
         ctx.fillStyle = isPathNode
-          ? '#38bdf8'
+          ? '#0F5132'
           : isSelected
-          ? '#ef4444'
+          ? '#D49B44'
           : isHovered
-          ? '#a855f7'
-          : n.color || '#94a3b8';
+          ? '#132B20'
+          : n.color || '#526058';
         ctx.fill();
-        ctx.lineWidth = isSelected || isHovered ? 3.2 : 2.0;
-        ctx.strokeStyle = isSelected ? '#ffffff' : isHovered ? '#f8fafc' : 'rgba(255, 255, 255, 0.9)';
+        ctx.lineWidth = isSelected || isHovered ? 3.0 : 1.8;
+        ctx.strokeStyle = isSelected ? '#132B20' : isHovered ? '#D49B44' : '#FCFCFA';
         ctx.stroke();
 
         // Hidden Connections Expand Badge indicator
@@ -347,14 +347,14 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           // Draw subtle "+k" indicator on God Node
           ctx.beginPath();
           ctx.arc(n.x + radius * 0.75, n.y - radius * 0.75, 7, 0, Math.PI * 2);
-          ctx.fillStyle = '#38bdf8';
+          ctx.fillStyle = '#132B20';
           ctx.fill();
-          ctx.strokeStyle = '#0f172a';
+          ctx.strokeStyle = '#FCFCFA';
           ctx.lineWidth = 1.5;
           ctx.stroke();
 
           ctx.font = 'bold 8px Inter, sans-serif';
-          ctx.fillStyle = '#0f172a';
+          ctx.fillStyle = '#FCFCFA';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(`+${n.degree}`, n.x + radius * 0.75, n.y - radius * 0.75);
@@ -364,7 +364,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
         if (transformRef.current.scale > 0.45 || isSelected || isHovered || isPathNode || n.degree >= 2) {
           const fontSize = isSelected || isHovered || isPathNode ? 11.5 : 10;
           ctx.font = `${isSelected || isHovered || isPathNode ? 'bold ' : '600 '}${fontSize}px Inter, system-ui, sans-serif`;
-          ctx.fillStyle = isPathNode ? '#38bdf8' : isHovered ? '#c084fc' : '#f8fafc';
+          ctx.fillStyle = isPathNode ? '#0F5132' : isHovered ? '#C88A2C' : '#132B20';
           ctx.textAlign = 'center';
           ctx.fillText(n.label, n.x, n.y + radius + 13);
         }
@@ -613,19 +613,19 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
     <div style={{
       width: '100%',
       height: '100%',
-      backgroundColor: '#0a0f1d',
+      backgroundColor: '#F4F0E8',
       display: 'flex',
       flexDirection: 'column',
       position: 'relative',
       overflow: 'hidden',
       fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-      color: '#f8fafc'
+      color: '#132B20'
     }}>
       {/* TOP COMMAND HEADER */}
       <div style={{
         height: '56px',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-        backgroundColor: '#0f172a',
+        borderBottom: '1px solid #D4CEBF',
+        backgroundColor: '#FCFCFA',
         padding: '0 20px',
         display: 'flex',
         alignItems: 'center',
@@ -638,22 +638,22 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             width: '32px',
             height: '32px',
             borderRadius: '8px',
-            backgroundColor: 'rgba(56, 189, 248, 0.15)',
-            border: '1px solid rgba(56, 189, 248, 0.4)',
+            backgroundColor: '#132B20',
+            border: '1px solid #D49B44',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <Network size={18} style={{ color: '#38bdf8' }} />
+            <Network size={18} style={{ color: '#D49B44' }} />
           </div>
           <div>
-            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#132B20', display: 'flex', alignItems: 'center', gap: '8px' }}>
               Network Link Intelligence & Graph Topology
-              <span style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', fontWeight: 800 }}>
+              <span style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: '10px', background: '#EAE4D6', border: '1px solid #C4B9A5', color: '#8A5A18', fontWeight: 800 }}>
                 {networkData.isLocked ? `Showing ${visibleNodes.length} of ${rawNodes.length} Entities (Hub Sliced)` : 'Awaiting Dataset'}
               </span>
             </div>
-            <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+            <div style={{ fontSize: '0.68rem', color: '#526058' }}>
               Centrality Slicing & Organic Physics Simulation · Click Hubs (+k) to Expand Leaves
             </div>
           </div>
@@ -664,13 +664,13 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: '#090d16',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
+            backgroundColor: '#FCFCFA',
+            border: '1px solid #D4CEBF',
             borderRadius: '8px',
-            padding: '4px 10px',
+            padding: '5px 10px',
             gap: '8px'
           }}>
-            <Search size={14} style={{ color: '#64748b' }} />
+            <Search size={14} style={{ color: '#8A9A90' }} />
             <input
               type="text"
               placeholder="Search Suspect, Vehicle, Phone, Mule..."
@@ -680,13 +680,13 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                 background: 'transparent',
                 border: 'none',
                 outline: 'none',
-                color: '#f8fafc',
+                color: '#1F2937',
                 fontSize: '0.75rem',
                 width: '100%'
               }}
             />
             {searchQuery && (
-              <X size={12} style={{ color: '#64748b', cursor: 'pointer' }} onClick={() => setSearchQuery('')} />
+              <X size={12} style={{ color: '#8A9A90', cursor: 'pointer' }} onClick={() => setSearchQuery('')} />
             )}
           </div>
 
@@ -697,10 +697,10 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
               top: '38px',
               left: 0,
               width: '100%',
-              backgroundColor: '#0f172a',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
+              backgroundColor: '#FCFCFA',
+              border: '1px solid #D4CEBF',
               borderRadius: '8px',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.6)',
+              boxShadow: '0 10px 25px rgba(19, 43, 32, 0.1)',
               zIndex: 50,
               overflow: 'hidden'
             }}>
@@ -714,21 +714,21 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                   style={{
                     padding: '8px 12px',
                     fontSize: '0.75rem',
-                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    borderBottom: '1px solid #D4CEBF',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
                     transition: 'background 0.15s ease'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.1)'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EDE7DA'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: n.color }} />
-                    <span style={{ fontWeight: 700, color: '#f8fafc' }}>{n.label}</span>
+                    <span style={{ fontWeight: 700, color: '#132B20' }}>{n.label}</span>
                   </div>
-                  <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{n.typeLabel} ({n.degree} links)</span>
+                  <span style={{ fontSize: '0.68rem', color: '#526058' }}>{n.typeLabel} ({n.degree} links)</span>
                 </div>
               ))}
             </div>
@@ -744,13 +744,14 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
               fontSize: '0.72rem',
               fontWeight: 800,
               borderRadius: '6px',
-              border: isPathFinderOpen ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.12)',
-              backgroundColor: isPathFinderOpen ? 'rgba(56, 189, 248, 0.15)' : '#0f172a',
-              color: isPathFinderOpen ? '#38bdf8' : '#cbd5e1',
+              border: isPathFinderOpen ? '1px solid #D49B44' : '1px solid #D4CEBF',
+              backgroundColor: isPathFinderOpen ? '#EAE4D6' : '#FCFCFA',
+              color: isPathFinderOpen ? '#8A5A18' : '#132B20',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              transition: 'all 0.15s'
             }}
           >
             <Share2 size={13} />
@@ -760,17 +761,27 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           <button
             onClick={() => setIsUploadModalOpen(true)}
             style={{
-              padding: '6px 12px',
+              padding: '6px 14px',
               fontSize: '0.72rem',
               fontWeight: 800,
               borderRadius: '6px',
-              border: '1px solid rgba(56, 189, 248, 0.4)',
-              backgroundColor: '#0284c7',
-              color: '#ffffff',
+              border: '1px solid #132B20',
+              backgroundColor: '#132B20',
+              color: '#FCFCFA',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(19, 43, 32, 0.15)',
+              transition: 'all 0.15s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#0F5132';
+              e.currentTarget.style.borderColor = '#D49B44';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#132B20';
+              e.currentTarget.style.borderColor = '#132B20';
             }}
           >
             <UploadCloud size={13} />
@@ -780,7 +791,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
       </div>
 
       {/* MAIN CANVAS WORKSPACE */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#F4F0E8' }}>
         <canvas
           ref={canvasRef}
           onMouseDown={handleMouseDown}
@@ -802,32 +813,32 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             left: '50%',
             transform: 'translate(-50%, -50%)',
             textAlign: 'center',
-            backgroundColor: 'rgba(15, 23, 42, 0.88)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backgroundColor: '#FCFCFA',
+            border: '1px solid #D4CEBF',
             borderRadius: '16px',
             padding: '32px 40px',
-            backdropFilter: 'blur(16px)',
             maxWidth: '440px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+            boxShadow: '0 15px 35px rgba(19, 43, 32, 0.08)',
             zIndex: 15
           }}>
             <div style={{
               width: '54px',
               height: '54px',
               borderRadius: '14px',
-              backgroundColor: 'rgba(56, 189, 248, 0.15)',
-              border: '1px solid rgba(56, 189, 248, 0.4)',
+              backgroundColor: '#132B20',
+              border: '1px solid #D49B44',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 16px auto'
+              margin: '0 auto 16px auto',
+              boxShadow: '0 4px 14px rgba(19, 43, 32, 0.15)'
             }}>
-              <Network size={28} style={{ color: '#38bdf8' }} />
+              <Network size={28} style={{ color: '#D49B44' }} />
             </div>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '1.1rem', fontWeight: 800, color: '#132B20' }}>
               No Active Network Dataset
             </h3>
-            <p style={{ margin: '0 0 20px 0', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
+            <p style={{ margin: '0 0 20px 0', fontSize: '0.78rem', color: '#526058', lineHeight: 1.5 }}>
               Upload a crime records CSV or syndicate link ledger to enable relational topology mapping and multi-hop link tracing.
             </p>
             <button
@@ -835,16 +846,25 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
               style={{
                 padding: '9px 18px',
                 borderRadius: '8px',
-                border: '1px solid rgba(56, 189, 248, 0.5)',
-                backgroundColor: '#0284c7',
-                color: '#ffffff',
+                border: '1px solid #132B20',
+                backgroundColor: '#132B20',
+                color: '#FCFCFA',
                 fontSize: '0.82rem',
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 14px rgba(2, 132, 199, 0.4)'
+                boxShadow: '0 2px 8px rgba(19, 43, 32, 0.15)',
+                transition: 'all 0.15s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#D49B44';
+                e.currentTarget.style.backgroundColor = '#0F5132';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#132B20';
+                e.currentTarget.style.backgroundColor = '#132B20';
               }}
             >
               <UploadCloud size={16} /> Attach Network / CDR File
@@ -858,22 +878,21 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             position: 'absolute',
             top: '16px',
             left: '16px',
-            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            backdropFilter: 'blur(14px)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
+            backgroundColor: '#FCFCFA',
+            border: '1px solid #D4CEBF',
             borderRadius: '10px',
             padding: '8px 12px',
             display: 'flex',
             flexDirection: 'column',
             gap: '8px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            boxShadow: '0 4px 14px rgba(19, 43, 32, 0.08)',
             zIndex: 10,
             maxWidth: '85%'
           }}>
           {/* Row 1: Hub Slicing Centrality Quick Presets & Slider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Sliders size={12} /> HUB SLICING:
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#132B20', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Sliders size={12} style={{ color: '#D49B44' }} /> HUB SLICING:
             </span>
 
             <button
@@ -883,9 +902,9 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                 fontSize: '0.66rem',
                 fontWeight: 700,
                 borderRadius: '4px',
-                border: 'none',
-                backgroundColor: minDegreeThreshold === 1 ? '#38bdf8' : 'rgba(255,255,255,0.06)',
-                color: minDegreeThreshold === 1 ? '#0f172a' : '#94a3b8',
+                border: '1px solid ' + (minDegreeThreshold === 1 ? '#132B20' : '#D4CEBF'),
+                backgroundColor: minDegreeThreshold === 1 ? '#132B20' : '#EFEBE2',
+                color: minDegreeThreshold === 1 ? '#FCFCFA' : '#526058',
                 cursor: 'pointer'
               }}
             >
@@ -899,9 +918,9 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                 fontSize: '0.66rem',
                 fontWeight: 700,
                 borderRadius: '4px',
-                border: 'none',
-                backgroundColor: minDegreeThreshold === 2 ? '#38bdf8' : 'rgba(255,255,255,0.06)',
-                color: minDegreeThreshold === 2 ? '#0f172a' : '#94a3b8',
+                border: '1px solid ' + (minDegreeThreshold === 2 ? '#132B20' : '#D4CEBF'),
+                backgroundColor: minDegreeThreshold === 2 ? '#132B20' : '#EFEBE2',
+                color: minDegreeThreshold === 2 ? '#FCFCFA' : '#526058',
                 cursor: 'pointer'
               }}
             >
@@ -915,9 +934,9 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                 fontSize: '0.66rem',
                 fontWeight: 700,
                 borderRadius: '4px',
-                border: 'none',
-                backgroundColor: minDegreeThreshold === 4 ? '#38bdf8' : 'rgba(255,255,255,0.06)',
-                color: minDegreeThreshold === 4 ? '#0f172a' : '#94a3b8',
+                border: '1px solid ' + (minDegreeThreshold === 4 ? '#132B20' : '#D4CEBF'),
+                backgroundColor: minDegreeThreshold === 4 ? '#132B20' : '#EFEBE2',
+                color: minDegreeThreshold === 4 ? '#FCFCFA' : '#526058',
                 cursor: 'pointer'
               }}
             >
@@ -925,7 +944,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '6px' }}>
-              <span style={{ fontSize: '0.64rem', color: '#64748b' }}>Threshold:</span>
+              <span style={{ fontSize: '0.64rem', color: '#526058' }}>Threshold:</span>
               <input
                 type="range"
                 min="1"
@@ -933,15 +952,15 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                 step="1"
                 value={minDegreeThreshold}
                 onChange={(e) => setMinDegreeThreshold(parseInt(e.target.value))}
-                style={{ width: '70px', height: '4px', accentColor: '#38bdf8', cursor: 'pointer' }}
+                style={{ width: '70px', height: '4px', accentColor: '#132B20', cursor: 'pointer' }}
               />
-              <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#38bdf8' }}>{minDegreeThreshold}</span>
+              <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#132B20' }}>{minDegreeThreshold}</span>
             </div>
           </div>
 
           {/* Row 2: Entity Type Filters */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto' }}>
-            <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#64748b', marginRight: '2px' }}>ENTITY:</span>
+            <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#526058', marginRight: '2px' }}>ENTITY:</span>
             <button
               onClick={() => setActiveFilterType('ALL')}
               style={{
@@ -949,9 +968,9 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                 fontSize: '0.65rem',
                 fontWeight: 700,
                 borderRadius: '4px',
-                border: 'none',
-                backgroundColor: activeFilterType === 'ALL' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
-                color: activeFilterType === 'ALL' ? '#38bdf8' : '#94a3b8',
+                border: '1px solid ' + (activeFilterType === 'ALL' ? '#132B20' : '#D4CEBF'),
+                backgroundColor: activeFilterType === 'ALL' ? '#132B20' : '#EFEBE2',
+                color: activeFilterType === 'ALL' ? '#FCFCFA' : '#526058',
                 cursor: 'pointer'
               }}
             >
@@ -969,9 +988,9 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                     fontSize: '0.65rem',
                     fontWeight: 700,
                     borderRadius: '4px',
-                    border: 'none',
-                    backgroundColor: isSelected ? `${ft.color}30` : 'transparent',
-                    color: isSelected ? ft.color : '#cbd5e1',
+                    border: '1px solid ' + (isSelected ? ft.color : '#D4CEBF'),
+                    backgroundColor: isSelected ? `${ft.color}20` : '#EFEBE2',
+                    color: isSelected ? ft.color : '#526058',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -992,15 +1011,14 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           position: 'absolute',
           bottom: '16px',
           left: '16px',
-          backgroundColor: 'rgba(15, 23, 42, 0.88)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
+          backgroundColor: '#FCFCFA',
+          border: '1px solid #D4CEBF',
           borderRadius: '10px',
           padding: '6px',
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+          boxShadow: '0 4px 12px rgba(19, 43, 32, 0.08)',
           zIndex: 10
         }}>
           {/* Physics Play/Pause Toggle */}
@@ -1008,9 +1026,9 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             onClick={() => setIsPhysicsActive(!isPhysicsActive)}
             title={isPhysicsActive ? "Pause Physics Simulation" : "Resume Physics Simulation"}
             style={{
-              background: isPhysicsActive ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+              background: isPhysicsActive ? '#EAE4D6' : 'transparent',
               border: 'none',
-              color: isPhysicsActive ? '#38bdf8' : '#94a3b8',
+              color: isPhysicsActive ? '#132B20' : '#526058',
               cursor: 'pointer',
               padding: '4px',
               borderRadius: '4px',
@@ -1020,26 +1038,26 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           >
             {isPhysicsActive ? <Pause size={15} /> : <Play size={15} />}
           </button>
-          <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ width: '1px', height: '14px', backgroundColor: '#D4CEBF' }} />
           <button
             onClick={() => { transformRef.current.scale = Math.min(4, transformRef.current.scale * 1.2); }}
             title="Zoom In"
-            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+            style={{ background: 'transparent', border: 'none', color: '#132B20', cursor: 'pointer', padding: '4px' }}
           >
             <ZoomIn size={16} />
           </button>
           <button
             onClick={() => { transformRef.current.scale = Math.max(0.15, transformRef.current.scale * 0.8); }}
             title="Zoom Out"
-            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+            style={{ background: 'transparent', border: 'none', color: '#132B20', cursor: 'pointer', padding: '4px' }}
           >
             <ZoomOut size={16} />
           </button>
-          <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ width: '1px', height: '14px', backgroundColor: '#D4CEBF' }} />
           <button
             onClick={handleResetView}
             title="Reset View & Center Canvas"
-            style={{ background: 'transparent', border: 'none', color: '#38bdf8', cursor: 'pointer', padding: '4px' }}
+            style={{ background: 'transparent', border: 'none', color: '#D49B44', cursor: 'pointer', padding: '4px' }}
           >
             <RotateCcw size={16} />
           </button>
@@ -1052,24 +1070,23 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             top: '16px',
             right: '16px',
             width: '360px',
-            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(56, 189, 248, 0.35)',
+            backgroundColor: '#FCFCFA',
+            border: '1px solid #D4CEBF',
             borderRadius: '14px',
             padding: '16px',
-            boxShadow: '0 12px 36px rgba(0,0,0,0.7)',
+            boxShadow: '0 12px 36px rgba(19, 43, 32, 0.12)',
             zIndex: 30
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Crosshair size={14} /> Shortest Multi-Hop Path Solver
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#132B20', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Crosshair size={14} style={{ color: '#D49B44' }} /> Shortest Multi-Hop Path Solver
               </span>
-              <X size={14} style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={() => setIsPathFinderOpen(false)} />
+              <X size={14} style={{ color: '#526058', cursor: 'pointer' }} onClick={() => setIsPathFinderOpen(false)} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div>
-                <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700 }}>START ENTITY:</label>
+                <label style={{ fontSize: '0.68rem', color: '#526058', fontWeight: 700 }}>START ENTITY:</label>
                 <input
                   type="text"
                   placeholder="e.g. Imran Khan..."
@@ -1079,9 +1096,9 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                     width: '100%',
                     padding: '6px 10px',
                     borderRadius: '6px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    backgroundColor: '#090d16',
-                    color: '#f8fafc',
+                    border: '1px solid #D4CEBF',
+                    backgroundColor: '#F4F0E8',
+                    color: '#132B20',
                     fontSize: '0.75rem',
                     marginTop: '4px',
                     outline: 'none'
@@ -1090,7 +1107,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
               </div>
 
               <div>
-                <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700 }}>TARGET ENTITY:</label>
+                <label style={{ fontSize: '0.68rem', color: '#526058', fontWeight: 700 }}>TARGET ENTITY:</label>
                 <input
                   type="text"
                   placeholder="e.g. Ramesh Tiwari..."
@@ -1100,9 +1117,9 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                     width: '100%',
                     padding: '6px 10px',
                     borderRadius: '6px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    backgroundColor: '#090d16',
-                    color: '#f8fafc',
+                    border: '1px solid #D4CEBF',
+                    backgroundColor: '#F4F0E8',
+                    color: '#132B20',
                     fontSize: '0.75rem',
                     marginTop: '4px',
                     outline: 'none'
@@ -1114,14 +1131,15 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                 onClick={handleExecutePathFinder}
                 style={{
                   padding: '8px',
-                  backgroundColor: '#38bdf8',
-                  color: '#0f172a',
+                  backgroundColor: '#132B20',
+                  color: '#FCFCFA',
                   fontWeight: 800,
                   fontSize: '0.75rem',
                   borderRadius: '6px',
                   border: 'none',
                   cursor: 'pointer',
-                  marginTop: '4px'
+                  marginTop: '4px',
+                  boxShadow: '0 2px 8px rgba(19, 43, 32, 0.15)'
                 }}
               >
                 Trace Path (BFS)
@@ -1131,8 +1149,8 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                 <div style={{
                   marginTop: '10px',
                   padding: '10px',
-                  backgroundColor: activePathResult.found ? 'rgba(56, 189, 248, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                  border: `1px solid ${activePathResult.found ? 'rgba(56, 189, 248, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                  backgroundColor: activePathResult.found ? '#EDE7DA' : 'rgba(239, 68, 68, 0.1)',
+                  border: `1px solid ${activePathResult.found ? '#D4CEBF' : 'rgba(239, 68, 68, 0.3)'}`,
                   borderRadius: '8px',
                   fontSize: '0.72rem',
                   lineHeight: 1.5,
@@ -1141,15 +1159,15 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                 }}>
                   {activePathResult.found ? (
                     <div>
-                      <div style={{ fontWeight: 800, color: '#38bdf8', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: 800, color: '#0F5132', marginBottom: '4px' }}>
                         ✓ {activePathResult.hops}-Hop Path Found:
                       </div>
                       {activePathResult.stepDescriptions.map((step, idx) => (
-                        <div key={idx} style={{ marginBottom: '4px', color: '#cbd5e1' }} dangerouslySetInnerHTML={{ __html: step.replace(/\*\*/g, '<b>').replace(/\\xrightarrow\{([^}]+)\}/g, '→ $1 →') }} />
+                        <div key={idx} style={{ marginBottom: '4px', color: '#132B20' }} dangerouslySetInnerHTML={{ __html: step.replace(/\*\*/g, '<b>').replace(/\\xrightarrow\{([^}]+)\}/g, '→ $1 →') }} />
                       ))}
                     </div>
                   ) : (
-                    <div style={{ color: '#ef4444' }}>{activePathResult.reason}</div>
+                    <div style={{ color: '#b91c1c' }}>{activePathResult.reason}</div>
                   )}
                 </div>
               )}
@@ -1165,14 +1183,13 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             right: 0,
             width: '380px',
             height: '100%',
-            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-            backdropFilter: 'blur(20px)',
-            borderLeft: '1px solid rgba(255, 255, 255, 0.12)',
+            backgroundColor: '#FCFCFA',
+            borderLeft: '1px solid #D4CEBF',
             padding: '24px',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px',
-            boxShadow: '-10px 0 35px rgba(0,0,0,0.8)',
+            boxShadow: '-10px 0 35px rgba(19, 43, 32, 0.1)',
             zIndex: 40,
             overflowY: 'auto'
           }}>
@@ -1189,16 +1206,16 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                 }}>
                   {selectedNode.typeLabel}
                 </span>
-                <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>
+                <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.2rem', fontWeight: 800, color: '#132B20' }}>
                   {selectedNode.label}
                 </h3>
-                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                  Entity ID: <code style={{ color: '#38bdf8' }}>{selectedNode.id}</code>
+                <div style={{ fontSize: '0.7rem', color: '#526058' }}>
+                  Entity ID: <code style={{ color: '#132B20', backgroundColor: '#EFEBE2', padding: '2px 6px', borderRadius: '4px' }}>{selectedNode.id}</code>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedNode(null)}
-                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: '#526058', cursor: 'pointer' }}
               >
                 <X size={18} />
               </button>
@@ -1207,33 +1224,33 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             {/* PERSON DEMOGRAPHIC CHIPS (IF SUSPECT) */}
             {selectedNode.type === 'SUSPECT' && (
               <div style={{ display: 'flex', gap: '8px' }}>
-                <div style={{ padding: '4px 10px', borderRadius: '6px', backgroundColor: '#090d16', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.72rem', color: '#cbd5e1' }}>
-                  Gender: <b style={{ color: '#38bdf8' }}>{selectedNode.metadata?.gender || 'Male'}</b>
+                <div style={{ padding: '4px 10px', borderRadius: '6px', backgroundColor: '#F4F0E8', border: '1px solid #D4CEBF', fontSize: '0.72rem', color: '#526058' }}>
+                  Gender: <b style={{ color: '#132B20' }}>{selectedNode.metadata?.gender || 'Male'}</b>
                 </div>
-                <div style={{ padding: '4px 10px', borderRadius: '6px', backgroundColor: '#090d16', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.72rem', color: '#cbd5e1' }}>
-                  Age: <b style={{ color: '#38bdf8' }}>{selectedNode.metadata?.age || '35'}</b>
+                <div style={{ padding: '4px 10px', borderRadius: '6px', backgroundColor: '#F4F0E8', border: '1px solid #D4CEBF', fontSize: '0.72rem', color: '#526058' }}>
+                  Age: <b style={{ color: '#132B20' }}>{selectedNode.metadata?.age || '35'}</b>
                 </div>
-                <div style={{ padding: '4px 10px', borderRadius: '6px', backgroundColor: '#090d16', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.72rem', color: '#cbd5e1' }}>
-                  Cases: <b style={{ color: '#f43f5e' }}>{selectedNode.metadata?.linkedCases?.length || 1}</b>
+                <div style={{ padding: '4px 10px', borderRadius: '6px', backgroundColor: '#F4F0E8', border: '1px solid #D4CEBF', fontSize: '0.72rem', color: '#526058' }}>
+                  Cases: <b style={{ color: '#C88A2C' }}>{selectedNode.metadata?.linkedCases?.length || 1}</b>
                 </div>
               </div>
             )}
 
             {/* KEY METRICS STRIP */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div style={{ backgroundColor: '#090d16', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700 }}>CENTRALITY DEGREE</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#38bdf8' }}>{selectedNode.degree} Links</div>
+              <div style={{ backgroundColor: '#F4F0E8', padding: '10px', borderRadius: '8px', border: '1px solid #D4CEBF' }}>
+                <div style={{ fontSize: '0.68rem', color: '#526058', fontWeight: 700 }}>CENTRALITY DEGREE</div>
+                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#132B20' }}>{selectedNode.degree} Links</div>
               </div>
-              <div style={{ backgroundColor: '#090d16', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700 }}>COMMUNITY CLUSTER</div>
+              <div style={{ backgroundColor: '#F4F0E8', padding: '10px', borderRadius: '8px', border: '1px solid #D4CEBF' }}>
+                <div style={{ fontSize: '0.68rem', color: '#526058', fontWeight: 700 }}>COMMUNITY CLUSTER</div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 900, color: selectedNode.color }}>Cluster #{selectedNode.community}</div>
               </div>
             </div>
 
             {/* DIRECT ASSOCIATED ENTITIES (VEHICLES, PHONES, MULES, CO-ACCUSED) */}
             <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '8px' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#132B20', marginBottom: '8px' }}>
                 DIRECT NETWORK ASSOCIATIONS ({focusedNeighborhood ? focusedNeighborhood.size - 1 : 0})
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
@@ -1246,9 +1263,9 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                       onClick={() => flyToNode(target)}
                       style={{
                         padding: '8px 10px',
-                        backgroundColor: '#090d16',
+                        backgroundColor: '#F4F0E8',
                         borderRadius: '6px',
-                        border: '1px solid rgba(255,255,255,0.06)',
+                        border: '1px solid #D4CEBF',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -1257,7 +1274,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: target.color }} />
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#e2e8f0' }}>{target.label}</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#132B20' }}>{target.label}</span>
                       </div>
                       <span style={{ fontSize: '0.65rem', color: target.color, fontWeight: 700 }}>{target.typeLabel}</span>
                     </div>
@@ -1269,12 +1286,12 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             {/* ASSOCIATED FIR CASES */}
             {selectedNode.metadata?.linkedCases && selectedNode.metadata.linkedCases.length > 0 && (
               <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '6px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#132B20', marginBottom: '6px' }}>
                   ASSOCIATED FIR CASES ({selectedNode.metadata.linkedCases.length})
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxHeight: '120px', overflowY: 'auto' }}>
                   {selectedNode.metadata.linkedCases.slice(0, 20).map((rec, i) => (
-                    <span key={i} style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#1e293b', color: '#93c5fd' }}>
+                    <span key={i} style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#EAE4D6', border: '1px solid #C4B9A5', color: '#132B20' }}>
                       {rec}
                     </span>
                   ))}
@@ -1286,14 +1303,14 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             <div style={{
               marginTop: 'auto',
               padding: '12px',
-              backgroundColor: '#090d16',
+              backgroundColor: '#F4F0E8',
               borderRadius: '8px',
-              border: '1px solid rgba(52, 211, 153, 0.3)'
+              border: '1px solid #0F5132'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#34d399', fontSize: '0.72rem', fontWeight: 800 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0F5132', fontSize: '0.72rem', fontWeight: 800 }}>
                 <Shield size={14} /> Section 65B Forensic Integrity Certificate
               </div>
-              <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '4px', wordBreak: 'break-all' }}>
+              <div style={{ fontSize: '0.68rem', color: '#526058', marginTop: '4px', wordBreak: 'break-all' }}>
                 Signature: <code>{selectedNode.metadata?.Section_65B_Signature || '8391526fab0a22e3-verified'}</code>
               </div>
             </div>
@@ -1309,7 +1326,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
           left: 0,
           width: '100vw',
           height: '100vh',
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          backgroundColor: 'rgba(19, 43, 32, 0.45)',
           backdropFilter: 'blur(8px)',
           display: 'flex',
           alignItems: 'center',
@@ -1318,40 +1335,67 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
         }}>
           <div style={{
             width: '480px',
-            backgroundColor: '#0f172a',
-            border: '1px solid rgba(56, 189, 248, 0.4)',
+            backgroundColor: '#F4F0E8',
+            border: '1px solid #D4CEBF',
             borderRadius: '16px',
             padding: '24px',
-            boxShadow: '0 25px 60px rgba(0,0,0,0.9)'
+            boxShadow: '0 20px 45px rgba(19, 43, 32, 0.12)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <UploadCloud size={20} style={{ color: '#38bdf8' }} />
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc' }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  backgroundColor: '#132B20',
+                  border: '1px solid #D49B44',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <UploadCloud size={18} style={{ color: '#D49B44' }} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#132B20' }}>
                   Attach Network / CDR Dataset
                 </h3>
               </div>
-              <X size={18} style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={() => setIsUploadModalOpen(false)} />
+              <button
+                onClick={() => setIsUploadModalOpen(false)}
+                style={{
+                  background: '#FCFCFA',
+                  border: '1px solid #D4CEBF',
+                  borderRadius: '50%',
+                  width: '28px',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#132B20',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={16} />
+              </button>
             </div>
 
-            <p style={{ fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '0.75rem', color: '#526058', lineHeight: 1.5, margin: '0 0 16px 0' }}>
               Upload any dedicated CSV, Excel (.xlsx/.xls), JSON / NoSQL dump, or SQL export. The Network Ingestion Agent will extract entity relationships and render the interactive graph topology.
             </p>
 
             <div
               onClick={() => document.getElementById('network-file-input').click()}
               style={{
-                border: '2px dashed rgba(56, 189, 248, 0.4)',
+                border: '1.5px dashed #C2BAAA',
                 borderRadius: '12px',
                 padding: '28px',
                 textAlign: 'center',
-                backgroundColor: 'rgba(9, 13, 22, 0.6)',
+                backgroundColor: '#FCFCFA',
                 cursor: 'pointer'
               }}
             >
-              <FileText size={32} style={{ color: '#38bdf8', margin: '0 auto 8px auto' }} />
-              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f8fafc' }}>Click to select Data File</div>
-              <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px' }}>Supports CSV, Excel (.xlsx), JSON, SQL exports & Telecom CDRs</div>
+              <FileText size={32} style={{ color: '#132B20', margin: '0 auto 8px auto' }} />
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#132B20' }}>Click to select Data File</div>
+              <div style={{ fontSize: '0.7rem', color: '#6B7A72', marginTop: '4px' }}>Supports CSV, Excel (.xlsx), JSON, SQL exports & Telecom CDRs</div>
               <input
                 id="network-file-input"
                 type="file"
@@ -1362,7 +1406,7 @@ export default function NetworkGraphView({ datasetState, onBackToChat, onDataset
             </div>
 
             {uploadError && (
-              <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '12px' }}>
+              <div style={{ color: '#b91c1c', fontSize: '0.72rem', marginTop: '12px' }}>
                 {uploadError}
               </div>
             )}

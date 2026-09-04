@@ -339,8 +339,8 @@ export default function AudioForensicsPanel({
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      backgroundColor: '#090d16',
-      color: '#f8fafc',
+      backgroundColor: '#F4F0E8',
+      color: '#132B20',
       fontFamily: "'Inter', system-ui, sans-serif",
       overflow: 'hidden',
       position: 'relative'
@@ -359,8 +359,8 @@ export default function AudioForensicsPanel({
       {/* ── SUCCESS BANNER (EVIDENCE INJECTED) ── */}
       {injectionSuccess && (
         <div style={{
-          background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.25) 100%)',
-          borderBottom: '1px solid rgba(16, 185, 129, 0.5)',
+          backgroundColor: '#EFEBE2',
+          borderBottom: '1px solid #C4B9A5',
           padding: '10px 24px',
           display: 'flex',
           alignItems: 'center',
@@ -370,12 +370,12 @@ export default function AudioForensicsPanel({
           zIndex: 10
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <CheckCircle2 size={18} color="#34d399" />
+            <CheckCircle2 size={18} color="#0F5132" />
             <div>
-              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#34d399' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F5132' }}>
                 Evidence Ingested into Session RAG (Strict Replacement Active):
               </span>
-              <span style={{ fontSize: '0.8rem', color: '#f1f5f9', marginLeft: '6px' }}>
+              <span style={{ fontSize: '0.8rem', color: '#132B20', marginLeft: '6px', fontWeight: 600 }}>
                 `{injectionSuccess.doc_name}` ({injectionSuccess.chunk_count} Markdown chunks indexed)
               </span>
             </div>
@@ -383,9 +383,9 @@ export default function AudioForensicsPanel({
           <button
             onClick={onBackToChat}
             style={{
-              background: '#10b981',
-              color: '#ffffff',
-              border: 'none',
+              backgroundColor: '#132B20',
+              color: '#FCFCFA',
+              border: '1px solid #132B20',
               borderRadius: '6px',
               padding: '6px 14px',
               fontSize: '0.75rem',
@@ -394,10 +394,19 @@ export default function AudioForensicsPanel({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 2px 10px rgba(16, 185, 129, 0.4)'
+              boxShadow: '0 2px 8px rgba(19, 43, 32, 0.15)',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#0F5132';
+              e.currentTarget.style.borderColor = '#D49B44';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#132B20';
+              e.currentTarget.style.borderColor = '#132B20';
             }}
           >
-            <MessageSquare size={13} /> Query Evidence in Chatbot ➔
+            <MessageSquare size={13} color="#D49B44" /> Query Evidence in Chatbot ➔
           </button>
         </div>
       )}
@@ -405,13 +414,13 @@ export default function AudioForensicsPanel({
       {/* ── ERROR BANNER ── */}
       {errorMessage && viewState === VIEW_STATES.TRANSCRIPT_ACTIVE && (
         <div style={{
-          background: 'rgba(239, 68, 68, 0.15)',
-          borderBottom: '1px solid rgba(239, 68, 68, 0.4)',
+          backgroundColor: '#FEF2F2',
+          borderBottom: '1px solid #FECACA',
           padding: '8px 24px',
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
-          color: '#f87171',
+          color: '#DC2626',
           fontSize: '0.8rem',
           fontWeight: 700,
           flexShrink: 0

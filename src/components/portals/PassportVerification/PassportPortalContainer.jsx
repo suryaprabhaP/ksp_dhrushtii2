@@ -95,17 +95,30 @@ export default function PassportPortalContainer({ onBackToDashboard }) {
   };
 
   return (
-    <div style={{
-      width: '100%',
-      height: '100%',
-      overflowY: 'auto',
-      backgroundColor: '#090d16',
-      color: '#f8fafc',
-      padding: '24px 32px',
-      fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
-    }}>
+    <div
+      className="portal-scroll"
+      style={{
+        width: '100%',
+        height: '100%',
+        overflowY: 'auto',
+        backgroundColor: '#F4F0E8',
+        color: '#132B20',
+        padding: '24px 32px',
+        fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
+      }}
+    >
       {/* Top Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '20px',
+        background: '#FCFCFA',
+        padding: '16px 20px',
+        borderRadius: '12px',
+        border: '1px solid #D4CEBF',
+        boxShadow: '0 2px 8px rgba(19, 43, 32, 0.05)'
+      }}>
         <button
           onClick={onBackToDashboard}
           style={{
@@ -113,36 +126,38 @@ export default function PassportPortalContainer({ onBackToDashboard }) {
             alignItems: 'center',
             gap: '8px',
             padding: '8px 14px',
-            background: 'rgba(30, 41, 59, 0.8)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
+            background: '#EFEBE2',
+            border: '1px solid #D4CEBF',
             borderRadius: '8px',
-            color: '#60a5fa',
+            color: '#132B20',
             fontWeight: 700,
             fontSize: '0.8rem',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
           }}
         >
           <ArrowLeft size={16} /> Back to Command Chatbot
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '8px',
-            background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
+            background: '#132B20',
+            border: '1px solid #D49B44',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 10px rgba(14, 165, 233, 0.5)'
+            boxShadow: '0 2px 8px rgba(19, 43, 32, 0.15)'
           }}>
-            <ShieldCheck size={18} color="#ffffff" />
+            <ShieldCheck size={20} color="#D49B44" />
           </div>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#f8fafc' }}>
+            <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#132B20', letterSpacing: '-0.3px' }}>
               Passport Police Verification Portal
             </h2>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+            <span style={{ fontSize: '0.72rem', color: '#526058', fontWeight: 600 }}>
               CCTNS Karnataka — Table 54626000000093001
             </span>
           </div>
@@ -154,14 +169,33 @@ export default function PassportPortalContainer({ onBackToDashboard }) {
 
       {/* Filter / Search Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, maxWidth: '400px', background: 'rgba(30, 41, 59, 0.8)', border: '1px solid #334155', borderRadius: '8px', padding: '8px 12px' }}>
-          <Search size={16} color="#94a3b8" />
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          flex: 1,
+          maxWidth: '420px',
+          background: '#FCFCFA',
+          border: '1px solid #D4CEBF',
+          borderRadius: '8px',
+          padding: '8px 14px',
+          boxShadow: '0 1px 3px rgba(19, 43, 32, 0.04)'
+        }}>
+          <Search size={16} color="#7D8B82" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by Applicant Name, App ID, Station..."
-            style={{ background: 'transparent', border: 'none', color: '#f8fafc', fontSize: '0.85rem', width: '100%', outline: 'none' }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#132B20',
+              fontSize: '0.85rem',
+              width: '100%',
+              outline: 'none',
+              fontWeight: 500
+            }}
           />
         </div>
 
@@ -171,14 +205,15 @@ export default function PassportPortalContainer({ onBackToDashboard }) {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            padding: '8px 14px',
-            background: 'rgba(30, 41, 59, 0.8)',
-            border: '1px solid #334155',
+            padding: '8px 16px',
+            background: '#EFEBE2',
+            border: '1px solid #D4CEBF',
             borderRadius: '8px',
-            color: '#94a3b8',
+            color: '#132B20',
             fontSize: '0.8rem',
             fontWeight: 700,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
           }}
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh Table

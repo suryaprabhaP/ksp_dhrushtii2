@@ -1,9 +1,9 @@
 import React, { useRef } from 'react';
-import { Upload, Mic, Volume2, Sparkles, FileAudio, AlertTriangle, ShieldCheck, Headphones } from 'lucide-react';
+import { Upload, Volume2, Sparkles, FileAudio, AlertTriangle, ShieldCheck, Headphones } from 'lucide-react';
 import { FILE_LIMITS } from './constants';
 
 /**
- * UploadCenterView — Centered Drag & Drop Audio Upload Screen
+ * UploadCenterView — Centered Drag & Drop Audio Upload Screen in DRISHTI Warm Parchment Theme
  * (SOLID: SRP — Centered Empty/Upload state presentation)
  */
 export default function UploadCenterView({
@@ -41,29 +41,28 @@ export default function UploadCenterView({
       position: 'relative',
       overflowY: 'auto'
     }}>
-      {/* Background Decorative Radial Glows */}
+      {/* Background Decorative Warm Radial Glow */}
       <div style={{
         position: 'absolute',
         width: '500px',
         height: '500px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.05) 50%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(212, 155, 68, 0.08) 0%, rgba(19, 43, 32, 0.04) 50%, transparent 70%)',
         pointerEvents: 'none',
         zIndex: 0
       }} />
 
-      {/* Main Glassmorphic Card Container */}
+      {/* Main Crisp Ivory Card Container */}
       <div style={{
         position: 'relative',
         zIndex: 1,
         width: '100%',
         maxWidth: '680px',
-        background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 27, 75, 0.6) 100%)',
-        border: '1px solid rgba(99, 102, 241, 0.35)',
+        backgroundColor: '#FCFCFA',
+        border: '1px solid #D4CEBF',
         borderRadius: '24px',
         padding: '36px',
-        boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(99, 102, 241, 0.15)',
-        backdropFilter: 'blur(16px)',
+        boxShadow: '0 15px 35px rgba(19, 43, 32, 0.08)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -74,37 +73,34 @@ export default function UploadCenterView({
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
-          background: 'rgba(99, 102, 241, 0.2)',
-          border: '1px solid rgba(99, 102, 241, 0.4)',
+          backgroundColor: '#EFEBE2',
+          border: '1px solid #D4CEBF',
           borderRadius: '20px',
           padding: '6px 14px',
-          color: '#c7d2fe',
+          color: '#132B20',
           fontSize: '0.75rem',
           fontWeight: 800,
           marginBottom: '16px',
           textTransform: 'uppercase',
           letterSpacing: '0.06em'
         }}>
-          <ShieldCheck size={14} color="#818cf8" />
+          <ShieldCheck size={14} color="#D49B44" />
           Karnataka State Police • Voice Forensics Lab
         </div>
 
         <h2 style={{
           fontSize: '1.6rem',
           fontWeight: 800,
-          color: '#ffffff',
+          color: '#132B20',
           margin: '0 0 8px 0',
-          letterSpacing: '-0.02em',
-          background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #818cf8 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent'
+          letterSpacing: '-0.02em'
         }}>
           Upload Voice & Audio Evidence
         </h2>
 
         <p style={{
           fontSize: '0.86rem',
-          color: '#94a3b8',
+          color: '#526058',
           margin: '0 0 24px 0',
           maxWidth: '480px',
           lineHeight: '1.5'
@@ -116,15 +112,15 @@ export default function UploadCenterView({
         {errorMessage && (
           <div style={{
             width: '100%',
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
+            backgroundColor: '#FEF2F2',
+            border: '1px solid #FECACA',
             borderRadius: '12px',
             padding: '10px 16px',
             marginBottom: '20px',
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            color: '#f87171',
+            color: '#DC2626',
             fontSize: '0.8rem',
             fontWeight: 700,
             textAlign: 'left'
@@ -141,25 +137,23 @@ export default function UploadCenterView({
           onDrop={handleDrop}
           style={{
             width: '100%',
-            border: selectedFile ? '2px solid rgba(99, 102, 241, 0.8)' : '2px dashed rgba(99, 102, 241, 0.4)',
+            border: selectedFile ? '2px solid #D49B44' : '1.5px dashed #C2BAAA',
             borderRadius: '18px',
             padding: '32px 20px',
-            background: selectedFile
-              ? 'rgba(99, 102, 241, 0.12)'
-              : 'rgba(15, 23, 42, 0.5)',
+            backgroundColor: selectedFile ? '#EAE4D6' : '#F9F7F2',
             cursor: isUploading ? 'not-allowed' : 'pointer',
-            transition: 'all 0.25s ease',
+            transition: 'all 0.2s ease',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: '12px',
-            boxShadow: selectedFile ? '0 0 25px rgba(99, 102, 241, 0.2)' : 'none'
+            boxShadow: selectedFile ? '0 0 15px rgba(212, 155, 68, 0.2)' : 'none'
           }}
           onMouseEnter={(e) => {
-            if (!selectedFile) e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.8)';
+            if (!selectedFile) e.currentTarget.style.borderColor = '#D49B44';
           }}
           onMouseLeave={(e) => {
-            if (!selectedFile) e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
+            if (!selectedFile) e.currentTarget.style.borderColor = '#C2BAAA';
           }}
         >
           <input
@@ -179,36 +173,34 @@ export default function UploadCenterView({
             width: '64px',
             height: '64px',
             borderRadius: '50%',
-            background: selectedFile
-              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-              : 'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(168, 85, 247, 0.3) 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
+            backgroundColor: selectedFile ? '#132B20' : '#EAE4D6',
+            border: '1px solid #D4CEBF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             boxShadow: selectedFile
-              ? '0 0 25px rgba(16, 185, 129, 0.4)'
-              : '0 0 20px rgba(99, 102, 241, 0.3)'
+              ? '0 4px 14px rgba(19, 43, 32, 0.25)'
+              : '0 2px 8px rgba(19, 43, 32, 0.08)'
           }}>
             {selectedFile ? (
-              <FileAudio size={28} color="#ffffff" />
+              <FileAudio size={28} color="#FCFCFA" />
             ) : (
-              <Upload size={28} color="#c7d2fe" />
+              <Upload size={28} color="#132B20" />
             )}
           </div>
 
           {/* Label Text */}
           <div>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc', marginBottom: '4px' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#132B20', marginBottom: '4px' }}>
               {selectedFile ? selectedFile.name : 'Click to Browse or Drag & Drop Recording'}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+            <div style={{ fontSize: '0.75rem', color: '#6B7A72' }}>
               {selectedFile ? (
-                <span style={{ color: '#38bdf8', fontWeight: 700 }}>
+                <span style={{ color: '#0F5132', fontWeight: 800 }}>
                   Ready to Transcribe • {roundSize(selectedFile.size)}
                 </span>
               ) : (
-                <>Supported formats: <strong style={{ color: '#c7d2fe' }}>.mp3, .wav, .ogg, .m4a, .aac, .flac</strong> (Max {FILE_LIMITS.MAX_SIZE_LABEL})</>
+                <>Supported formats: <strong style={{ color: '#132B20' }}>.mp3, .wav, .ogg, .m4a, .aac, .flac</strong> (Max {FILE_LIMITS.MAX_SIZE_LABEL})</>
               )}
             </div>
           </div>
@@ -220,12 +212,12 @@ export default function UploadCenterView({
                 key={ext}
                 style={{
                   fontSize: '0.65rem',
-                  background: 'rgba(30, 41, 59, 0.8)',
-                  color: '#94a3b8',
-                  padding: '2px 8px',
+                  backgroundColor: '#FCFCFA',
+                  color: '#132B20',
+                  padding: '3px 8px',
                   borderRadius: '6px',
-                  border: '1px solid rgba(148, 163, 184, 0.15)',
-                  fontWeight: 600
+                  border: '1px solid #D4CEBF',
+                  fontWeight: 700
                 }}
               >
                 {ext.toUpperCase()}
@@ -239,15 +231,15 @@ export default function UploadCenterView({
           <div style={{
             width: '100%',
             marginTop: '16px',
-            background: 'rgba(15, 23, 42, 0.7)',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
+            backgroundColor: '#EFEBE2',
+            border: '1px solid #D4CEBF',
             borderRadius: '12px',
             padding: '10px 16px',
             display: 'flex',
             alignItems: 'center',
             gap: '12px'
           }}>
-            <Volume2 size={18} color="#38bdf8" />
+            <Volume2 size={18} color="#D49B44" />
             <audio
               src={audioUrl}
               controls
@@ -264,11 +256,9 @@ export default function UploadCenterView({
             width: '100%',
             marginTop: '20px',
             padding: '14px',
-            background: !selectedFile || isUploading
-              ? '#334155'
-              : 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-            color: '#ffffff',
-            border: 'none',
+            backgroundColor: !selectedFile || isUploading ? '#A8A29E' : '#132B20',
+            color: '#FCFCFA',
+            border: '1px solid #132B20',
             borderRadius: '12px',
             fontSize: '0.92rem',
             fontWeight: 800,
@@ -277,8 +267,20 @@ export default function UploadCenterView({
             alignItems: 'center',
             justifyContent: 'center',
             gap: '10px',
-            boxShadow: selectedFile && !isUploading ? '0 6px 20px rgba(168, 85, 247, 0.4)' : 'none',
-            transition: 'all 0.25s ease'
+            boxShadow: selectedFile && !isUploading ? '0 4px 14px rgba(19, 43, 32, 0.2)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            if (selectedFile && !isUploading) {
+              e.currentTarget.style.backgroundColor = '#0F5132';
+              e.currentTarget.style.borderColor = '#D49B44';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (selectedFile && !isUploading) {
+              e.currentTarget.style.backgroundColor = '#132B20';
+              e.currentTarget.style.borderColor = '#132B20';
+            }
           }}
         >
           {isUploading ? (
@@ -287,7 +289,7 @@ export default function UploadCenterView({
             </>
           ) : (
             <>
-              <Sparkles size={18} /> Run Speech-to-Text Transcription & Legal Mapping
+              <Sparkles size={18} color="#D49B44" /> Run Speech-to-Text Transcription & Legal Mapping
             </>
           )}
         </button>
@@ -299,7 +301,7 @@ export default function UploadCenterView({
           alignItems: 'center',
           gap: '10px',
           fontSize: '0.75rem',
-          color: '#64748b'
+          color: '#526058'
         }}>
           <span>Or test instant audio intelligence:</span>
           <button
@@ -307,20 +309,27 @@ export default function UploadCenterView({
             disabled={isUploading}
             onClick={onLoadSampleAudio}
             style={{
-              background: 'transparent',
-              border: '1px dashed rgba(99, 102, 241, 0.5)',
-              color: '#818cf8',
+              backgroundColor: 'rgba(212, 155, 68, 0.08)',
+              border: '1px dashed #D49B44',
+              color: '#C88A2C',
               borderRadius: '6px',
-              padding: '3px 8px',
+              padding: '4px 10px',
               fontSize: '0.72rem',
-              fontWeight: 700,
+              fontWeight: 800,
               cursor: isUploading ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '5px',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (!isUploading) e.currentTarget.style.backgroundColor = 'rgba(212, 155, 68, 0.18)';
+            }}
+            onMouseLeave={(e) => {
+              if (!isUploading) e.currentTarget.style.backgroundColor = 'rgba(212, 155, 68, 0.08)';
             }}
           >
-            <Headphones size={12} /> Load Witness Statement Recording
+            <Headphones size={13} color="#C88A2C" /> Load Witness Statement Recording
           </button>
         </div>
       </div>

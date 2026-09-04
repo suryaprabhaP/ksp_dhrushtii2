@@ -7,11 +7,11 @@ import ComplaintPortalContainer from './components/portals/EComplaint/ComplaintP
 import PassportPortalContainer from './components/portals/PassportVerification/PassportPortalContainer';
 import PoliceInitiatedPortalContainer from './components/portals/PoliceInitiated/PoliceInitiatedPortalContainer';
 import CommandCenterMenu from './components/portals/CommandCenter/CommandCenterMenu';
-import CrimeAnalyticsHub from './components/portals/CrimeAnalyticsHub';
 import { GlobalInvestigationContextProvider } from './context/GlobalInvestigationContext';
 import { initialDatasetState } from './analytics/services/datasetStore';
 import { globalNetworkStore } from './analytics/services/networkAnalyticsService';
 import { Shield, MapPin, Radio, BarChart2 } from 'lucide-react';
+import CrimeAnalyticsHub from './components/portals/CrimeAnalyticsHub';
 
 // KSP Main Division & Landing Components
 import BengaluruHeadDashboard from './components/command_center/BengaluruHeadDashboard';
@@ -147,22 +147,6 @@ function ChatbotAppContainer({ selectedDivision, onNavigateBackToCommandCenter }
     );
   }
 
-  if (activeView === 'crime_analytics_hub') {
-    return (
-      <ErrorBoundary>
-        <CrimeAnalyticsHub
-          selectedDivision={selectedDivision}
-          onNavigateBackToCommandCenter={() => setActiveView('chat')}
-          isDatasetLoaded={datasetState.isLoaded}
-          datasetState={datasetState}
-          onDatasetIngested={handleDatasetLoaded}
-          onSessionReset={handleSessionReset}
-        />
-        <DraggableGlobalChat divisionName={selectedDivision} />
-      </ErrorBoundary>
-    );
-  }
-
   if (activeView === 'analytics') {
     return (
       <ErrorBoundary>
@@ -182,6 +166,21 @@ function ChatbotAppContainer({ selectedDivision, onNavigateBackToCommandCenter }
     );
   }
 
+  if (activeView === 'crime_analytics_hub') {
+    return (
+      <ErrorBoundary>
+        <CrimeAnalyticsHub
+          selectedDivision={selectedDivision}
+          onNavigateBackToCommandCenter={() => setActiveView('chat')}
+          isDatasetLoaded={datasetState.isLoaded}
+          datasetState={datasetState}
+          onDatasetIngested={handleDatasetLoaded}
+          onSessionReset={handleSessionReset}
+        />
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <div style={{
@@ -190,9 +189,9 @@ function ChatbotAppContainer({ selectedDivision, onNavigateBackToCommandCenter }
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: '#090d16',
+        backgroundColor: '#0D1512',
         fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-        color: '#f8fafc',
+        color: '#FCFCFA',
         position: 'relative'
       }}>
         {/* TOP COMMAND BAR (TACTICAL FOREST GREEN & GOLD THEME) */}
@@ -262,32 +261,6 @@ function ChatbotAppContainer({ selectedDivision, onNavigateBackToCommandCenter }
               <span style={{ color: '#D49B44', fontWeight: 700 }}>{selectedDivision}</span>
             </div>
 
-            {/* ZOHO DUAL-SCREEN ANALYTICS HUB BUTTON */}
-            <button
-              onClick={() => setActiveView('crime_analytics_hub')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%)',
-                border: '1px solid #38bdf8',
-                borderRadius: '8px',
-                padding: '4px 11px',
-                fontSize: '0.72rem',
-                color: '#ffffff',
-                fontWeight: 800,
-                cursor: 'pointer',
-                boxShadow: '0 0 12px rgba(56, 189, 248, 0.35)',
-                transition: 'all 0.15s ease'
-              }}
-              title="Open Zoho Analytics Split-Screen Hub"
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
-            >
-              <BarChart2 size={13} color="#ffffff" />
-              <span>ZOHO ANALYTICS HUB</span>
-            </button>
-
             {/* STATUS BADGE */}
             <div style={{
               display: 'flex',
@@ -304,6 +277,29 @@ function ChatbotAppContainer({ selectedDivision, onNavigateBackToCommandCenter }
               <Radio size={11} color="#34D399" />
               <span>COMMAND READY</span>
             </div>
+
+            {/* ZOHO ANALYTICS SPLIT-SCREEN HUB TOGGLE BUTTON */}
+            <button
+              onClick={() => setActiveView('crime_analytics_hub')}
+              style={{
+                background: 'linear-gradient(135deg, #132B20 0%, #1E4332 100%)',
+                border: '1px solid rgba(212, 155, 68, 0.5)',
+                borderRadius: '6px',
+                padding: '4px 10px',
+                color: '#FCFCFA',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: '0 0 10px rgba(212, 155, 68, 0.2)'
+              }}
+              title="Launch Dual-Console Zoho Analytics Split-Screen Studio"
+            >
+              <BarChart2 size={12} color="#D49B44" />
+              <span>ZOHO ANALYTICS HUB</span>
+            </button>
           </div>
         </header>
 
