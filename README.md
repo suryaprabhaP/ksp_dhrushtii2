@@ -1,4 +1,4 @@
-# 🛡️ KSP Sentinel AI (Drishti Command Intelligence Platform)
+# 🛡️ KSP Drishti AI (Drishti Command Intelligence Platform)
 
 > **Karnataka State Police — Next-Gen AI Crime Intelligence, Multi-Agent Forensics & Command Platform**  
 > *Built for Police Officers, Cyber Crime Cells, and State Intelligence Wings.*
