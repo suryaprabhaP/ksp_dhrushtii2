@@ -1,5 +1,5 @@
 /**
- * KSP Sentinel AI — Dynamic In-Memory Dataset Store & OLAP Engine
+ * KSP DRISHTI — Dynamic In-Memory Dataset Store & OLAP Engine
  * Handles CSV parsing, dynamic schema inference, multi-dimensional slicing,
  * and automated visual spectrum generation (Bar, Doughnut, Line, Scatter, Histogram).
  */

@@ -1,5 +1,5 @@
 /**
- * KSP Sentinel AI — Portals API Client (SOLID: SRP)
+ * KSP DRISHTI — Portals API Client (SOLID: SRP)
  * Handles communication with the backend portal REST endpoints.
  */
 import { getApiUrl } from './apiClient';

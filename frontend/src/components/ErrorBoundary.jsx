@@ -11,7 +11,7 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("KSP Sentinel AI Error Boundary Caught Error:", error, errorInfo);
+    console.error("KSP DRISHTI Error Boundary Caught Error:", error, errorInfo);
   }
 
   handleReset = () => {
@@ -61,7 +61,7 @@ export class ErrorBoundary extends React.Component {
               <span style={{ fontSize: '24px' }}>🛡️</span>
             </div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', margin: '0 0 8px 0' }}>
-              KSP Sentinel AI — Session Refresh
+              KSP DRISHTI — Session Refresh
             </h2>
             <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.5, margin: '0 0 16px 0' }}>
               An error occurred during view rendering. Click below to reload the Sentinel Command Assistant.

@@ -1,5 +1,5 @@
 /**
- * KSP Sentinel AI — Investigation API Client (SOLID: SRP + DIP)
+ * KSP DRISHTI — Investigation API Client (SOLID: SRP + DIP)
  * Encapsulates HTTP communication for Phase 3 AI Agent Handoff & Session Memory.
  * Uses centralized getApiUrl for seamless local & AppSail cloud execution.
  */

@@ -189,9 +189,9 @@ function ChatbotAppContainer({ selectedDivision, onNavigateBackToCommandCenter }
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: '#0D1512',
+        backgroundColor: '#090d16',
         fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-        color: '#FCFCFA',
+        color: '#f8fafc',
         position: 'relative'
       }}>
         {/* TOP COMMAND BAR (TACTICAL FOREST GREEN & GOLD THEME) */}
@@ -235,7 +235,7 @@ function ChatbotAppContainer({ selectedDivision, onNavigateBackToCommandCenter }
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
               }}>
-                KSP SENTINEL AI COMMAND
+                KSP DRISHTI
               </h1>
             </div>
 
@@ -282,22 +282,22 @@ function ChatbotAppContainer({ selectedDivision, onNavigateBackToCommandCenter }
             <button
               onClick={() => setActiveView('crime_analytics_hub')}
               style={{
-                background: 'linear-gradient(135deg, #132B20 0%, #1E4332 100%)',
-                border: '1px solid rgba(212, 155, 68, 0.5)',
+                background: 'linear-gradient(135deg, #1d4ed8, #0284c7)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
                 borderRadius: '6px',
                 padding: '4px 10px',
-                color: '#FCFCFA',
+                color: '#ffffff',
                 fontSize: '0.68rem',
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
-                boxShadow: '0 0 10px rgba(212, 155, 68, 0.2)'
+                boxShadow: '0 0 10px rgba(56, 189, 248, 0.3)'
               }}
               title="Launch Dual-Console Zoho Analytics Split-Screen Studio"
             >
-              <BarChart2 size={12} color="#D49B44" />
+              <BarChart2 size={12} color="#ffffff" />
               <span>ZOHO ANALYTICS HUB</span>
             </button>
           </div>

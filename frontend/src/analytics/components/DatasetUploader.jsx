@@ -569,7 +569,7 @@ export default function DatasetUploader({
           fontSize: '0.72rem',
           color: '#64748b'
         }}>
-          <span>KSP Sentinel AI &bull; Geospatial Ingestion Engine v2.0 (SOLID Compliant)</span>
+          <span>KSP DRISHTI &bull; Geospatial Ingestion Engine v2.0 (SOLID Compliant)</span>
           <button
             onClick={onClose}
             style={{

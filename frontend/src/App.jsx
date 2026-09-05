@@ -235,7 +235,7 @@ function ChatbotAppContainer({ selectedDivision, onNavigateBackToCommandCenter }
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
               }}>
-                KSP SENTINEL AI COMMAND
+                KSP DRISHTI
               </h1>
             </div>
 

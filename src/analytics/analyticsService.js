@@ -1,5 +1,5 @@
 /**
- * KSP Sentinel AI — Analytics Service & Dataset Connectors
+ * KSP DRISHTI — Analytics Service & Dataset Connectors
  * Provides data processing, dynamic schema detection, and chart specification builders.
  */
 

@@ -101,17 +101,17 @@ class TestPhase4UnifiedSwarm(unittest.TestCase):
         })
         self.assertTrue(res.get('success', False))
         self.assertEqual(res.get('agent_type'), 'conversational_agent')
-        self.assertNotIn('⚠️ **KSP Sentinel Operational Guardrail**', res.get('answer', ''))
+        self.assertNotIn('Operational Guardrail', res.get('answer', ''))
 
     def test_07_identity_fastpath_who_are_you(self):
-        # Verify "who are you" is treated as CONVERSATIONAL and explains Sentinel AI identity
+        # Verify "who are you" is treated as CONVERSATIONAL and explains Drishti AI identity
         res = req('/chat', 'POST', {
             'query': 'who are you',
             'session_id': 'test_greeting_session'
         })
         self.assertTrue(res.get('success', False))
         self.assertEqual(res.get('agent_type'), 'conversational_agent')
-        self.assertNotIn('⚠️ **KSP Sentinel Operational Guardrail**', res.get('answer', ''))
+        self.assertNotIn('Operational Guardrail', res.get('answer', ''))
 
     def test_08_strict_guardrail_off_topic(self):
         # Verify off-topic recipe is strictly intercepted by guardrail
@@ -121,7 +121,7 @@ class TestPhase4UnifiedSwarm(unittest.TestCase):
         })
         self.assertTrue(res.get('success', False))
         self.assertEqual(res.get('agent_type'), 'guardrail_agent')
-        self.assertIn('⚠️ **KSP Sentinel Operational Guardrail**', res.get('answer', ''))
+        self.assertIn('Operational Guardrail', res.get('answer', ''))
 
 
 if __name__ == '__main__':

@@ -19,7 +19,7 @@ export const API_BASE_URL = (() => {
       const env = parts[1] || 'development';
       const hostPrefix = parts[0] || '';
       const orgMatch = hostPrefix.match(/\d{5,}/);
-      const orgId = orgMatch ? orgMatch[0] : '60077159195';
+      const orgId = orgMatch ? orgMatch[0] : '50043767490';
       return `https://ksp-backend-${orgId}.${env}.catalystappsail.in`;
     }
   }
@@ -88,4 +88,3 @@ export async function getAnalyticsEvidentiaryStatus() {
   }
   return response.json();
 }
-

@@ -146,7 +146,7 @@ export default function InvestigationChatView({ sessionData, onClose }) {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '14px', fontWeight: '700', color: '#f1f5f9' }}>
-                  KSP Sentinel Tactical AI Investigator
+                  KSP DRISHTI Tactical AI Investigator
                 </span>
                 <span
                   style={{
@@ -262,7 +262,7 @@ export default function InvestigationChatView({ sessionData, onClose }) {
                 gap: '6px'
               }}
             >
-              <span>{msg.role === 'user' ? '👮 Officer Command' : '🛡️ KSP Sentinel AI'}</span>
+              <span>{msg.role === 'user' ? '👮 Officer Command' : '🛡️ KSP DRISHTI'}</span>
               <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '400' }}>
                 {msg.timestamp}
               </span>
@@ -354,7 +354,7 @@ export default function InvestigationChatView({ sessionData, onClose }) {
                 animation: 'spin 0.8s linear infinite'
               }}
             />
-            <span>Sentinel AI reasoning over spatial bounds and invoking Zoho tools...</span>
+            <span>KSP DRISHTI reasoning over spatial bounds and invoking Zoho tools...</span>
           </div>
         )}
 
@@ -462,7 +462,7 @@ export default function InvestigationChatView({ sessionData, onClose }) {
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder={`Ask Sentinel AI about modus operandi, suspects, or tactical deployment in ${districtName}...`}
+            placeholder={`Ask KSP DRISHTI about modus operandi, suspects, or tactical deployment in ${districtName}...`}
             disabled={isLoading}
             style={{
               flex: 1,

@@ -262,7 +262,7 @@ export default function InvestigationChatView({ sessionData, onClose }) {
                 gap: '6px'
               }}
             >
-              <span>{msg.role === 'user' ? '👮 Officer Command' : '🛡️ KSP Sentinel AI'}</span>
+              <span>{msg.role === 'user' ? '👮 Officer Command' : '🛡️ KSP DRISHTI'}</span>
               <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '400' }}>
                 {msg.timestamp}
               </span>

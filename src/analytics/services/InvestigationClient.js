@@ -1,5 +1,5 @@
 /**
- * KSP Sentinel AI — Investigation API Client (SOLID: SRP + DIP)
+ * KSP DRISHTI — Investigation API Client (SOLID: SRP + DIP)
  * Encapsulates HTTP communication for Phase 3 AI Agent Handoff & Session Memory.
  * Uses centralized getApiUrl for seamless local & AppSail cloud execution.
  */
@@ -27,7 +27,7 @@ export const InvestigationClient = {
       return {
         success: false,
         error: error.message,
-        greeting: '### ⚠️ Connection Notice\n\nUnable to reach Sentinel API server. Operating in offline tactical mode.'
+        greeting: '### ⚠️ Connection Notice\n\nUnable to reach KSP DRISHTI API server. Operating in offline tactical mode.'
       };
     }
   },
@@ -54,7 +54,7 @@ export const InvestigationClient = {
       return {
         success: false,
         error: error.message,
-        response: '⚠️ Unable to process query with Sentinel AI. Please verify backend connection.'
+        response: '⚠️ Unable to process query with KSP DRISHTI. Please verify backend connection.'
       };
     }
   },

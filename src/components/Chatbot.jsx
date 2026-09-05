@@ -324,7 +324,11 @@ function Chatbot({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.map(msg => ({
+            ...msg,
+            agent_label: msg.agent_label ? String(msg.agent_label).replace(/KSP\s+Sentinel\s+AI/gi, 'KSP DRISHTI').replace(/Sentinel\s+AI/gi, 'KSP DRISHTI').replace(/Sentinel\b/gi, 'DRISHTI') : msg.agent_label,
+            text: typeof msg.text === 'string' ? msg.text.replace(/KSP\s+Sentinel\s+AI/gi, 'KSP DRISHTI').replace(/Sentinel\s+AI/gi, 'KSP DRISHTI') : msg.text
+          }));
         }
       }
     } catch (e) {
@@ -744,7 +748,7 @@ function Chatbot({
         const botReply = {
           id: Date.now() + '-bot',
           sender: 'bot',
-          text: `### 🛡️ Sentinel Graph Intelligence Notice\n\n**No active relational dataset is currently locked in Crime Analytics.**\n\nTo trace multi-hop entity connections, vehicle-suspect links, or syndicate topologies:\n1. Open the **Crime Analytics Portal** from the header or sidebar.\n2. In the **Network & Link Intelligence** workspace, load an active dataset or attach a dedicated CDR/Transaction file.\n\n*Once locked, I will deterministically compute and verify exact multi-hop paths without hallucination.*`,
+          text: `### 🛡️ DRISHTI Graph Intelligence Notice\n\n**No active relational dataset is currently locked in Crime Analytics.**\n\nTo trace multi-hop entity connections, vehicle-suspect links, or syndicate topologies:\n1. Open the **Crime Analytics Portal** from the header or sidebar.\n2. In the **Network & Link Intelligence** workspace, load an active dataset or attach a dedicated CDR/Transaction file.\n\n*Once locked, I will deterministically compute and verify exact multi-hop paths without hallucination.*`,
           agent_type: 'graph_intelligence_agent',
           agent_label: 'Graph Intelligence Agent',
           agent_icon: '🕸️',
@@ -1007,7 +1011,7 @@ function Chatbot({
 
                 const solutionScope = eb.solution_scope || "Establish multi-jurisdictional evidence registries, fast-track Section 102 BNSS asset freezing orders, and increase beat patrol frequency across identified high-volume sectors.";
 
-                cleanAnswerText = `### 🛡️ Sentinel Command Synthesis: ${title}\n\n**Situational Overview:**\n${overview}\n\n**Tactical Directives:**\n${directiveText}\n\n**Solution & Preventive Scope:**\n${solutionScope}`;
+                cleanAnswerText = `### 🛡️ DRISHTI Command Synthesis: ${title}\n\n**Situational Overview:**\n${overview}\n\n**Tactical Directives:**\n${directiveText}\n\n**Solution & Preventive Scope:**\n${solutionScope}`;
                 
                 if (!extractedDecision) {
                   extractedDecision = {
@@ -1024,18 +1028,24 @@ function Chatbot({
                   .filter(([k, v]) => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
                   .map(([k, v]) => `• **${k.replace(/_/g, ' ')}:** ${v}`);
                 if (bullets.length > 0) {
-                  cleanAnswerText = `### 🛡️ Sentinel Intelligence Summary\n\n` + bullets.join('\n');
+                  cleanAnswerText = `### 🛡️ DRISHTI Intelligence Summary\n\n` + bullets.join('\n');
                 } else {
-                  cleanAnswerText = "### 🛡️ Sentinel Intelligence Analysis\n\nThe analytical model has evaluated the operational records. Review the active visual studio cards on the left panel.";
+                  cleanAnswerText = "### 🛡️ DRISHTI Intelligence Analysis\n\nThe analytical model has evaluated the operational records. Review the active visual studio cards on the left panel.";
                 }
               }
             }
           } catch (e) {
             console.warn("Client JSON interceptor parse skipped:", e);
             if (cleanAnswerText.trim().startsWith('{') || cleanAnswerText.trim().startsWith('```')) {
-              cleanAnswerText = "### 🛡️ Sentinel Intelligence Analysis\n\nThe analytical model has evaluated the operational dataset and computed the visual chart suite. Review the Visual Intelligence Studio on the left panel.";
+              cleanAnswerText = "### 🛡️ DRISHTI Intelligence Analysis\n\nThe analytical model has evaluated the operational dataset and computed the visual chart suite. Review the Visual Intelligence Studio on the left panel.";
             }
           }
+        }
+
+        if (typeof cleanAnswerText === 'string') {
+          cleanAnswerText = cleanAnswerText
+            .replace(/KSP\s+Sentinel\s+AI/gi, 'KSP DRISHTI')
+            .replace(/Sentinel\s+AI/gi, 'KSP DRISHTI');
         }
 
         const botReply = {
@@ -1050,7 +1060,7 @@ function Chatbot({
           user_query: text,
           // Supervisor Agent metadata
           agent_type: data.agent_type || 'general_agent',
-          agent_label: data.agent_label || 'KSP Sentinel AI',
+          agent_label: data.agent_label ? String(data.agent_label).replace(/KSP\s+Sentinel\s+AI/gi, 'KSP DRISHTI').replace(/Sentinel\s+AI/gi, 'KSP DRISHTI').replace(/Sentinel\b/gi, 'DRISHTI') : 'KSP DRISHTI',
           agent_icon: data.agent_icon || '🛡️',
           agent_color: data.agent_color || '#1e40af',
           agent_description: data.agent_description || 'General Command Operations',
@@ -1083,7 +1093,7 @@ function Chatbot({
           sender: 'bot',
           text: "Error: " + (data.error || "Failed to process query."),
           agent_type: 'general_agent',
-          agent_label: 'KSP Sentinel AI',
+          agent_label: 'KSP DRISHTI',
           agent_icon: '🛡️',
           agent_color: '#1e40af',
           agent_description: 'General Command Operations',
@@ -1097,7 +1107,7 @@ function Chatbot({
         sender: 'bot',
         text: "Network error. Is the backend Flask app listening?",
         agent_type: 'general_agent',
-        agent_label: 'KSP Sentinel AI',
+        agent_label: 'KSP DRISHTI',
         agent_icon: '🛡️',
         agent_color: '#1e40af',
         agent_description: 'General Command Operations',
@@ -1205,7 +1215,7 @@ function Chatbot({
               sender: 'bot',
               text: `✅ <b>File '${data.filename}' successfully ingested into Investigation Engine!</b><br/>Indexed <b>${data.row_count ? data.row_count.toLocaleString() : 'active'} records</b> into in-memory table <code>${data.table_name || 'crime_dataset'}</code>. The <b>Visual Intelligence Studio</b> is now bound to your case dataset.`,
               agent_type: 'analytical_agent',
-              agent_label: 'KSP Sentinel AI Engine',
+              agent_label: 'KSP DRISHTI',
               agent_icon: '📊',
               rag_used: true,
               rag_sources: [
@@ -1301,7 +1311,7 @@ function Chatbot({
       {
         id: Date.now() + '-confirm',
         sender: 'bot',
-        text: "Location received. The hazard point has been dynamically pinned on the primary Sentinel Map. Safety teams notified."
+        text: "Location received. The hazard point has been dynamically pinned on the primary DRISHTI Map. Safety teams notified."
       }
     ]);
     setActiveFlow(null);
@@ -2017,13 +2027,13 @@ function Chatbot({
                     }}>
                       <div className="bot-sender-badge">
                         <ShieldCheck size={15} style={{ color: '#2563EB' }} />
-                        <span>{m.agent_label || `KSP ${divisionName || 'Bengaluru'} Division Assistant`}</span>
+                        <span>{((m.agent_label && String(m.agent_label).replace(/KSP\s+Sentinel\s+AI/gi, 'KSP DRISHTI').replace(/Sentinel\s+AI/gi, 'KSP DRISHTI').replace(/Sentinel\b/gi, 'DRISHTI')) || `KSP ${divisionName || 'Bengaluru'} Division Assistant`)}</span>
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div className="bot-message-prose" dangerouslySetInnerHTML={{ __html: markdownToHtml(m.text) }} />
+                <div className="bot-message-prose" dangerouslySetInnerHTML={{ __html: markdownToHtml(typeof m.text === 'string' ? m.text.replace(/KSP\s+Sentinel\s+AI/gi, 'KSP DRISHTI').replace(/Sentinel\s+AI/gi, 'KSP DRISHTI') : m.text) }} />
 
                 {m.sender === 'bot' && m.prompt_suggestions && m.prompt_suggestions.length > 0 && (
                   <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: `1px solid ${DRISHTI_THEME.colors.borderSubtle}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -2681,7 +2691,7 @@ function Chatbot({
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.5px' }}>
-                      KSP Sentinel Command Page
+                      KSP DRISHTI Command Page
                     </h3>
                     <span style={{
                       fontSize: '0.62rem',

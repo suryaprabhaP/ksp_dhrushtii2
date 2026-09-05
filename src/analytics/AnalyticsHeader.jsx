@@ -34,7 +34,7 @@ export default function AnalyticsHeader({ divisionName, onBackToChat, activeTab,
           onMouseEnter={(e) => { e.currentTarget.style.background = '#1d4ed8'; e.currentTarget.style.color = '#ffffff'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)'; e.currentTarget.style.color = '#93c5fd'; }}
         >
-          <ArrowLeft size={14} /> Return to Sentinel Assistant
+          <ArrowLeft size={14} /> Return to Drishti Assistant
         </button>
 
         <div style={{ height: '24px', width: '1px', background: 'rgba(255, 255, 255, 0.15)' }} />

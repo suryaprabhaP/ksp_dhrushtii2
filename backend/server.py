@@ -98,7 +98,7 @@ audit_logger = AuditLogger(AUDIT_LOG_PATH, audit_repo=catalyst_audit_repo)
 def health_check():
     return jsonify({
         "status": "healthy",
-        "service": "KSP Sentinel AI AppSail Backend",
+        "service": "KSP DRISHTI AppSail Backend",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     }), 200
 
@@ -193,9 +193,9 @@ def chat():
         if intent == "GUARDRAIL":
             return jsonify({
                 "success": True,
-                "answer": "⚠️ **KSP Sentinel Operational Guardrail**\n\nI am restricted strictly to Karnataka State Police operations, crime analytics, IPC/BNS statutory laws, and tactical field investigations. Please reframe your query.",
+                "answer": "⚠️ **KSP DRISHTI Operational Guardrail**\n\nI am restricted strictly to Karnataka State Police operations, crime analytics, IPC/BNS statutory laws, and tactical field investigations. Please reframe your query.",
                 "agent_type": "guardrail_agent",
-                "agent_label": "KSP Sentinel Guardrail",
+                "agent_label": "KSP DRISHTI Guardrail",
                 "agent_icon": "🛑",
                 "agent_color": "#ef4444",
                 "charts": [],
@@ -253,9 +253,9 @@ def chat():
     except Exception as e:
         log.error(f"[Chat Error] Failed to process query '{user_query}': {e}", exc_info=True)
         return jsonify({
-            "answer": f"### ⚠️ Sentinel System Error\n\nAn unexpected exception occurred during intelligence synthesis: `{str(e)}`",
+            "answer": f"### ⚠️ DRISHTI System Error\n\nAn unexpected exception occurred during intelligence synthesis: `{str(e)}`",
             "agent_type": "error_agent",
-            "agent_label": "KSP Sentinel AI",
+            "agent_label": "KSP DRISHTI",
             "agent_icon": "⚠️",
             "agent_color": "#ef4444",
             "charts": [],
@@ -1014,5 +1014,5 @@ def extract_metadata():
 
 if __name__ == "__main__":
     listen_port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT", os.getenv("PORT", 9000)))
-    log.info(f"Starting KSP Sentinel AI Modular Server on port {listen_port}")
+    log.info(f"Starting KSP DRISHTI Modular Server on port {listen_port}")
     app.run(host="0.0.0.0", port=listen_port, debug=False, threaded=True)

@@ -32,7 +32,7 @@ def test_zoho_live_queries():
     for idx, q in enumerate(test_queries, 1):
         print(f"\n[{idx}] Testing Query: '{q}'")
         messages = [
-            {"role": "system", "content": "You are KSP Sentinel AI, Karnataka Police Intelligence Assistant."},
+            {"role": "system", "content": "You are KSP DRISHTI, Karnataka Police Intelligence Assistant."},
             {"role": "user", "content": q}
         ]
         try:

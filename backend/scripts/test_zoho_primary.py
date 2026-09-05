@@ -18,7 +18,7 @@ def test_zoho_primary_preference():
 
     # Query matching standard KSP SOPs in Zoho Catalyst KB
     messages = [
-        {"role": "system", "content": "You are KSP Sentinel AI, law enforcement assistant."},
+        {"role": "system", "content": "You are KSP DRISHTI, law enforcement assistant."},
         {"role": "user", "content": "What is the standard procedure for investigating cyber crime financial fraud?"}
     ]
 

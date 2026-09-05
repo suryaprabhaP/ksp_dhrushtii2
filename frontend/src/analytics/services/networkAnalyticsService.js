@@ -1,5 +1,5 @@
 /**
- * KSP Sentinel AI — Dynamic Entity Link Analytics & Graph Intelligence Service
+ * KSP DRISHTI — Dynamic Entity Link Analytics & Graph Intelligence Service
  * 
  * SOLID ARCHITECTURE:
  * - Real Investigative Entities (Suspects, Vehicles, Phones, Mule Accounts, Police Stations, Operations)
